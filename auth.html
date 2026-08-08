@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الأعضاء - الأمازون</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-container">
+        <h1>بوابة المستكشفين</h1>
+        <p>انضم إلى صفوف الناجين في الأدغال الغامضة</p>
+        
+        <input type="text" id="username" placeholder="اسم المستكشف (الاسم)">
+        <input type="password" id="password" placeholder="الرمز السري">
+        
+        <div class="menu-grid" style="margin-top: 15px;">
+            <button class="menu-btn" onclick="registerUser()">تسجيل جديد</button>
+            <button class="menu-btn" onclick="loginUser()" style="background: #2980b9;">دخول</button>
+        </div>
+        
+        <button class="menu-btn full-width" style="margin-top: 15px; background: #7f8c8d;" onclick="window.location.href='index.html'">العودة للرئيسية</button>
+    </div>
+
+    <script>
+        function registerUser() {
+            let user = document.getElementById('username').value;
+            let pass = document.getElementById('password').value;
+            if(!user || !pass) {
+                alert('الرجاء إدخال البيانات كاملة.');
+                return;
+            }
+            localStorage.setItem('user_' + user, pass);
+            // حفظ الحساب في قائمة المستخدمين للإدارة
+            let users = JSON.parse(localStorage.getItem('all_users') || '[]');
+            if(!users.includes(user)) users.push(user);
+            localStorage.setItem('all_users', JSON.stringify(users));
+
+            alert('تم التسجيل بنجاح! يمكنك الدخول الآن.');
+        }
+
+        function loginUser() {
+            let user = document.getElementById('username').value;
+            let pass = document.getElementById('password').value;
+            let storedPass = localStorage.getItem('user_' + user);
+            
+            if(storedPass && storedPass === pass) {
+                localStorage.setItem('activeUser', user);
+                alert('مرحباً بك في أعماق الغابة، ' + user);
+                window.location.href = 'index.html';
+            } else {
+                alert('خطأ في اسم المستخدم أو الرمز السري.');
+            }
+        }
+    </script>
+</body>
+</html>

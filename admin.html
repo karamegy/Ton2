@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم والإدارة العليا - Lords Mobile</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-panel { border-color: var(--accent-red); box-shadow: 0 0 25px rgba(192, 57, 43, 0.5); }
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; color: var(--gold); margin-bottom: 5px; font-size: 0.9em; }
+        .input-group input { width: 100%; padding: 8px; background: #080b10; border: 1px solid #34495e; color: white; border-radius: 6px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <div class="lords-empire-container admin-panel">
+        <header>
+            <h1>🛡️ لوحة إدارة وسيرفر الإمبراطورية</h1>
+            <p>التحكم المركزي في بيانات اللاعبين، الموارد، وإعدادات اللعبة السحابية</p>
+        </header>
+
+        <!-- لوحة التحكم السريعة للمشرف -->
+        <div class="lords-grid">
+            
+            <div class="feature-box">
+                <h3>⚙️ التحكم المباشر بموارد اللاعب</h3>
+                <div class="input-group">
+                    <label>معرف اللاعب (Player ID):</label>
+                    <input type="text" id="targetPlayerId" value="player_hero_01">
+                </div>
+                <div class="input-group">
+                    <label>كمية الذهب المضافة:</label>
+                    <input type="number" id="addGoldVal" value="5000">
+                </div>
+                <button class="btn-action btn-war" onclick="adminGrantGold()">شحن وإضافة الذهب فوراً</button>
+                <button class="btn-action" onclick="adminResetPlayer()">إعادة ضبط وتصفير الإمبراطورية</button>
+            </div>
+
+            <div class="feature-box">
+                <h3>📊 مراقبة حالة السيرفر السحابي</h3>
+                <button class="btn-action btn-hero" onclick="adminFetchStats()">جلب ومراجعة بيانات اللاعب الحالية</button>
+                <p id="serverStatus" style="font-family: monospace; font-size: 0.85em; color: #3498db; margin-top: 10px;">
+                    حالة الاتصال: جاهز لتلقي أوامر المشرف...
+                </p>
+            </div>
+
+            <div class="feature-box console-box" style="grid-column: span 2;">
+                <h3>📜 سجل العمليات الإدارية والرقابية</h3>
+                <div id="adminLog" class="console-output">
+                    [نظام المشرف]: تم تحميل لوحة الإدارة بنجاح. يمكنك التحكم بأي لاعب متصل عبر Firebase...
+                </div>
+                <br>
+                <a href="index.html" class="btn-action" style="text-align: center; display: block; text-decoration: none;">العودة إلى واجهة اللعبة الرئيسية</a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ربط محرك المشرف السحابي -->
+    <script type="module" src="admin.js"></script>
+</body>
+</html>
