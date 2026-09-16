@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.giti.erp",
+      "package_name": "io.github.karamegy.Ton2",
       "sha256_cert_fingerprints": [
-        "ضع_هنا_بصمة_SHA256_الخاصة_بمفتاح_التوقيع"
+        "DD:51:46:CA:F5:80:8D:0F:4A:E9:8B:3F:0D:E3:DE:EF:A5:4D:99:7F:66:FD:3D:84:7F:E9:F6:47:7F:30:5E:30"
       ]
     }
   }
