@@ -1,1 +1,47 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام الفواتير المحلي</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- شاشة الحظر الكامل (تظهر عندما يوقف الأدمن الحساب) -->
+  <div id="lock-screen" class="hidden">
+    <div class="lock-card">
+      <h2>⚠️ الحساب غير مفعل</h2>
+      <p>تم إيقاف صلاحية استخدام التطبيق من قبل المدير (Admin Master).</p>
+      <p class="sub-text">يرجى التواصل مع الإدارة لإعادة تفعيل الحساب.</p>
+    </div>
+  </div>
+
+  <!-- الواجهة الرئيسية للتطبيق -->
+  <div id="main-app">
+    <header>
+      <h1>إدارة الفواتير المحلية</h1>
+      <span id="account-status" class="status-badge">جاري التحقق...</span>
+    </header>
+
+    <main>
+      <!-- نموذج إنشاء فاتورة -->
+      <section class="invoice-form">
+        <h3>فاتورة جديدة</h3>
+        <input type="text" id="client-name" placeholder="اسم العميل">
+        <input type="number" id="invoice-amount" placeholder="المبلغ">
+        <button id="save-btn">حفظ الفاتورة محلياً</button>
+      </section>
+
+      <!-- قائمة الفواتير المخزنة محلياً -->
+      <section class="invoice-list">
+        <h3>الفواتير المحفوظة</h3>
+        <ul id="invoices-container"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
 
