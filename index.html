@@ -4,26 +4,51 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0f172a">
-  <title>نظام إدارة الأعمال المتكامل</title>
+  <title>نظام إدارة الأعمال الذكي</title>
   
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
-  <!-- مكتبة تحويل الفواتير إلى صور -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
-  <!-- شاشة القفل عند تعطيل الحساب -->
-  <div id="lock-screen" class="hidden">
-    <div class="lock-card">
-      <h2>⚠️ الحساب معطل</h2>
-      <p>تم إيقاف صلاحية استخدام التطبيق من قبل المدير (Admin Master).</p>
-      <p class="sub-text">يرجى التواصل مع الإدارة لإعادة التفعيل.</p>
+  <!-- 1. شاشة تسجيل الدخول والتفعيل للمستخدم -->
+  <div id="login-screen" class="login-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <span class="app-icon">🔐</span>
+        <h2>تسجيل الدخول للنظام</h2>
+        <p>أدخل بيانات حسابك أو كود التفعيل للبدء</p>
+      </div>
+      <form id="login-form">
+        <div class="form-group">
+          <label>البريد الإلكتروني / رقم التفعيل</label>
+          <input type="email" id="login-email" required placeholder="user@domain.com">
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label>كلمة المرور</label>
+          <input type="password" id="login-password" required placeholder="••••••••">
+        </div>
+        <button type="submit" id="login-btn" class="btn-primary login-submit-btn">دخول التطبيق</button>
+      </form>
+      <div id="login-error" class="login-error-msg hidden"></div>
+      <div class="login-footer">
+        <p>ليس لديك حساب؟ <a href="https://wa.me/20100000000" target="_blank">تواصل مع الدعم الفني للتفعيل</a></p>
+      </div>
     </div>
   </div>
 
-  <!-- الواجهة الرئيسية -->
-  <div id="main-app">
+  <!-- 2. شاشة الحظر التلقائي عند إلغاء التنشيط من الأدمن -->
+  <div id="lock-screen" class="hidden">
+    <div class="lock-card">
+      <h2>⚠️ الحساب معطل أو غير مفعل</h2>
+      <p>تم إيقاف صلاحية استخدام التطبيق لهذا الجهاز من قبل الإدارة.</p>
+      <button id="logout-lock-btn" class="btn-secondary" style="margin-top: 15px;">تسجيل الخروج</button>
+    </div>
+  </div>
+
+  <!-- 3. الواجهة الرئيسية للتطبيق -->
+  <div id="main-app" class="hidden">
     <header class="app-header">
       <div class="brand-container">
         <img id="header-logo" class="store-logo hidden" alt="Logo">
@@ -33,12 +58,12 @@
         </div>
       </div>
       <div class="header-actions">
-        <span id="account-status" class="status-badge">جاري التحقق...</span>
+        <span id="account-status" class="status-badge">مفعل</span>
         <button id="open-settings-btn" class="btn-icon">⚙️ الإعدادات</button>
+        <button id="logout-btn" class="btn-icon btn-logout" title="تسجيل الخروج">🚪 Exit</button>
       </div>
     </header>
 
-    <!-- شريط التنقل المتجاوب -->
     <nav class="app-nav">
       <button class="nav-tab active" data-tab="invoices">🧾 الفواتير</button>
       <button class="nav-tab" data-tab="products">📦 المخزن</button>
@@ -46,7 +71,6 @@
       <button class="nav-tab" data-tab="expenses">💸 الخزينة</button>
     </nav>
 
-    <!-- شريط الإحصائيات -->
     <section class="stats-grid">
       <div class="stat-card">
         <span class="stat-title">إجمالي المبيعات</span>
@@ -66,7 +90,7 @@
       </div>
     </section>
 
-    <!-- 1. قسم الفواتير -->
+    <!-- تبويب الفواتير -->
     <main id="tab-invoices" class="tab-content active">
       <div class="dashboard-grid">
         <section class="card invoice-form-section">
@@ -156,7 +180,7 @@
       </div>
     </main>
 
-    <!-- 2. قسم المخزن والمنتجات -->
+    <!-- باقي التبويبات (المخزن، العملاء، المصروفات) -->
     <section id="tab-products" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
@@ -190,7 +214,6 @@
       </div>
     </section>
 
-    <!-- 3. قسم العملاء -->
     <section id="tab-clients" class="tab-content">
       <div class="card">
         <h3>سجل العملاء والمديونيات</h3>
@@ -200,7 +223,6 @@
       </div>
     </section>
 
-    <!-- 4. قسم الخزينة والمصروفات -->
     <section id="tab-expenses" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
@@ -227,7 +249,7 @@
     </section>
   </div>
 
-  <!-- نافذة معاينة الفاتورة وتحميلها كصورة -->
+  <!-- Modal معاينة الفاتورة -->
   <div id="view-modal" class="modal hidden">
     <div class="modal-content preview-modal-content">
       <div class="modal-header">
@@ -274,7 +296,7 @@
     </div>
   </div>
 
-  <!-- نافذة الإعدادات والثيمات -->
+  <!-- Modal الإعدادات -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
