@@ -4,50 +4,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>نظام إدارة الأعمال المتكامل</title>
+  <title>Global ERP & E-Invoicing System</title>
   
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- مكتبة توليد رمز QR المعياري للطباعة والمعاينة -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
-  <!-- 1. شاشة الدخول وإنشاء الحساب المفصلة -->
+  <!-- شاشة الدخول والتسجيل السحابي -->
   <div id="login-screen" class="login-overlay">
     <div class="login-card">
+      <div class="lang-switch-auth">
+        <button id="auth-lang-btn" class="btn-sm">English / عربي</button>
+      </div>
       <div class="auth-tabs">
-        <button id="tab-login-btn" class="auth-tab active">تسجيل الدخول</button>
-        <button id="tab-register-btn" class="auth-tab">حساب جديد</button>
+        <button id="tab-login-btn" class="auth-tab active" data-i18n="login">تسجيل الدخول</button>
+        <button id="tab-register-btn" class="auth-tab" data-i18n="register">حساب جديد</button>
       </div>
 
-      <!-- نموذج تسجيل الدخول -->
+      <button type="button" id="google-login-btn" class="btn-google">
+        <svg class="google-icon" width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span data-i18n="googleAuth">متابعة بواسطة Google</span>
+      </button>
+
+      <div class="auth-divider"><span data-i18n="or">أو</span></div>
+
       <form id="login-form" class="auth-form">
         <div class="form-group">
-          <label>البريد الإلكتروني</label>
+          <label data-i18n="email">البريد الإلكتروني</label>
           <input type="email" id="login-email" required placeholder="user@domain.com">
         </div>
         <div class="form-group" style="margin-top: 10px;">
-          <label>كلمة المرور</label>
+          <label data-i18n="password">كلمة المرور</label>
           <input type="password" id="login-password" required placeholder="••••••••">
         </div>
-        <button type="submit" class="btn-primary auth-submit-btn">دخول التطبيق</button>
+        <button type="submit" class="btn-primary auth-submit-btn" data-i18n="loginBtn">دخول التطبيق</button>
       </form>
 
-      <!-- نموذج إنشاء حساب جديد -->
       <form id="register-form" class="auth-form hidden">
         <div class="form-group">
-          <label>الاسم أو اسم النشاط</label>
+          <label data-i18n="storeName">اسم النشاط / الشركة</label>
           <input type="text" id="reg-name" required placeholder="اسم المحل / الشركة">
         </div>
         <div class="form-group" style="margin-top: 10px;">
-          <label>البريد الإلكتروني</label>
+          <label data-i18n="email">البريد الإلكتروني</label>
           <input type="email" id="reg-email" required placeholder="user@domain.com">
         </div>
         <div class="form-group" style="margin-top: 10px;">
-          <label>كلمة المرور</label>
+          <label data-i18n="password">كلمة المرور</label>
           <input type="password" id="reg-password" minlength="6" required placeholder="••••••••">
         </div>
-        <button type="submit" class="btn-success auth-submit-btn">إنشاء حساب طلب تفعيل</button>
+        <button type="submit" class="btn-success auth-submit-btn" data-i18n="registerBtn">إنشاء حساب طلب تفعيل</button>
       </form>
 
       <div id="auth-error" class="auth-msg error hidden"></div>
@@ -55,55 +70,56 @@
     </div>
   </div>
 
-  <!-- 2. شاشة قفل الحساب عند التعطيل -->
+  <!-- شاشة القفل والتعطيل -->
   <div id="lock-screen" class="hidden">
     <div class="lock-card">
-      <h2>⚠️ الحساب معطل أو بانتظار التفعيل</h2>
-      <p>تم تسجيل حسابك بنجاح. يرجى التواصل مع الإدارة لتفعيل الرخصة.</p>
+      <h2 data-i18n="accountDisabled">⚠️ الحساب معطل أو بانتظار التفعيل</h2>
+      <p data-i18n="accountDisabledDesc">تم تسجيل حسابك بنجاح. يرجى التواصل مع الإدارة لتفعيل الرخصة السحابية.</p>
       <p class="sub-text" id="user-uid-tag"></p>
-      <button id="logout-lock-btn" class="btn-secondary" style="margin-top: 15px;">تسجيل الخروج</button>
+      <button id="logout-lock-btn" class="btn-secondary" style="margin-top: 15px;" data-i18n="logout">تسجيل الخروج</button>
     </div>
   </div>
 
-  <!-- 3. الواجهة الرئيسية للتطبيق -->
+  <!-- التطبيق الرئيسي -->
   <div id="main-app" class="hidden">
     <header class="app-header">
       <div class="brand-container">
         <img id="header-logo" class="store-logo hidden" alt="Logo">
         <div>
-          <h1 id="header-store-name">نظام إدارة الأعمال</h1>
-          <p class="subtitle" id="header-store-phone">إدارة الفواتير والمخزن محلياً</p>
+          <h1 id="header-store-name">نظام إدارة الأعمال السحابي</h1>
+          <p class="subtitle" id="header-store-phone">الفاتورة الإلكترونية والمخزن</p>
         </div>
       </div>
       <div class="header-actions">
-        <span id="account-status" class="status-badge">مفعل</span>
+        <button id="toggle-lang-btn" class="btn-icon">🌐 EN/عربي</button>
+        <span id="account-status" class="status-badge">مفعل سحابياً</span>
         <button id="open-settings-btn" class="btn-icon">⚙️ الإعدادات</button>
-        <button id="logout-btn" class="btn-icon btn-logout" title="تسجيل الخروج">🚪 خروج</button>
+        <button id="logout-btn" class="btn-icon btn-logout" title="خروج">🚪 خروج</button>
       </div>
     </header>
 
     <nav class="app-nav">
-      <button class="nav-tab active" data-tab="invoices">🧾 الفواتير</button>
-      <button class="nav-tab" data-tab="products">📦 المخزن</button>
-      <button class="nav-tab" data-tab="clients">👥 العملاء</button>
-      <button class="nav-tab" data-tab="expenses">💸 الخزينة</button>
+      <button class="nav-tab active" data-tab="invoices" data-i18n="tabInvoices">🧾 الفواتير</button>
+      <button class="nav-tab" data-tab="products" data-i18n="tabProducts">📦 المخزن</button>
+      <button class="nav-tab" data-tab="clients" data-i18n="tabClients">👥 العملاء</button>
+      <button class="nav-tab" data-tab="expenses" data-i18n="tabExpenses">💸 الخزينة</button>
     </nav>
 
     <section class="stats-grid">
       <div class="stat-card">
-        <span class="stat-title">إجمالي المبيعات</span>
-        <strong id="stat-total-sales" class="stat-value">0.00 ج.م</strong>
+        <span class="stat-title" data-i18n="totalSales">إجمالي المبيعات</span>
+        <strong id="stat-total-sales" class="stat-value">0.00</strong>
       </div>
       <div class="stat-card">
-        <span class="stat-title">صافي الأرباح</span>
-        <strong id="stat-net-profit" class="stat-value text-success">0.00 ج.م</strong>
+        <span class="stat-title" data-i18n="netProfit">صافي الأرباح</span>
+        <strong id="stat-net-profit" class="stat-value text-success">0.00</strong>
       </div>
       <div class="stat-card">
-        <span class="stat-title">المصروفات</span>
-        <strong id="stat-expenses" class="stat-value text-danger">0.00 ج.م</strong>
+        <span class="stat-title" data-i18n="expenses">المصروفات</span>
+        <strong id="stat-expenses" class="stat-value text-danger">0.00</strong>
       </div>
       <div class="stat-card">
-        <span class="stat-title">عدد الفواتير</span>
+        <span class="stat-title" data-i18n="invoiceCount">عدد الفواتير</span>
         <strong id="stat-count" class="stat-value">0</strong>
       </div>
     </section>
@@ -113,55 +129,53 @@
       <div class="dashboard-grid">
         <section class="card invoice-form-section">
           <div class="card-header">
-            <h3>فاتورة جديدة</h3>
-            <span class="invoice-number-tag">رقم الفاتورة: <strong id="inv-number-display">#1001</strong></span>
+            <h3 data-i18n="newInvoice">فاتورة مبيعات جديدة</h3>
+            <span class="invoice-number-tag"><span data-i18n="invNo">رقم الفاتورة:</span> <strong id="inv-number-display">#1001</strong></span>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>اسم العميل / الشركة</label>
+              <label data-i18n="clientName">اسم العميل / الشركة</label>
               <input type="text" id="client-name" list="clients-datalist" placeholder="اختر أو اكتب اسم العميل">
               <datalist id="clients-datalist"></datalist>
             </div>
             <div class="form-group">
-              <label>رقم هاتف العميل (للواتساب)</label>
+              <label data-i18n="clientPhone">رقم الهاتف (للواتساب)</label>
               <input type="tel" id="client-phone" placeholder="201xxxxxxxxx">
             </div>
           </div>
 
-          <!-- جدول الأصناف المتطابق والمرن للموبايل -->
           <div class="items-table-wrapper">
-            <div class="table-header-mobile">الأصناف والخدمات</div>
             <table id="items-table" class="responsive-items-table">
               <thead>
                 <tr>
-                  <th>الصنف / الخدمة</th>
-                  <th width="70">الكمية</th>
-                  <th width="90">السعر</th>
-                  <th width="90">الإجمالي</th>
-                  <th width="40"></th>
+                  <th style="width: 45%;" data-i18n="itemTitle">الصنف / الخدمة</th>
+                  <th style="width: 15%;" data-i18n="qtyTitle">الكمية</th>
+                  <th style="width: 20%;" data-i18n="priceTitle">السعر</th>
+                  <th style="width: 15%;" data-i18n="subtotalTitle">الإجمالي</th>
+                  <th style="width: 5%;"></th>
                 </tr>
               </thead>
               <tbody id="items-body"></tbody>
             </table>
-            <button type="button" id="add-item-btn" class="btn-secondary">+ إضافة صنف جديد</button>
+            <button type="button" id="add-item-btn" class="btn-secondary" data-i18n="addItem">+ إضافة صنف جديد</button>
           </div>
 
           <div class="calc-summary">
             <div class="calc-row">
-              <span>المجموع الفرعي:</span>
-              <span id="subtotal-val">0.00 ج.م</span>
+              <span data-i18n="subtotal">المجموع الفرعي:</span>
+              <span id="subtotal-val">0.00</span>
             </div>
             <div class="calc-row inputs-row">
-              <label>الخصم:
+              <label><span data-i18n="discount">الخصم:</span>
                 <input type="number" id="discount-input" value="0" min="0">
               </label>
-              <label>الضريبة (%):
-                <input type="number" id="tax-input" value="0" min="0">
+              <label><span data-i18n="tax">الضريبة (%):</span>
+                <input type="number" id="tax-input" value="14" min="0">
               </label>
             </div>
             <div class="calc-row">
-              <label style="width:100%">حالة الدفع:
+              <label style="width:100%"><span data-i18n="payStatus">حالة الدفع:</span>
                 <select id="payment-status-select">
                   <option value="مدفوعة">✅ مدفوعة بالكامل</option>
                   <option value="آجل / غير مدفوعة">❌ آجل / غير مدفوعة</option>
@@ -170,23 +184,23 @@
               </label>
             </div>
             <div class="calc-row grand-total">
-              <span>الإجمالي النهائي:</span>
-              <strong id="grand-total-val">0.00 ج.م</strong>
+              <span data-i18n="grandTotal">الإجمالي النهائي:</span>
+              <strong id="grand-total-val">0.00</strong>
             </div>
           </div>
 
           <div class="form-actions">
-            <button id="save-btn" class="btn-primary">حفظ الفاتورة</button>
-            <button id="whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
-            <button id="print-btn" class="btn-success">طباعة 🖨️</button>
+            <button id="save-btn" class="btn-primary" data-i18n="saveInv">حفظ الفاتورة</button>
+            <button id="whatsapp-btn" class="btn-whatsapp" data-i18n="sendWhatsApp">واتساب 💬</button>
+            <button id="print-btn" class="btn-success" data-i18n="print">طباعة 🖨️</button>
           </div>
         </section>
 
         <section class="card invoice-list-section">
           <div class="card-header">
-            <h3>سجل الفواتير</h3>
+            <h3 data-i18n="invHistory">سجل الفواتير السحابي</h3>
             <div class="backup-btns">
-              <button id="export-json-btn" class="btn-sm">💾 نسخ</button>
+              <button id="export-json-btn" class="btn-sm">💾 Backup</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
             </div>
           </div>
@@ -204,29 +218,29 @@
     <section id="tab-products" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
-          <h3>إضافة منتج جديد للمخزن</h3>
+          <h3 data-i18n="addProduct">إضافة منتج جديد للمخزن</h3>
           <form id="product-form" class="form-row" style="margin-top:15px;">
             <div class="form-group">
-              <label>اسم المنتج</label>
+              <label data-i18n="pName">اسم المنتج</label>
               <input type="text" id="p-name" required placeholder="اسم الصنف">
             </div>
             <div class="form-group">
-              <label>سعر البيع</label>
+              <label data-i18n="pPrice">سعر البيع</label>
               <input type="number" id="p-price" required step="0.5" placeholder="0.00">
             </div>
             <div class="form-group">
-              <label>سعر التكلفة (للأرباح)</label>
+              <label data-i18n="pCost">سعر التكلفة</label>
               <input type="number" id="p-cost" step="0.5" placeholder="0.00">
             </div>
             <div class="form-group">
-              <label>الكمية بالمخزن</label>
+              <label data-i18n="pStock">الكمية بالمخزن</label>
               <input type="number" id="p-stock" value="100">
             </div>
-            <button type="submit" class="btn-primary" style="grid-column: 1 / -1;">حفظ المنتج</button>
+            <button type="submit" class="btn-primary" style="grid-column: 1 / -1;" data-i18n="saveProduct">حفظ المنتج</button>
           </form>
         </div>
         <div class="card">
-          <h3>قائمة المنتجات المخزنة</h3>
+          <h3 data-i18n="productList">قائمة المنتجات المخزنة</h3>
           <div class="list-container" style="margin-top:10px;">
             <ul id="products-list-container"></ul>
           </div>
@@ -236,7 +250,7 @@
 
     <section id="tab-clients" class="tab-content">
       <div class="card">
-        <h3>سجل العملاء والمديونيات</h3>
+        <h3 data-i18n="clientDb">سجل العملاء والمديونيات</h3>
         <div class="list-container" style="margin-top:15px;">
           <ul id="clients-list-container"></ul>
         </div>
@@ -246,21 +260,21 @@
     <section id="tab-expenses" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
-          <h3>تسجيل مصروف جديد</h3>
+          <h3 data-i18n="addExpense">تسجيل مصروف جديد</h3>
           <form id="expense-form" style="margin-top:15px;">
             <div class="form-group">
-              <label>بند المصروف</label>
+              <label data-i18n="expTitle">بند المصروف</label>
               <input type="text" id="exp-title" required placeholder="مثال: إيجار، كهرباء، نثريات">
             </div>
             <div class="form-group" style="margin-top:10px;">
-              <label>المبلغ</label>
+              <label data-i18n="expAmount">المبلغ</label>
               <input type="number" id="exp-amount" required step="0.5" placeholder="0.00">
             </div>
-            <button type="submit" class="btn-primary" style="margin-top:15px; width:100%;">تسجيل المصروف</button>
+            <button type="submit" class="btn-primary" style="margin-top:15px; width:100%;" data-i18n="saveExpense">تسجيل المصروف</button>
           </form>
         </div>
         <div class="card">
-          <h3>سجل المصروفات</h3>
+          <h3 data-i18n="expList">سجل المصروفات</h3>
           <div class="list-container" style="margin-top:10px;">
             <ul id="expenses-list-container"></ul>
           </div>
@@ -269,11 +283,11 @@
     </section>
   </div>
 
-  <!-- Modal المعاينة -->
+  <!-- Modal معاينة الفاتورة الإلكترونية المعيارية ZATCA/ETA -->
   <div id="view-modal" class="modal hidden">
     <div class="modal-content preview-modal-content">
       <div class="modal-header">
-        <h3>👁️ معاينة الفاتورة</h3>
+        <h3 data-i18n="previewTitle">👁️ معاينة الفاتورة الإلكترونية</h3>
         <button id="close-view-btn" class="btn-close">✕</button>
       </div>
       <div id="invoice-card-preview" class="invoice-card-preview">
@@ -281,6 +295,7 @@
           <img id="v-logo" class="preview-logo hidden" alt="Logo">
           <h2 id="v-store-name">اسم المحل</h2>
           <p id="v-store-phone"></p>
+          <p id="v-store-vat"></p>
           <p id="v-store-address"></p>
           <hr>
           <p id="v-inv-id"></p>
@@ -302,29 +317,33 @@
           </thead>
           <tbody id="v-items-body"></tbody>
         </table>
-        <div class="preview-totals">
-          <p>المجموع الفرعي: <span id="v-subtotal"></span></p>
-          <p>الخصم: <span id="v-discount"></span></p>
-          <p>الضريبة: <span id="v-tax"></span></p>
-          <h3>الإجمالي الكلي: <span id="v-total"></span></h3>
+        <div class="preview-footer-container">
+          <div class="preview-totals">
+            <p>المجموع الفرعي: <span id="v-subtotal"></span></p>
+            <p>الخصم: <span id="v-discount"></span></p>
+            <p>الضريبة: <span id="v-tax"></span></p>
+            <h3>الإجمالي الكلي: <span id="v-total"></span></h3>
+          </div>
+          <!-- حاوية QR Code الفاتورة الإلكترونية المشفر ZATCA/ETA -->
+          <div id="preview-qrcode" class="qrcode-wrapper"></div>
         </div>
       </div>
       <div class="modal-actions-row">
-        <button id="download-img-btn" class="btn-primary">تحميل كصورة 🖼️</button>
-        <button id="print-view-btn" class="btn-success">طباعة 🖨️</button>
+        <button id="download-img-btn" class="btn-primary" data-i18n="downloadImg">تحميل كصورة 🖼️</button>
+        <button id="print-view-btn" class="btn-success" data-i18n="print">طباعة 🖨️</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal الإعدادات -->
+  <!-- Modal الإعدادات السحابية والتنظيمية -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>⚙️ إعدادات النشاط والثيمات</h3>
+        <h3 data-i18n="settingsTitle">⚙️ إعدادات المنشأة والعملة السحابية</h3>
         <button id="close-settings-btn" class="btn-close">✕</button>
       </div>
       <div class="form-group">
-        <label>مظهر التطبيق (الثيمات)</label>
+        <label data-i18n="theme">مظهر التطبيق</label>
         <select id="theme-select">
           <option value="dark">🌙 داكن (Dark Default)</option>
           <option value="light">☀️ فاتح (Light Classic)</option>
@@ -333,35 +352,46 @@
         </select>
       </div>
       <div class="form-group" style="margin-top:10px;">
-        <label>شعار المحل / الشركة (Logo)</label>
+        <label data-i18n="currency">العملة الرئسية</label>
+        <select id="currency-select">
+          <option value="ج.م">ج.م - الجنيه المصري</option>
+          <option value="SAR">SAR - الريال السعودي</option>
+          <option value="AED">AED - الدرهم الإماراتي</option>
+          <option value="USD">USD - الدولار الأمريكي</option>
+          <option value="EUR">EUR - اليورو الأوروبي</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:10px;">
+        <label data-i18n="vatNo">الرقم الضريبي للمنشأة (VAT Number)</label>
+        <input type="text" id="store-vat-input" placeholder="300000000000003">
+      </div>
+      <div class="form-group" style="margin-top:10px;">
+        <label data-i18n="logo">شعار المحل / الشركة (Logo)</label>
         <input type="file" id="store-logo-input" accept="image/*">
       </div>
       <div class="form-group" style="margin-top:10px;">
-        <label>اسم المحل / الشركة</label>
+        <label data-i18n="storeName">اسم المحل / الشركة</label>
         <input type="text" id="store-name-input">
       </div>
       <div class="form-group" style="margin-top:10px;">
-        <label>رقم الهاتف للاتصال</label>
+        <label data-i18n="clientPhone">رقم الهاتف</label>
         <input type="text" id="store-phone-input">
       </div>
       <div class="form-group" style="margin-top:10px;">
-        <label>العنوان</label>
+        <label data-i18n="address">العنوان</label>
         <input type="text" id="store-address-input">
       </div>
-      <div class="form-group" style="margin-top:10px;">
-        <label>العملة</label>
-        <input type="text" id="currency-symbol-input" value="ج.م">
-      </div>
-      <button id="save-settings-btn" class="btn-primary" style="margin-top: 15px;">حفظ التغييرات</button>
+      <button id="save-settings-btn" class="btn-primary" style="margin-top: 15px;" data-i18n="saveSettings">حفظ التغييرات السحابية</button>
     </div>
   </div>
 
-  <!-- قالب الطباعة -->
+  <!-- قالب الطباعة الحراري المعياري -->
   <div id="print-template" class="print-only">
     <div class="print-header">
       <img id="p-logo" class="print-logo hidden" alt="Store Logo">
-      <h1 id="p-store-name">فاتورة مبيعات</h1>
+      <h1 id="p-store-name">فاتورة مبيعات إلكترونية</h1>
       <p id="p-store-phone"></p>
+      <p id="p-store-vat"></p>
       <p id="p-store-address"></p>
       <hr>
       <p id="p-inv-id"></p>
@@ -383,11 +413,14 @@
       </thead>
       <tbody id="p-items-body"></tbody>
     </table>
-    <div class="print-totals">
-      <p>المجموع الفرعي: <span id="p-subtotal"></span></p>
-      <p>الخصم: <span id="p-discount"></span></p>
-      <p>الضريبة: <span id="p-tax"></span></p>
-      <h3>الإجمالي الكلي: <span id="p-total"></span></h3>
+    <div class="print-footer-container">
+      <div class="print-totals">
+        <p>المجموع الفرعي: <span id="p-subtotal"></span></p>
+        <p>الخصم: <span id="p-discount"></span></p>
+        <p>الضريبة: <span id="p-tax"></span></p>
+        <h3>الإجمالي الكلي: <span id="p-total"></span></h3>
+      </div>
+      <div id="print-qrcode" class="qrcode-wrapper"></div>
     </div>
   </div>
 
