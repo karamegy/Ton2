@@ -15,25 +15,59 @@
 body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg-main); color: var(--text-main); line-height: 1.5; padding: 12px; }
 #main-app { max-width: 1200px; margin: 0 auto; }
 
-.app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+/* الهيدر والشعار */
+.app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px; }
+.brand-container { display: flex; align-items: center; gap: 12px; }
+.store-logo { max-height: 48px; max-width: 100px; object-fit: contain; border-radius: 6px; }
 .subtitle { color: var(--text-muted); font-size: 0.8rem; }
-.header-actions { display: flex; align-items: center; gap: 10px; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
 .status-badge { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; background: #334155; font-weight: bold; }
 
-/* تبويبات التنقل Nav Tabs */
-.app-nav { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
-.nav-tab { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-muted); padding: 10px 16px; border-radius: 8px; cursor: pointer; white-space: nowrap; font-weight: bold; }
-.nav-tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+/* شريط التنقل المتجاوب دون تداخل (Horizontal Scroll Segment Control) */
+.app-nav {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 15px;
+  overflow-x: auto;
+  padding: 4px;
+  background: var(--card-bg);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  -webkit-overflow-scrolling: touch;
+}
+.app-nav::-webkit-scrollbar { display: none; } /* إخفاء شريط التمرير */
+
+.nav-tab {
+  flex: 1 0 auto;
+  min-width: max-content;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.nav-tab.active {
+  background: var(--accent);
+  color: #0f172a;
+}
+
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 
 /* الإحصائيات */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 15px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; }
 .stat-card { background: var(--card-bg); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); }
 .stat-title { font-size: 0.75rem; color: var(--text-muted); }
-.stat-value { font-size: 1.15rem; color: var(--accent); margin-top: 4px; display: block; }
+.stat-value { font-size: 1.1rem; color: var(--accent); margin-top: 4px; display: block; }
+.text-success { color: var(--success) !important; }
+.text-danger { color: var(--danger) !important; }
 
-/* الشبكة الرئيسية */
+/* التقسيم والبطاقات */
 .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
 @media (min-width: 850px) { .dashboard-grid { grid-template-columns: 1.3fr 1fr; } }
 
@@ -48,7 +82,7 @@ input, select { width: 100%; padding: 9px; background: var(--input-bg); border: 
 input:focus, select:focus { outline: none; border-color: var(--accent); }
 
 /* الأزرار */
-button { padding: 10px 14px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+button { padding: 10px 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
 .btn-primary { background: var(--accent); color: #0f172a; }
 .btn-secondary { background: #334155; color: var(--text-main); width: 100%; margin-top: 8px; }
 .btn-success { background: var(--success); color: #fff; }
@@ -84,10 +118,13 @@ li { background: var(--input-bg); padding: 10px; border-radius: 6px; margin-bott
 .hidden { display: none !important; }
 .print-only { display: none !important; }
 
+/* الطباعة والشعار المطبوع */
 @media print {
   body * { visibility: hidden !important; }
   #print-template, #print-template * { visibility: visible !important; }
   #print-template { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000 !important; background: #fff !important; padding: 20px; }
+  .print-header { text-align: center; margin-bottom: 15px; }
+  .print-logo { max-height: 70px; max-width: 180px; object-fit: contain; margin-bottom: 10px; }
   .print-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
   .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: right; }
 }
