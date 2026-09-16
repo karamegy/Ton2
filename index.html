@@ -2,9 +2,9 @@
 <html lang="ar" dir="rtl" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>نظام إدارة الأعمال الذكي</title>
+  <title>نظام إدارة الأعمال المتكامل</title>
   
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
@@ -12,37 +12,55 @@
 </head>
 <body>
 
-  <!-- 1. شاشة تسجيل الدخول والتفعيل للمستخدم -->
+  <!-- 1. شاشة الدخول وإنشاء الحساب المفصلة -->
   <div id="login-screen" class="login-overlay">
     <div class="login-card">
-      <div class="login-header">
-        <span class="app-icon">🔐</span>
-        <h2>تسجيل الدخول للنظام</h2>
-        <p>أدخل بيانات حسابك أو كود التفعيل للبدء</p>
+      <div class="auth-tabs">
+        <button id="tab-login-btn" class="auth-tab active">تسجيل الدخول</button>
+        <button id="tab-register-btn" class="auth-tab">حساب جديد</button>
       </div>
-      <form id="login-form">
+
+      <!-- نموذج تسجيل الدخول -->
+      <form id="login-form" class="auth-form">
         <div class="form-group">
-          <label>البريد الإلكتروني / رقم التفعيل</label>
+          <label>البريد الإلكتروني</label>
           <input type="email" id="login-email" required placeholder="user@domain.com">
         </div>
-        <div class="form-group" style="margin-top: 12px;">
+        <div class="form-group" style="margin-top: 10px;">
           <label>كلمة المرور</label>
           <input type="password" id="login-password" required placeholder="••••••••">
         </div>
-        <button type="submit" id="login-btn" class="btn-primary login-submit-btn">دخول التطبيق</button>
+        <button type="submit" class="btn-primary auth-submit-btn">دخول التطبيق</button>
       </form>
-      <div id="login-error" class="login-error-msg hidden"></div>
-      <div class="login-footer">
-        <p>ليس لديك حساب؟ <a href="https://wa.me/20100000000" target="_blank">تواصل مع الدعم الفني للتفعيل</a></p>
-      </div>
+
+      <!-- نموذج إنشاء حساب جديد -->
+      <form id="register-form" class="auth-form hidden">
+        <div class="form-group">
+          <label>الاسم أو اسم النشاط</label>
+          <input type="text" id="reg-name" required placeholder="اسم المحل / الشركة">
+        </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label>البريد الإلكتروني</label>
+          <input type="email" id="reg-email" required placeholder="user@domain.com">
+        </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label>كلمة المرور</label>
+          <input type="password" id="reg-password" minlength="6" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn-success auth-submit-btn">إنشاء حساب طلب تفعيل</button>
+      </form>
+
+      <div id="auth-error" class="auth-msg error hidden"></div>
+      <div id="auth-success" class="auth-msg success hidden"></div>
     </div>
   </div>
 
-  <!-- 2. شاشة الحظر التلقائي عند إلغاء التنشيط من الأدمن -->
+  <!-- 2. شاشة قفل الحساب عند التعطيل -->
   <div id="lock-screen" class="hidden">
     <div class="lock-card">
-      <h2>⚠️ الحساب معطل أو غير مفعل</h2>
-      <p>تم إيقاف صلاحية استخدام التطبيق لهذا الجهاز من قبل الإدارة.</p>
+      <h2>⚠️ الحساب معطل أو بانتظار التفعيل</h2>
+      <p>تم تسجيل حسابك بنجاح. يرجى التواصل مع الإدارة لتفعيل الرخصة.</p>
+      <p class="sub-text" id="user-uid-tag"></p>
       <button id="logout-lock-btn" class="btn-secondary" style="margin-top: 15px;">تسجيل الخروج</button>
     </div>
   </div>
@@ -60,7 +78,7 @@
       <div class="header-actions">
         <span id="account-status" class="status-badge">مفعل</span>
         <button id="open-settings-btn" class="btn-icon">⚙️ الإعدادات</button>
-        <button id="logout-btn" class="btn-icon btn-logout" title="تسجيل الخروج">🚪 Exit</button>
+        <button id="logout-btn" class="btn-icon btn-logout" title="تسجيل الخروج">🚪 خروج</button>
       </div>
     </header>
 
@@ -111,8 +129,10 @@
             </div>
           </div>
 
+          <!-- جدول الأصناف المتطابق والمرن للموبايل -->
           <div class="items-table-wrapper">
-            <table id="items-table">
+            <div class="table-header-mobile">الأصناف والخدمات</div>
+            <table id="items-table" class="responsive-items-table">
               <thead>
                 <tr>
                   <th>الصنف / الخدمة</th>
@@ -124,7 +144,7 @@
               </thead>
               <tbody id="items-body"></tbody>
             </table>
-            <button type="button" id="add-item-btn" class="btn-secondary">+ إضافة صنف</button>
+            <button type="button" id="add-item-btn" class="btn-secondary">+ إضافة صنف جديد</button>
           </div>
 
           <div class="calc-summary">
@@ -180,7 +200,7 @@
       </div>
     </main>
 
-    <!-- باقي التبويبات (المخزن، العملاء، المصروفات) -->
+    <!-- باقي التبويبات -->
     <section id="tab-products" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
@@ -249,7 +269,7 @@
     </section>
   </div>
 
-  <!-- Modal معاينة الفاتورة -->
+  <!-- Modal المعاينة -->
   <div id="view-modal" class="modal hidden">
     <div class="modal-content preview-modal-content">
       <div class="modal-header">
