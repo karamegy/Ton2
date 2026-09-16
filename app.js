@@ -155,6 +155,16 @@ let activeUnsubscribers = [];
 let activeItems = [];
 let activeLedgerClientName = null;
 
+/* التحكم بنافذة سياسة الخصوصية */
+const privacyModal = document.getElementById('privacy-modal');
+document.getElementById('open-privacy-auth-btn')?.addEventListener('click', () => privacyModal.classList.remove('hidden'));
+document.getElementById('open-privacy-settings-btn')?.addEventListener('click', () => {
+  document.getElementById('settings-modal').classList.add('hidden');
+  privacyModal.classList.remove('hidden');
+});
+document.getElementById('close-privacy-btn')?.addEventListener('click', () => privacyModal.classList.add('hidden'));
+document.getElementById('accept-privacy-btn')?.addEventListener('click', () => privacyModal.classList.add('hidden'));
+
 document.getElementById('tab-login-btn').addEventListener('click', () => {
   document.getElementById('tab-login-btn').classList.add('active');
   document.getElementById('tab-register-btn').classList.remove('active');
@@ -828,7 +838,7 @@ document.getElementById('close-ledger-btn').addEventListener('click', () => {
   document.getElementById('client-ledger-modal').classList.add('hidden');
 });
 
-/* وظائف الأزرار لكشف حساب العميل (واتساب، صورة، طباعة) */
+/* أزرار إجراءات كشف الحساب */
 document.getElementById('ledger-whatsapp-btn').addEventListener('click', () => {
   if (!activeLedgerClientName) return;
   const stats = getClientCalculatedLedger(activeLedgerClientName);
