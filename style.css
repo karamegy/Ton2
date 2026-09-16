@@ -354,6 +354,9 @@ li {
 .giti-title-auth { font-size: 1.6rem; font-weight: 900; letter-spacing: 1.5px; color: var(--accent); margin-top: 6px; }
 .giti-sub-auth { font-size: 0.75rem; color: var(--text-muted); }
 
+.privacy-text-content::-webkit-scrollbar { width: 6px; }
+.privacy-text-content::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
 .giti-ad-wrapper { display: none !important; }
 .giti-ad-wrapper:has(ins[data-ad-status="filled"]) {
   display: block !important; width: 100%; margin-bottom: 12px;
