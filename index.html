@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0f172a">
-  <title>نظام إدارة الأعمال الذكي</title>
+  <title>نظام إدارة الأعمال المتكامل</title>
   
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
+  <!-- مكتبة تحويل الفواتير إلى صور -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -36,7 +38,7 @@
       </div>
     </header>
 
-    <!-- شريط التنقل الانسيابي بين الأقسام -->
+    <!-- شريط التنقل المتجاوب -->
     <nav class="app-nav">
       <button class="nav-tab active" data-tab="invoices">🧾 الفواتير</button>
       <button class="nav-tab" data-tab="products">📦 المخزن</button>
@@ -225,14 +227,70 @@
     </section>
   </div>
 
-  <!-- نافذة الإعدادات ورفع الشعار -->
+  <!-- نافذة معاينة الفاتورة وتحميلها كصورة -->
+  <div id="view-modal" class="modal hidden">
+    <div class="modal-content preview-modal-content">
+      <div class="modal-header">
+        <h3>👁️ معاينة الفاتورة</h3>
+        <button id="close-view-btn" class="btn-close">✕</button>
+      </div>
+      <div id="invoice-card-preview" class="invoice-card-preview">
+        <div class="preview-header">
+          <img id="v-logo" class="preview-logo hidden" alt="Logo">
+          <h2 id="v-store-name">اسم المحل</h2>
+          <p id="v-store-phone"></p>
+          <p id="v-store-address"></p>
+          <hr>
+          <p id="v-inv-id"></p>
+          <p id="v-date"></p>
+        </div>
+        <div class="preview-client">
+          <p><strong>العميل:</strong> <span id="v-client-name"></span></p>
+          <p><strong>الهاتف:</strong> <span id="v-client-phone"></span></p>
+          <p><strong>حالة الدفع:</strong> <span id="v-payment-status"></span></p>
+        </div>
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>الصنف</th>
+              <th>الكمية</th>
+              <th>السعر</th>
+              <th>الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody id="v-items-body"></tbody>
+        </table>
+        <div class="preview-totals">
+          <p>المجموع الفرعي: <span id="v-subtotal"></span></p>
+          <p>الخصم: <span id="v-discount"></span></p>
+          <p>الضريبة: <span id="v-tax"></span></p>
+          <h3>الإجمالي الكلي: <span id="v-total"></span></h3>
+        </div>
+      </div>
+      <div class="modal-actions-row">
+        <button id="download-img-btn" class="btn-primary">تحميل كصورة 🖼️</button>
+        <button id="print-view-btn" class="btn-success">طباعة 🖨️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة الإعدادات والثيمات -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>⚙️ إعدادات النشاط والشعار</h3>
+        <h3>⚙️ إعدادات النشاط والثيمات</h3>
         <button id="close-settings-btn" class="btn-close">✕</button>
       </div>
       <div class="form-group">
+        <label>مظهر التطبيق (الثيمات)</label>
+        <select id="theme-select">
+          <option value="dark">🌙 داكن (Dark Default)</option>
+          <option value="light">☀️ فاتح (Light Classic)</option>
+          <option value="emerald">🟢 زمردي (Emerald Green)</option>
+          <option value="indigo">🟣 بنفسجي (Indigo Night)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:10px;">
         <label>شعار المحل / الشركة (Logo)</label>
         <input type="file" id="store-logo-input" accept="image/*">
       </div>
@@ -256,7 +314,7 @@
     </div>
   </div>
 
-  <!-- قالب الطباعة مع الشعار -->
+  <!-- قالب الطباعة -->
   <div id="print-template" class="print-only">
     <div class="print-header">
       <img id="p-logo" class="print-logo hidden" alt="Store Logo">
