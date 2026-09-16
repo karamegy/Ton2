@@ -39,7 +39,7 @@ const translations = {
     storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب مجاني", logout: "تسجيل الخروج",
     accountDisabled: "⚠️ الحساب معطل من قبل الإدارة",
     accountDisabledDesc: "تم تعطيل رخصة هذا الحساب. يرجى التواصل مع Admin Master (haretg@gmail.com).",
-    tabInvoices: "🧾 الفواتير", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabExpenses: "💸 الخزينة",
+    tabInvoices: "🧾 الفواتير الحية", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabExpenses: "💸 الخزينة",
     totalSales: "إجمالي المبيعات", netProfit: "صافي الأرباح", expenses: "المصروفات", invoiceCount: "عدد الفواتير",
     newInvoice: "فاتورة مبيعات جديدة", invNo: "رقم الفاتورة:", clientName: "اسم العميل / الشركة",
     clientPhone: "رقم الهاتف (للواتساب)", itemTitle: "الصنف / الخدمة", qtyTitle: "الكمية", priceTitle: "السعر",
@@ -58,7 +58,7 @@ const translations = {
     storeName: "Business Name", registerBtn: "Create Free Instant Account", logout: "Sign Out",
     accountDisabled: "⚠️ Account Disabled by Admin",
     accountDisabledDesc: "This license has been suspended. Contact Admin Master (haretg@gmail.com).",
-    tabInvoices: "🧾 Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients & Ledger", tabExpenses: "💸 Expenses",
+    tabInvoices: "🧾 Live Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients & Ledger", tabExpenses: "💸 Expenses",
     totalSales: "Total Sales", netProfit: "Net Profit", expenses: "Expenses", invoiceCount: "Total Invoices",
     newInvoice: "New Sales Invoice", invNo: "Invoice #:", clientName: "Client / Company Name",
     clientPhone: "Client Phone (WhatsApp)", itemTitle: "Item / Service", qtyTitle: "Qty", priceTitle: "Price",
@@ -337,6 +337,7 @@ function applyTheme(themeName) {
 function updateHeaderUI() {
   document.getElementById('header-store-name').textContent = storeProfile.name;
   document.getElementById('header-store-phone').textContent = storeProfile.phone;
+  document.getElementById('currency-tag-display').textContent = storeProfile.currency || 'ج.م';
   
   const headerLogo = document.getElementById('header-logo');
   if (storeProfile.logo) {
@@ -364,25 +365,21 @@ function updateProductsDatalist() {
 
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
-    <tr class="item-row">
-      <td class="col-name">
-        <label class="mobile-label">${translations[currentLang].itemTitle}</label>
-        <input type="text" list="products-datalist" value="${item.name}" placeholder="اسم الصنف" onchange="window.onItemNameChange(${index}, this.value)">
+    <tr>
+      <td>
+        <input type="text" list="products-datalist" value="${item.name}" placeholder="أدخل أو اختر الصنف" onchange="window.onItemNameChange(${index}, this.value)">
       </td>
-      <td class="col-qty">
-        <label class="mobile-label">${translations[currentLang].qtyTitle}</label>
+      <td>
         <input type="number" value="${item.qty}" min="1" onchange="window.updateItem(${index}, 'qty', this.value)">
       </td>
-      <td class="col-price">
-        <label class="mobile-label">${translations[currentLang].priceTitle}</label>
+      <td>
         <input type="number" value="${item.price}" min="0" step="0.5" onchange="window.updateItem(${index}, 'price', this.value)">
       </td>
-      <td class="col-total">
-        <span class="mobile-label">${translations[currentLang].subtotalTitle}:</span>
-        <span class="total-amount">${(item.qty * item.price).toFixed(2)} ${storeProfile.currency}</span>
+      <td>
+        <span class="item-total-text">${(item.qty * item.price).toFixed(2)}</span>
       </td>
-      <td class="col-action">
-        <button type="button" class="btn-remove" onclick="window.removeItem(${index})" title="حذف">✕</button>
+      <td>
+        <button type="button" class="btn-remove" onclick="window.removeItem(${index})" title="حذف البند">✕</button>
       </td>
     </tr>
   `).join('');
@@ -427,6 +424,16 @@ function calculateTotals() {
   const discount = parseFloat(discountInput.value) || 0;
   const taxPercent = parseFloat(taxInput.value) || 0;
   
+  const discountRow = document.getElementById('discount-applied-row');
+  const discountDisplay = document.getElementById('discount-amount-display');
+
+  if (discount > 0) {
+    discountRow.classList.remove('hidden');
+    discountDisplay.textContent = `-${discount.toFixed(2)} ${storeProfile.currency}`;
+  } else {
+    discountRow.classList.add('hidden');
+  }
+
   const afterDiscount = Math.max(0, subtotal - discount);
   const taxAmount = afterDiscount * (taxPercent / 100);
   const grandTotal = afterDiscount + taxAmount;
@@ -508,6 +515,7 @@ function sendWhatsApp(inv) {
     msg += `• ${i.name} (×${i.qty}) = ${(i.qty * i.price).toFixed(2)} ${storeProfile.currency}\n`;
   });
   msg += `-----------------------------------\n`;
+  if (inv.discount > 0) msg += `🏷️ *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency}\n`;
   msg += `💰 *الإجمالي النهائي:* ${inv.grandTotal.toFixed(2)} ${storeProfile.currency}\n`;
   msg += `📌 *حالة الدفع:* ${inv.status}\n\n`;
   msg += `شكراً لتعاملكم معنا!`;
