@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
-  getFirestore, doc, setDoc, getDoc, collection, onSnapshot, 
+  getFirestore, doc, setDoc, getDoc, onSnapshot, 
   enableIndexedDbPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
@@ -22,10 +22,8 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// 1. تفعيل التخزين والمزامنة غير المتصلة (Offline-First Architecture)
 enableIndexedDbPersistence(db).catch(() => {});
 
-// محرك تفعيل الإعلانات التلقائي
 function triggerAds() {
   try {
     document.querySelectorAll('.adsbygoogle').forEach(() => {
@@ -34,20 +32,19 @@ function triggerAds() {
   } catch (e) {}
 }
 
-// 2. محرك الترجمة متعدد اللغات (i18n Engine)
 const translations = {
   ar: {
     login: "تسجيل الدخول", register: "حساب جديد", googleAuth: "متابعة بواسطة Google",
     or: "أو", email: "البريد الإلكتروني", password: "كلمة المرور", loginBtn: "دخول التطبيق",
-    storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب تلقائي مجاني", logout: "تسجيل الخروج",
+    storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب مجاني", logout: "تسجيل الخروج",
     accountDisabled: "⚠️ الحساب معطل من قبل الإدارة",
     accountDisabledDesc: "تم تعطيل رخصة هذا الحساب. يرجى التواصل مع Admin Master (haretg@gmail.com).",
-    tabInvoices: "🧾 الفواتير", tabProducts: "📦 المخزن", tabClients: "👥 العملاء", tabExpenses: "💸 الخزينة",
+    tabInvoices: "🧾 الفواتير", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabExpenses: "💸 الخزينة",
     totalSales: "إجمالي المبيعات", netProfit: "صافي الأرباح", expenses: "المصروفات", invoiceCount: "عدد الفواتير",
     newInvoice: "فاتورة مبيعات جديدة", invNo: "رقم الفاتورة:", clientName: "اسم العميل / الشركة",
     clientPhone: "رقم الهاتف (للواتساب)", itemTitle: "الصنف / الخدمة", qtyTitle: "الكمية", priceTitle: "السعر",
     subtotalTitle: "الإجمالي", addItem: "+ إضافة صنف جديد", subtotal: "المجموع الفرعي:", discount: "الخصم:",
-    tax: "الضريبة (%):", payStatus: "حالة الدفع:", grandTotal: "الإجمالي النهائي:", saveInv: "حفظ الفاتورة",
+    tax: "الضريبة (%):", payStatus: "حالة الدفع:", grandTotal: "الإجمالي النهائي:", saveInv: "حفظ وتسجيل الفاتورة",
     sendWhatsApp: "واتساب 💬", print: "طباعة 🖨️", invHistory: "سجل الفواتير السحابي", addProduct: "إضافة منتج للمخزن",
     pName: "اسم المنتج", pPrice: "سعر البيع", pCost: "سعر التكلفة", pStock: "الكمية بالمخزن", saveProduct: "حفظ المنتج",
     productList: "قائمة المنتجات المخزنة", clientDb: "سجل العملاء والمديونيات", addExpense: "تسجيل مصروف جديد",
@@ -61,7 +58,7 @@ const translations = {
     storeName: "Business Name", registerBtn: "Create Free Instant Account", logout: "Sign Out",
     accountDisabled: "⚠️ Account Disabled by Admin",
     accountDisabledDesc: "This license has been suspended. Contact Admin Master (haretg@gmail.com).",
-    tabInvoices: "🧾 Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients", tabExpenses: "💸 Expenses",
+    tabInvoices: "🧾 Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients & Ledger", tabExpenses: "💸 Expenses",
     totalSales: "Total Sales", netProfit: "Net Profit", expenses: "Expenses", invoiceCount: "Total Invoices",
     newInvoice: "New Sales Invoice", invNo: "Invoice #:", clientName: "Client / Company Name",
     clientPhone: "Client Phone (WhatsApp)", itemTitle: "Item / Service", qtyTitle: "Qty", priceTitle: "Price",
@@ -95,7 +92,6 @@ function applyLanguage(lang) {
 document.getElementById('toggle-lang-btn').addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
 document.getElementById('auth-lang-btn').addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
 
-// 3. خوارزمية تشفير الفاتورة الإلكترونية ZATCA / ETA TLV Base64
 function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAmount) {
   function getTlvTag(tag, value) {
     const encoder = new TextEncoder();
@@ -140,7 +136,6 @@ function renderQrCode(containerId, dataText) {
   }
 }
 
-// 4. عناصر الواجهة الأساسية
 const loginScreen = document.getElementById('login-screen');
 const lockScreen = document.getElementById('lock-screen');
 const mainApp = document.getElementById('main-app');
@@ -152,10 +147,13 @@ const authSuccess = document.getElementById('auth-success');
 
 let currentUser = null;
 let invoicesDB = [];
+let clientsDB = [];
 let productsDB = [];
 let expensesDB = [];
-let storeProfile = { name: "نظام إدارة الأعمال", phone: "01000000000", address: "", currency: "ج.م", vatNo: "", logo: "" };
+let storeProfile = { name: "GITI Enterprise ERP", phone: "01000000000", address: "", currency: "ج.م", vatNo: "", logo: "" };
 let activeUnsubscribers = [];
+let activeItems = [];
+let activeLedgerClientName = null;
 
 document.getElementById('tab-login-btn').addEventListener('click', () => {
   document.getElementById('tab-login-btn').classList.add('active');
@@ -178,7 +176,6 @@ function clearAuthMsgs() {
   authSuccess.classList.add('hidden');
 }
 
-// 5. إدارة الجلسات ومراقبة التراخيص الفورية
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
@@ -186,15 +183,13 @@ onAuthStateChanged(auth, async (user) => {
     const isAdmin = user.email === 'haretg@gmail.com';
     document.getElementById('user-uid-tag').textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
     
-    // فحص رخصة المستخدم تلقائياً
     const userRef = doc(db, "licenses", user.uid);
     const docSnap = await getDoc(userRef);
 
-    // إنشاء الرخصة المفعلة تلقائياً مجاناً إذا لم تكن موجودة
     if (!docSnap.exists()) {
       await setDoc(userRef, {
         email: user.email,
-        storeName: user.displayName || "نشاط تجاري مجاني",
+        storeName: user.displayName || "نشاط تجاري جديد",
         isActive: true,
         role: isAdmin ? "admin_master" : "user",
         createdAt: new Date().toISOString()
@@ -237,6 +232,11 @@ function attachCloudRealtimeSync(uid) {
     renderAllModules();
   });
 
+  const unsubClients = onSnapshot(doc(db, "users", uid, "data", "clients"), (snap) => {
+    clientsDB = snap.exists() ? snap.data().list || [] : [];
+    renderAllModules();
+  });
+
   const unsubProducts = onSnapshot(doc(db, "users", uid, "data", "products"), (snap) => {
     productsDB = snap.exists() ? snap.data().list || [] : [];
     renderAllModules();
@@ -247,7 +247,7 @@ function attachCloudRealtimeSync(uid) {
     renderAllModules();
   });
 
-  activeUnsubscribers = [unsubProfile, unsubInvoices, unsubProducts, unsubExpenses];
+  activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubProducts, unsubExpenses];
 }
 
 function detachCloudSync() {
@@ -260,7 +260,6 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
-// تسجيل الدخول بالبريد
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
@@ -272,7 +271,6 @@ loginForm.addEventListener('submit', async (e) => {
   }
 });
 
-// تسجيل الدخول بواسطة Google مع التفعيل المجاني التلقائي
 document.getElementById('google-login-btn').addEventListener('click', async () => {
   clearAuthMsgs();
   try {
@@ -295,7 +293,6 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
   }
 });
 
-// إنشاء حساب جديد وتفعيله مجاناً وبشكل فوري
 registerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
@@ -323,7 +320,6 @@ registerForm.addEventListener('submit', async (e) => {
 document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 document.getElementById('logout-lock-btn').addEventListener('click', () => signOut(auth));
 
-// 6. إدارة التبويبات والمظهر
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -351,8 +347,6 @@ function updateHeaderUI() {
   }
 }
 
-// 7. محرك الفواتير والحسابات
-let activeItems = [];
 const itemsBody = document.getElementById('items-body');
 const discountInput = document.getElementById('discount-input');
 const taxInput = document.getElementById('tax-input');
@@ -373,22 +367,22 @@ function renderItemsTable() {
     <tr class="item-row">
       <td class="col-name">
         <label class="mobile-label">${translations[currentLang].itemTitle}</label>
-        <input type="text" list="products-datalist" value="${item.name}" placeholder="اسم الصنف" onchange="onItemNameChange(${index}, this.value)">
+        <input type="text" list="products-datalist" value="${item.name}" placeholder="اسم الصنف" onchange="window.onItemNameChange(${index}, this.value)">
       </td>
       <td class="col-qty">
         <label class="mobile-label">${translations[currentLang].qtyTitle}</label>
-        <input type="number" value="${item.qty}" min="1" onchange="updateItem(${index}, 'qty', this.value)">
+        <input type="number" value="${item.qty}" min="1" onchange="window.updateItem(${index}, 'qty', this.value)">
       </td>
       <td class="col-price">
         <label class="mobile-label">${translations[currentLang].priceTitle}</label>
-        <input type="number" value="${item.price}" min="0" step="0.5" onchange="updateItem(${index}, 'price', this.value)">
+        <input type="number" value="${item.price}" min="0" step="0.5" onchange="window.updateItem(${index}, 'price', this.value)">
       </td>
       <td class="col-total">
         <span class="mobile-label">${translations[currentLang].subtotalTitle}:</span>
         <span class="total-amount">${(item.qty * item.price).toFixed(2)} ${storeProfile.currency}</span>
       </td>
       <td class="col-action">
-        <button type="button" class="btn-remove" onclick="removeItem(${index})" title="حذف">✕</button>
+        <button type="button" class="btn-remove" onclick="window.removeItem(${index})" title="حذف">✕</button>
       </td>
     </tr>
   `).join('');
@@ -417,6 +411,17 @@ document.getElementById('add-item-btn').addEventListener('click', () => {
   renderItemsTable();
 });
 
+const payStatusSelect = document.getElementById('payment-status-select');
+const paidAmountWrapper = document.getElementById('paid-amount-wrapper');
+
+payStatusSelect.addEventListener('change', () => {
+  if (payStatusSelect.value === 'مدفوعة جزئياً') {
+    paidAmountWrapper.classList.remove('hidden');
+  } else {
+    paidAmountWrapper.classList.add('hidden');
+  }
+});
+
 function calculateTotals() {
   const subtotal = activeItems.reduce((acc, item) => acc + (item.qty * item.price), 0);
   const discount = parseFloat(discountInput.value) || 0;
@@ -436,19 +441,27 @@ taxInput.addEventListener('input', calculateTotals);
 
 async function saveInvoiceData() {
   const clientName = document.getElementById('client-name').value.trim();
+  const clientPhone = document.getElementById('client-phone').value.trim();
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
   if (activeItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل'); return null; }
 
   const totals = calculateTotals();
   const isoTime = new Date().toISOString();
-  
+  const status = payStatusSelect.value;
+  let paidVal = totals.grandTotal;
+
+  if (status === 'آجل / غير مدفوعة') paidVal = 0;
+  else if (status === 'مدفوعة جزئياً') paidVal = parseFloat(document.getElementById('paid-amount-input').value) || 0;
+
   const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
 
   const invoice = {
     id: nextInvNum,
     client: clientName,
-    phone: document.getElementById('client-phone').value.trim(),
-    status: document.getElementById('payment-status-select').value,
+    phone: clientPhone,
+    status: status,
+    paidAmount: paidVal,
+    dueAmount: totals.grandTotal - paidVal,
     items: [...activeItems],
     ...totals,
     date: new Date().toLocaleDateString('ar-EG'),
@@ -458,6 +471,14 @@ async function saveInvoiceData() {
 
   invoicesDB.unshift(invoice);
   await syncDocToCloud('invoices', { list: invoicesDB });
+
+  let clientIndex = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
+  if (clientIndex === -1) {
+    clientsDB.push({ name: clientName, phone: clientPhone, openingBalance: 0, payments: [] });
+  } else {
+    if (clientPhone) clientsDB[clientIndex].phone = clientPhone;
+  }
+  await syncDocToCloud('clients', { list: clientsDB });
 
   nextInvNum++;
   localStorage.setItem('last_inv_num', nextInvNum.toString());
@@ -470,10 +491,9 @@ async function saveInvoiceData() {
 
 document.getElementById('save-btn').addEventListener('click', async () => {
   const inv = await saveInvoiceData();
-  if (inv) alert('تم حفظ الفاتورة سحابياً بنجاح');
+  if (inv) alert('تم حفظ الفاتورة وتحديث حساب العميل سحابياً بنجاح');
 });
 
-// 8. ميزات المعاينة، الطباعة والواتساب
 function sendWhatsApp(inv) {
   let phone = inv.phone.replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
@@ -596,10 +616,12 @@ function resetForm() {
   activeItems = [];
   discountInput.value = 0;
   taxInput.value = 14;
+  document.getElementById('paid-amount-input').value = 0;
+  paidAmountWrapper.classList.add('hidden');
+  payStatusSelect.value = 'مدفوعة';
   document.getElementById('add-item-btn').click();
 }
 
-// 9. وحدة الإدارة والعرض السحابي
 function renderSavedInvoices(filter = '') {
   const container = document.getElementById('invoices-container');
   const filtered = invoicesDB.filter(inv => inv.client.toLowerCase().includes(filter.toLowerCase()) || inv.id.toString().includes(filter) || inv.phone.includes(filter));
@@ -607,16 +629,17 @@ function renderSavedInvoices(filter = '') {
   container.innerHTML = filtered.map(inv => `
     <li>
       <div>
-        <strong>#${inv.id} - ${inv.client}</strong> (${inv.status})
+        <strong>#${inv.id} - ${inv.client}</strong> 
+        <span class="badge ${inv.status === 'مدفوعة' ? 'badge-paid' : (inv.status === 'مدفوعة جزئياً' ? 'badge-partial' : 'badge-unpaid')}">${inv.status}</span>
         <br><small style="color:var(--text-muted)">${inv.date} • ${inv.items.length} أصناف</small>
-        <div class="inv-actions">
-          <button class="btn-sm" style="background:var(--accent); color:#0f172a" onclick='viewInvoiceById(${inv.id})'>👁️ معاينة</button>
-          <button class="btn-sm" style="background:#25d366; color:#fff" onclick='sendWhatsAppById(${inv.id})'>💬 واتساب</button>
-          <button class="btn-sm" onclick="reprintInvoice(${inv.id})">🖨️ طباعة</button>
-          <button class="btn-sm" style="color:var(--danger)" onclick="deleteInvoice(${inv.id})">🗑️</button>
+        <div class="inv-actions" style="margin-top:6px;">
+          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick='window.viewInvoiceById(${inv.id})'>👁️ معاينة</button>
+          <button class="btn-sm" style="background:#25d366; color:#fff" onclick='window.sendWhatsAppById(${inv.id})'>💬 واتساب</button>
+          <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨️ طباعة</button>
+          <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </div>
-      <strong style="color:var(--accent)">${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</strong>
+      <strong style="color:var(--accent); font-size: 1rem;">${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</strong>
     </li>
   `).join('');
 }
@@ -666,7 +689,7 @@ function renderProducts() {
       </div>
       <div>
         <strong style="color:var(--success)">${p.price} ${storeProfile.currency}</strong>
-        <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="deleteProduct(${idx})">🗑️</button>
+        <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="window.deleteProduct(${idx})">🗑️</button>
       </div>
     </li>
   `).join('');
@@ -677,33 +700,130 @@ window.deleteProduct = async (idx) => {
   await syncDocToCloud('products', { list: productsDB });
 };
 
-function renderClients() {
-  const clientsMap = {};
+document.getElementById('client-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('c-name').value.trim();
+  const phone = document.getElementById('c-phone').value.trim();
+  const openingBalance = parseFloat(document.getElementById('c-balance').value) || 0;
 
-  invoicesDB.forEach(inv => {
-    if (!clientsMap[inv.client]) clientsMap[inv.client] = { phone: inv.phone, totalPurchases: 0, unpaid: 0 };
-    clientsMap[inv.client].totalPurchases += inv.grandTotal;
-    if (inv.status !== 'مدفوعة') clientsMap[inv.client].unpaid += inv.grandTotal;
+  if (clientsDB.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+    alert('العميل موجود بالفعل!');
+    return;
+  }
+
+  clientsDB.push({ name, phone, openingBalance, payments: [] });
+  await syncDocToCloud('clients', { list: clientsDB });
+  e.target.reset();
+});
+
+function getClientCalculatedLedger(clientName) {
+  const clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || { openingBalance: 0, payments: [] };
+  const clientInvoices = invoicesDB.filter(i => i.client.toLowerCase() === clientName.toLowerCase());
+
+  let totalPurchases = clientObj.openingBalance || 0;
+  let totalPaid = 0;
+
+  clientInvoices.forEach(inv => {
+    totalPurchases += inv.grandTotal;
+    totalPaid += (inv.paidAmount || 0);
   });
 
-  const container = document.getElementById('clients-list-container');
-  const datalist = document.getElementById('clients-datalist');
+  (clientObj.payments || []).forEach(p => {
+    totalPaid += p.amount;
+  });
 
-  datalist.innerHTML = Object.keys(clientsMap).map(c => `<option value="${c}">${clientsMap[c].phone}</option>`).join('');
-  container.innerHTML = Object.keys(clientsMap).map(cName => `
-    <li>
-      <div>
-        <strong>👤 ${cName}</strong> (${clientsMap[cName].phone || 'بدون هاتف'})
-        <br><small style="color:var(--text-muted)">إجمالي التعاملات: ${clientsMap[cName].totalPurchases.toFixed(2)} ${storeProfile.currency}</small>
-      </div>
-      <div>
-        <span style="color:${clientsMap[cName].unpaid > 0 ? 'var(--danger)' : 'var(--success)'}">
-          ${clientsMap[cName].unpaid > 0 ? `مستحق: ${clientsMap[cName].unpaid.toFixed(2)}` : 'خالي المديونية'}
-        </span>
-      </div>
-    </li>
-  `).join('');
+  const balance = Math.max(0, totalPurchases - totalPaid);
+  return { totalPurchases, totalPaid, balance, clientInvoices, payments: clientObj.payments || [] };
 }
+
+function renderClients() {
+  const datalist = document.getElementById('clients-datalist');
+  datalist.innerHTML = clientsDB.map(c => `<option value="${c.name}">${c.phone || ''}</option>`).join('');
+
+  const container = document.getElementById('clients-list-container');
+  const searchFilter = (document.getElementById('search-clients-input')?.value || '').toLowerCase();
+  const filtered = clientsDB.filter(c => c.name.toLowerCase().includes(searchFilter));
+
+  container.innerHTML = filtered.map(c => {
+    const stats = getClientCalculatedLedger(c.name);
+    return `
+      <li>
+        <div>
+          <strong>👤 ${c.name}</strong> <small style="color:var(--text-muted)">(${c.phone || 'بدون رقم'})</small>
+          <br><small style="color:var(--text-muted)">إجمالي التعاملات: ${stats.totalPurchases.toFixed(2)} | المدفوع: ${stats.totalPaid.toFixed(2)}</small>
+        </div>
+        <div style="text-align:left;">
+          <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
+            ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
+          </span>
+          <button class="btn-sm" style="margin-right:6px; background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name}')">كشف حساب 📄</button>
+        </div>
+      </li>
+    `;
+  }).join('');
+}
+
+document.getElementById('search-clients-input')?.addEventListener('input', renderClients);
+
+window.openClientLedger = (clientName) => {
+  activeLedgerClientName = clientName;
+  const stats = getClientCalculatedLedger(clientName);
+
+  document.getElementById('ledger-client-title').textContent = `👤 كشف حساب: ${clientName}`;
+  document.getElementById('ledger-total-sales').textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('ledger-total-paid').textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('ledger-balance').textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency}`;
+
+  const historyUl = document.getElementById('client-ledger-history');
+  let historyHtml = '';
+
+  stats.clientInvoices.forEach(inv => {
+    historyHtml += `
+      <li style="border-right: 4px solid var(--accent)">
+        <div>فاتورة #${inv.id} (${inv.date})<br><small>${inv.items.length} أصناف - ${inv.status}</small></div>
+        <strong>${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</strong>
+      </li>
+    `;
+  });
+
+  stats.payments.forEach(p => {
+    historyHtml += `
+      <li style="border-right: 4px solid var(--success)">
+        <div>دفعة سداد 💵 (${p.date})</div>
+        <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
+      </li>
+    `;
+  });
+
+  historyUl.innerHTML = historyHtml || '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
+  document.getElementById('client-ledger-modal').classList.remove('hidden');
+};
+
+document.getElementById('close-ledger-btn').addEventListener('click', () => {
+  document.getElementById('client-ledger-modal').classList.add('hidden');
+});
+
+document.getElementById('submit-payment-btn').addEventListener('click', async () => {
+  const amount = parseFloat(document.getElementById('pay-amount-input').value) || 0;
+  if (amount <= 0 || !activeLedgerClientName) return;
+
+  const idx = clientsDB.findIndex(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
+  if (idx !== -1) {
+    if (!clientsDB[idx].payments) clientsDB[idx].payments = [];
+    clientsDB[idx].payments.push({ amount, date: new Date().toLocaleDateString('ar-EG') });
+    await syncDocToCloud('clients', { list: clientsDB });
+    document.getElementById('pay-amount-input').value = '';
+    window.openClientLedger(activeLedgerClientName);
+    renderAllModules();
+  }
+});
+
+document.getElementById('client-name').addEventListener('input', (e) => {
+  const match = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
+  if (match && match.phone) {
+    document.getElementById('client-phone').value = match.phone;
+  }
+});
 
 document.getElementById('expense-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -725,7 +845,7 @@ function renderExpenses() {
       </div>
       <div>
         <strong style="color:var(--danger)">-${exp.amount.toFixed(2)} ${storeProfile.currency}</strong>
-        <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="deleteExpense(${idx})">🗑️</button>
+        <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="window.deleteExpense(${idx})">🗑️</button>
       </div>
     </li>
   `).join('');
@@ -741,14 +861,20 @@ function updateDashboardStats() {
   const totalExpensesAmount = expensesDB.reduce((acc, e) => acc + e.amount, 0);
   const netProfit = totalSales - totalExpensesAmount;
 
+  let totalDebts = 0;
+  clientsDB.forEach(c => {
+    totalDebts += getClientCalculatedLedger(c.name).balance;
+  });
+
   document.getElementById('stat-total-sales').textContent = `${totalSales.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('stat-total-debts').textContent = `${totalDebts.toFixed(2)} ${storeProfile.currency}`;
   document.getElementById('stat-expenses').textContent = `${totalExpensesAmount.toFixed(2)} ${storeProfile.currency}`;
   document.getElementById('stat-net-profit').textContent = `${netProfit.toFixed(2)} ${storeProfile.currency}`;
   document.getElementById('stat-count').textContent = invoicesDB.length;
 }
 
 document.getElementById('export-json-btn').addEventListener('click', () => {
-  const data = { invoices: invoicesDB, products: productsDB, expenses: expensesDB, storeProfile };
+  const data = { invoices: invoicesDB, clients: clientsDB, products: productsDB, expenses: expensesDB, storeProfile };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -788,7 +914,7 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
   
   const saveProfileData = async (logoBase64) => {
     storeProfile = {
-      name: document.getElementById('store-name-input').value || "نظام إدارة الأعمال",
+      name: document.getElementById('store-name-input').value || "GITI Enterprise ERP",
       phone: document.getElementById('store-phone-input').value,
       vatNo: document.getElementById('store-vat-input').value.trim(),
       address: document.getElementById('store-address-input').value,
