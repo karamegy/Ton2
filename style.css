@@ -223,6 +223,54 @@ li { background: var(--input-bg); padding: 10px; border-radius: 6px; margin-bott
 .auth-msg.success { background: rgba(34, 197, 94, 0.15); border: 1px solid var(--success); color: var(--success); }
 .btn-logout { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
 
+/* تنسيقات شعار GITI الأنيق */
+.giti-brand-auth {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.giti-logo-auth {
+  width: 68px;
+  height: 68px;
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+  object-fit: cover;
+}
+
+.giti-title-auth {
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #818cf8;
+  margin-top: 6px;
+}
+
+.giti-sub-auth {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.giti-header-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* حاويات الإعلانات التجاوبية (AdSense Containers) */
+.giti-ad-wrapper {
+  width: 100%;
+  margin: 12px 0;
+  background: var(--card-bg);
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 8px;
+  overflow: hidden;
+  text-align: center;
+  min-height: 90px;
+}
+
 .hidden { display: none !important; }
 .print-only { display: none !important; }
 
