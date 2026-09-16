@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// 1. إعدادات Firebase ونظام التحكم بالحساب (Kill-Switch)
+// 1. Firebase License Check (Kill Switch)
 const firebaseConfig = {
   apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
   authDomain: "giti-68750.firebaseapp.com",
@@ -19,7 +19,6 @@ localStorage.setItem('device_id', DEVICE_ID);
 const lockScreen = document.getElementById('lock-screen');
 const statusBadge = document.getElementById('account-status');
 
-// المراقبة اللحظية لصلاحية الاستخدام من Firestore
 onSnapshot(doc(db, "licenses", DEVICE_ID), (snapshot) => {
   if (snapshot.exists() && snapshot.data().isActive === true) {
     lockScreen.classList.add('hidden');
@@ -32,7 +31,20 @@ onSnapshot(doc(db, "licenses", DEVICE_ID), (snapshot) => {
   }
 });
 
-// 2. حالة الفاتورة الحالية والعناصر
+// 2. إعدادات النشاط التجاري (Store Settings)
+let storeProfile = JSON.parse(localStorage.getItem('store_profile') || JSON.stringify({
+  name: "نظام الفواتير الذكي",
+  phone: "إدارة الفواتير محلياً",
+  address: "",
+  currency: "ج.م"
+}));
+
+function updateHeaderUI() {
+  document.getElementById('header-store-name').textContent = storeProfile.name;
+  document.getElementById('header-store-phone').textContent = storeProfile.phone;
+}
+
+// 3. حالة عناصر الفاتورة والحسابات
 let activeItems = [];
 const itemsBody = document.getElementById('items-body');
 const addItemBtn = document.getElementById('add-item-btn');
@@ -42,11 +54,9 @@ const subtotalDisplay = document.getElementById('subtotal-val');
 const grandTotalDisplay = document.getElementById('grand-total-val');
 const invNumberDisplay = document.getElementById('inv-number-display');
 
-// توليد رقم الفاتورة التلقائي
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
 invNumberDisplay.textContent = `#${nextInvNum}`;
 
-// 3. إدارة جدول الأصناف المباشر
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
@@ -75,7 +85,6 @@ addItemBtn.addEventListener('click', () => {
   renderItemsTable();
 });
 
-// 4. حساب المجموع والخصم والضريبة
 function calculateTotals() {
   const subtotal = activeItems.reduce((acc, item) => acc + (item.qty * item.price), 0);
   const discount = parseFloat(discountInput.value) || 0;
@@ -85,15 +94,15 @@ function calculateTotals() {
   const taxAmount = afterDiscount * (taxPercent / 100);
   const grandTotal = afterDiscount + taxAmount;
 
-  subtotalDisplay.textContent = `${subtotal.toFixed(2)} ج.م`;
-  grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ج.م`;
+  subtotalDisplay.textContent = `${subtotal.toFixed(2)} ${storeProfile.currency}`;
+  grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ${storeProfile.currency}`;
   return { subtotal, discount, taxPercent, grandTotal };
 }
 
 discountInput.addEventListener('input', calculateTotals);
 taxInput.addEventListener('input', calculateTotals);
 
-// 5. حفظ وطباعة الفاتورة
+// 4. حفظ وإدارة الفواتير
 function saveInvoiceData() {
   const clientName = document.getElementById('client-name').value.trim();
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
@@ -119,6 +128,7 @@ function saveInvoiceData() {
 
   resetForm();
   renderSavedInvoices();
+  updateDashboardStats();
   return invoice;
 }
 
@@ -128,16 +138,21 @@ document.getElementById('save-btn').addEventListener('click', () => {
 
 document.getElementById('print-btn').addEventListener('click', () => {
   const inv = saveInvoiceData();
-  if (!inv) return;
+  if (inv) printInvoice(inv);
+});
 
+function printInvoice(inv) {
+  document.getElementById('p-store-name').textContent = storeProfile.name;
+  document.getElementById('p-store-phone').textContent = storeProfile.phone;
+  document.getElementById('p-store-address').textContent = storeProfile.address;
   document.getElementById('p-inv-id').textContent = `رقم الفاتورة: #${inv.id}`;
   document.getElementById('p-date').textContent = `التاريخ: ${inv.date}`;
   document.getElementById('p-client-name').textContent = inv.client;
   document.getElementById('p-client-phone').textContent = inv.phone || '-';
-  document.getElementById('p-subtotal').textContent = `${inv.subtotal.toFixed(2)} ج.م`;
-  document.getElementById('p-discount').textContent = `${inv.discount.toFixed(2)} ج.م`;
+  document.getElementById('p-subtotal').textContent = `${inv.subtotal.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('p-discount').textContent = `${inv.discount.toFixed(2)} ${storeProfile.currency}`;
   document.getElementById('p-tax').textContent = `${inv.taxPercent}%`;
-  document.getElementById('p-total').textContent = `${inv.grandTotal.toFixed(2)} ج.م`;
+  document.getElementById('p-total').textContent = `${inv.grandTotal.toFixed(2)} ${storeProfile.currency}`;
 
   document.getElementById('p-items-body').innerHTML = inv.items.map(item => `
     <tr>
@@ -149,7 +164,7 @@ document.getElementById('print-btn').addEventListener('click', () => {
   `).join('');
 
   window.print();
-});
+}
 
 function resetForm() {
   document.getElementById('client-name').value = '';
@@ -160,7 +175,7 @@ function resetForm() {
   addItemBtn.click();
 }
 
-// 6. عرض وسجل الفواتير المحفوظة والبحث
+// 5. سجل الفواتير، البحث، والحذف
 function renderSavedInvoices(filter = '') {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const container = document.getElementById('invoices-container');
@@ -175,23 +190,108 @@ function renderSavedInvoices(filter = '') {
       <div>
         <strong>#${inv.id} - ${inv.client}</strong>
         <br><small style="color:#94a3b8">${inv.date} • ${inv.items.length} أصناف</small>
+        <div class="inv-actions">
+          <button class="btn-sm" onclick="reprintInvoice(${inv.id})">🖨️ طباعة</button>
+          <button class="btn-sm" style="color:#ef4444" onclick="deleteInvoice(${inv.id})">🗑️ حذف</button>
+        </div>
       </div>
-      <strong style="color:#38bdf8">${inv.grandTotal.toFixed(2)} ج.م</strong>
+      <strong style="color:#38bdf8">${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</strong>
     </li>
   `).join('');
 }
+
+window.reprintInvoice = (id) => {
+  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
+  const inv = invoices.find(i => i.id === id);
+  if (inv) printInvoice(inv);
+};
+
+window.deleteInvoice = (id) => {
+  if (!confirm('هل أنت تأكد من حذف هذه الفاتورة؟')) return;
+  let invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
+  invoices = invoices.filter(i => i.id !== id);
+  localStorage.setItem('invoices_db', JSON.stringify(invoices));
+  renderSavedInvoices();
+  updateDashboardStats();
+};
 
 document.getElementById('search-input').addEventListener('input', (e) => {
   renderSavedInvoices(e.target.value);
 });
 
-// تسجيل Service Worker للعمل أوفلاين
+// 6. الإحصائيات (Stats Dashboard)
+function updateDashboardStats() {
+  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
+  const totalSales = invoices.reduce((acc, i) => acc + i.grandTotal, 0);
+  const count = invoices.length;
+  const avg = count > 0 ? totalSales / count : 0;
+
+  document.getElementById('stat-total-sales').textContent = `${totalSales.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('stat-count').textContent = count;
+  document.getElementById('stat-avg').textContent = `${avg.toFixed(2)} ${storeProfile.currency}`;
+}
+
+// 7. النسخ الاحتياطي وتصدير CSV
+document.getElementById('export-json-btn').addEventListener('click', () => {
+  const invoices = localStorage.getItem('invoices_db') || '[]';
+  const blob = new Blob([invoices], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `invoices_backup_${Date.now()}.json`;
+  a.click();
+});
+
+document.getElementById('export-csv-btn').addEventListener('click', () => {
+  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
+  let csv = 'رقم الفاتورة,العميل,الهاتف,التاريخ,الإجمالي\n';
+  invoices.forEach(inv => {
+    csv += `${inv.id},"${inv.client}","${inv.phone}",${inv.date},${inv.grandTotal}\n`;
+  });
+  const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sales_report_${Date.now()}.csv`;
+  a.click();
+});
+
+// 8. إدارة الإعدادات (Modal)
+const settingsModal = document.getElementById('settings-modal');
+document.getElementById('open-settings-btn').addEventListener('click', () => {
+  document.getElementById('store-name-input').value = storeProfile.name;
+  document.getElementById('store-phone-input').value = storeProfile.phone;
+  document.getElementById('store-address-input').value = storeProfile.address;
+  document.getElementById('currency-symbol-input').value = storeProfile.currency;
+  settingsModal.classList.remove('hidden');
+});
+
+document.getElementById('close-settings-btn').addEventListener('click', () => {
+  settingsModal.classList.add('hidden');
+});
+
+document.getElementById('save-settings-btn').addEventListener('click', () => {
+  storeProfile = {
+    name: document.getElementById('store-name-input').value || "نظام الفواتير الذكي",
+    phone: document.getElementById('store-phone-input').value,
+    address: document.getElementById('store-address-input').value,
+    currency: document.getElementById('currency-symbol-input').value || "ج.م"
+  };
+  localStorage.setItem('store_profile', JSON.stringify(storeProfile));
+  updateHeaderUI();
+  calculateTotals();
+  renderSavedInvoices();
+  updateDashboardStats();
+  settingsModal.classList.add('hidden');
+});
+
+// تسجيل PWA Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
 
-// التشغيل المبدئي
+// البدء الأول
+updateHeaderUI();
 addItemBtn.click();
 renderSavedInvoices();
+updateDashboardStats();
