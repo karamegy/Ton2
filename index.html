@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>Global ERP & E-Invoicing System</title>
+  <title>GITI - Global ERP & E-Invoicing System</title>
   
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -20,6 +22,14 @@
       <div class="lang-switch-auth">
         <button id="auth-lang-btn" class="btn-sm">English / عربي</button>
       </div>
+
+      <!-- الهوية البصرية وشعار GITI -->
+      <div class="giti-brand-auth">
+        <img src="logo.png" alt="GITI Logo" class="giti-logo-auth">
+        <h1 class="giti-title-auth">GITI</h1>
+        <p class="giti-sub-auth">Global ERP & E-Invoicing System</p>
+      </div>
+
       <div class="auth-tabs">
         <button id="tab-login-btn" class="auth-tab active" data-i18n="login">تسجيل الدخول</button>
         <button id="tab-register-btn" class="auth-tab" data-i18n="register">حساب جديد</button>
@@ -73,6 +83,7 @@
   <!-- شاشة القفل والتعطيل -->
   <div id="lock-screen" class="hidden">
     <div class="lock-card">
+      <img src="logo.png" alt="GITI Logo" class="giti-logo-auth" style="width: 50px; height: 50px; margin-bottom: 10px;">
       <h2 data-i18n="accountDisabled">⚠️ الحساب معطل أو بانتظار التفعيل</h2>
       <p data-i18n="accountDisabledDesc">تم تسجيل حسابك بنجاح. يرجى التواصل مع الإدارة لتفعيل الرخصة السحابية.</p>
       <p class="sub-text" id="user-uid-tag"></p>
@@ -84,9 +95,10 @@
   <div id="main-app" class="hidden">
     <header class="app-header">
       <div class="brand-container">
-        <img id="header-logo" class="store-logo hidden" alt="Logo">
+        <img src="logo.png" alt="GITI Logo" class="giti-header-logo">
+        <img id="header-logo" class="store-logo hidden" alt="Store Logo">
         <div>
-          <h1 id="header-store-name">نظام إدارة الأعمال السحابي</h1>
+          <h1 id="header-store-name">GITI ERP</h1>
           <p class="subtitle" id="header-store-phone">الفاتورة الإلكترونية والمخزن</p>
         </div>
       </div>
