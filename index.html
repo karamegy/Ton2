@@ -4,15 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0f172a">
-  <meta name="description" content="نظام إدارة المبيعات والمخازن وإرسال الفواتير عبر واتساب">
-  <title>نظام إدارة الأعمال المتكامل</title>
+  <title>نظام إدارة الأعمال الذكي</title>
   
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
-  <!-- شاشة الحظر التلقائي (Kill-Switch) -->
+  <!-- شاشة القفل عند تعطيل الحساب -->
   <div id="lock-screen" class="hidden">
     <div class="lock-card">
       <h2>⚠️ الحساب معطل</h2>
@@ -24,9 +23,12 @@
   <!-- الواجهة الرئيسية -->
   <div id="main-app">
     <header class="app-header">
-      <div>
-        <h1 id="header-store-name">نظام الفواتير والشركات</h1>
-        <p class="subtitle" id="header-store-phone">إدارة الفواتير والمخزن محلياً</p>
+      <div class="brand-container">
+        <img id="header-logo" class="store-logo hidden" alt="Logo">
+        <div>
+          <h1 id="header-store-name">نظام إدارة الأعمال</h1>
+          <p class="subtitle" id="header-store-phone">إدارة الفواتير والمخزن محلياً</p>
+        </div>
       </div>
       <div class="header-actions">
         <span id="account-status" class="status-badge">جاري التحقق...</span>
@@ -34,15 +36,15 @@
       </div>
     </header>
 
-    <!-- شريط التنقل بين الأقسام (Tabs) -->
+    <!-- شريط التنقل الانسيابي بين الأقسام -->
     <nav class="app-nav">
-      <button class="nav-tab active" data-tab="invoices">🧾 الفواتير والمبيعات</button>
-      <button class="nav-tab" data-tab="products">📦 المنتجات والمخزن</button>
-      <button class="nav-tab" data-tab="clients">👥 دليل العملاء</button>
-      <button class="nav-tab" data-tab="expenses">💸 الخزينة والمصروفات</button>
+      <button class="nav-tab active" data-tab="invoices">🧾 الفواتير</button>
+      <button class="nav-tab" data-tab="products">📦 المخزن</button>
+      <button class="nav-tab" data-tab="clients">👥 العملاء</button>
+      <button class="nav-tab" data-tab="expenses">💸 الخزينة</button>
     </nav>
 
-    <!-- شريط الإحصائيات الشاملة -->
+    <!-- شريط الإحصائيات -->
     <section class="stats-grid">
       <div class="stat-card">
         <span class="stat-title">إجمالي المبيعات</span>
@@ -50,11 +52,11 @@
       </div>
       <div class="stat-card">
         <span class="stat-title">صافي الأرباح</span>
-        <strong id="stat-net-profit" class="stat-value" style="color: #22c55e;">0.00 ج.م</strong>
+        <strong id="stat-net-profit" class="stat-value text-success">0.00 ج.م</strong>
       </div>
       <div class="stat-card">
-        <span class="stat-title">إجمالي المصروفات</span>
-        <strong id="stat-expenses" class="stat-value" style="color: #ef4444;">0.00 ج.م</strong>
+        <span class="stat-title">المصروفات</span>
+        <strong id="stat-expenses" class="stat-value text-danger">0.00 ج.م</strong>
       </div>
       <div class="stat-card">
         <span class="stat-title">عدد الفواتير</span>
@@ -62,7 +64,7 @@
       </div>
     </section>
 
-    <!-- 1. قسم الفواتير والمبيعات -->
+    <!-- 1. قسم الفواتير -->
     <main id="tab-invoices" class="tab-content active">
       <div class="dashboard-grid">
         <section class="card invoice-form-section">
@@ -73,8 +75,8 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>اختر العميل أو اكتب اسمه</label>
-              <input type="text" id="client-name" list="clients-datalist" placeholder="اسم العميل...">
+              <label>اسم العميل / الشركة</label>
+              <input type="text" id="client-name" list="clients-datalist" placeholder="اختر أو اكتب اسم العميل">
               <datalist id="clients-datalist"></datalist>
             </div>
             <div class="form-group">
@@ -83,7 +85,6 @@
             </div>
           </div>
 
-          <!-- جدول الأصناف -->
           <div class="items-table-wrapper">
             <table id="items-table">
               <thead>
@@ -100,7 +101,6 @@
             <button type="button" id="add-item-btn" class="btn-secondary">+ إضافة صنف</button>
           </div>
 
-          <!-- الحسابات وحالة الدفع -->
           <div class="calc-summary">
             <div class="calc-row">
               <span>المجموع الفرعي:</span>
@@ -136,7 +136,6 @@
           </div>
         </section>
 
-        <!-- سجل الفواتير -->
         <section class="card invoice-list-section">
           <div class="card-header">
             <h3>سجل الفواتير</h3>
@@ -155,7 +154,7 @@
       </div>
     </main>
 
-    <!-- 2. قسم المنتجات والمخزن -->
+    <!-- 2. قسم المخزن والمنتجات -->
     <section id="tab-products" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
@@ -177,7 +176,7 @@
               <label>الكمية بالمخزن</label>
               <input type="number" id="p-stock" value="100">
             </div>
-            <button type="submit" class="btn-primary" style="grid-column: 1 / -1;">حفظ المنتج في المخزن</button>
+            <button type="submit" class="btn-primary" style="grid-column: 1 / -1;">حفظ المنتج</button>
           </form>
         </div>
         <div class="card">
@@ -189,7 +188,7 @@
       </div>
     </section>
 
-    <!-- 3. قسم دليل العملاء -->
+    <!-- 3. قسم العملاء -->
     <section id="tab-clients" class="tab-content">
       <div class="card">
         <h3>سجل العملاء والمديونيات</h3>
@@ -226,26 +225,30 @@
     </section>
   </div>
 
-  <!-- نافذة إعدادات المتجر -->
+  <!-- نافذة الإعدادات ورفع الشعار -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>⚙️ إعدادات النشاط التجاري</h3>
+        <h3>⚙️ إعدادات النشاط والشعار</h3>
         <button id="close-settings-btn" class="btn-close">✕</button>
       </div>
       <div class="form-group">
+        <label>شعار المحل / الشركة (Logo)</label>
+        <input type="file" id="store-logo-input" accept="image/*">
+      </div>
+      <div class="form-group" style="margin-top:10px;">
         <label>اسم المحل / الشركة</label>
         <input type="text" id="store-name-input">
       </div>
-      <div class="form-group">
+      <div class="form-group" style="margin-top:10px;">
         <label>رقم الهاتف للاتصال</label>
         <input type="text" id="store-phone-input">
       </div>
-      <div class="form-group">
+      <div class="form-group" style="margin-top:10px;">
         <label>العنوان</label>
         <input type="text" id="store-address-input">
       </div>
-      <div class="form-group">
+      <div class="form-group" style="margin-top:10px;">
         <label>العملة</label>
         <input type="text" id="currency-symbol-input" value="ج.م">
       </div>
@@ -253,9 +256,10 @@
     </div>
   </div>
 
-  <!-- قالب الطباعة -->
+  <!-- قالب الطباعة مع الشعار -->
   <div id="print-template" class="print-only">
     <div class="print-header">
+      <img id="p-logo" class="print-logo hidden" alt="Store Logo">
       <h1 id="p-store-name">فاتورة مبيعات</h1>
       <p id="p-store-phone"></p>
       <p id="p-store-address"></p>
