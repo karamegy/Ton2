@@ -587,31 +587,48 @@ document.getElementById('print-btn').addEventListener('click', async () => {
 });
 
 function printInvoice(inv) {
-  const printLogo = document.getElementById('p-logo');
-  if (storeProfile.logo) {
-    printLogo.src = storeProfile.logo;
-    printLogo.classList.remove('hidden');
-  } else {
-    printLogo.classList.add('hidden');
-  }
-
-  document.getElementById('p-store-name').textContent = storeProfile.name;
-  document.getElementById('p-store-phone').textContent = storeProfile.phone;
-  document.getElementById('p-store-vat').textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
-  document.getElementById('p-store-address').textContent = storeProfile.address;
-  document.getElementById('p-inv-id').textContent = `رقم الفاتورة: #${inv.id}`;
-  document.getElementById('p-date').textContent = `التاريخ: ${inv.date}`;
-  document.getElementById('p-client-name').textContent = inv.client;
-  document.getElementById('p-client-phone').textContent = inv.phone || '-';
-  document.getElementById('p-payment-status').textContent = inv.status;
-  document.getElementById('p-subtotal').textContent = `${inv.subtotal.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('p-discount').textContent = `${inv.discount.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('p-tax').textContent = `${inv.taxPercent}%`;
-  document.getElementById('p-total').textContent = `${inv.grandTotal.toFixed(2)} ${storeProfile.currency}`;
-
-  document.getElementById('p-items-body').innerHTML = inv.items.map(item => `
-    <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
-  `).join('');
+  const printTemplate = document.getElementById('print-template');
+  printTemplate.innerHTML = `
+    <div class="print-header">
+      ${storeProfile.logo ? `<img id="p-logo" class="print-logo" src="${storeProfile.logo}">` : ''}
+      <h1 id="p-store-name">${storeProfile.name}</h1>
+      <p id="p-store-phone">${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
+      <p id="p-store-vat">${storeProfile.vatNo ? 'الرقم الضريبي: ' + storeProfile.vatNo : ''}</p>
+      <p id="p-store-address">${storeProfile.address || ''}</p>
+      <hr>
+      <p id="p-inv-id">رقم الفاتورة: #${inv.id}</p>
+      <p id="p-date">التاريخ: ${inv.date}</p>
+    </div>
+    <div class="print-client">
+      <p><strong>العميل:</strong> <span id="p-client-name">${inv.client}</span></p>
+      <p><strong>الهاتف:</strong> <span id="p-client-phone">${inv.phone || '-'}</span></p>
+      <p><strong>حالة الدفع:</strong> <span id="p-payment-status">${inv.status}</span></p>
+    </div>
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>الصنف</th>
+          <th>الكمية</th>
+          <th>السعر</th>
+          <th>الإجمالي</th>
+        </tr>
+      </thead>
+      <tbody id="p-items-body">
+        ${inv.items.map(item => `
+          <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="print-footer-container">
+      <div class="print-totals">
+        <p>المجموع الفرعي: <span id="p-subtotal">${inv.subtotal.toFixed(2)} ${storeProfile.currency}</span></p>
+        <p>الخصم: <span id="p-discount">${inv.discount.toFixed(2)} ${storeProfile.currency}</span></p>
+        <p>الضريبة: <span id="p-tax">${inv.taxPercent}%</span></p>
+        <h3>الإجمالي الكلي: <span id="p-total">${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</span></h3>
+      </div>
+      <div id="print-qrcode" class="qrcode-wrapper"></div>
+    </div>
+  `;
 
   renderQrCode('print-qrcode', inv.zatcaQr || generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime || new Date().toISOString(), inv.grandTotal, inv.taxAmount || 0));
 
@@ -809,6 +826,92 @@ window.openClientLedger = (clientName) => {
 
 document.getElementById('close-ledger-btn').addEventListener('click', () => {
   document.getElementById('client-ledger-modal').classList.add('hidden');
+});
+
+/* وظائف الأزرار لكشف حساب العميل (واتساب، صورة، طباعة) */
+document.getElementById('ledger-whatsapp-btn').addEventListener('click', () => {
+  if (!activeLedgerClientName) return;
+  const stats = getClientCalculatedLedger(activeLedgerClientName);
+  const clientObj = clientsDB.find(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
+  let phone = (clientObj?.phone || '').replace(/[^0-9]/g, '');
+  if (!phone) { alert('يرجى تسجيل رقم الهاتف للعميل أولاً في سجل العملاء'); return; }
+  if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
+
+  let msg = `*${storeProfile.name}*\n`;
+  msg += `📄 *كشف حساب العميل:* ${activeLedgerClientName}\n`;
+  msg += `📅 *التاريخ:* ${new Date().toLocaleDateString('ar-EG')}\n`;
+  msg += `-----------------------------------\n`;
+  msg += `🛍️ *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
+  msg += `✅ *إجمالي المدفوعات:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
+  msg += `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
+  msg += `-----------------------------------\n`;
+  msg += `شكراً لتعاملكم معنا!`;
+
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+});
+
+document.getElementById('ledger-download-btn').addEventListener('click', () => {
+  const ledgerCard = document.getElementById('ledger-printable-card');
+  html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+});
+
+document.getElementById('ledger-print-btn').addEventListener('click', () => {
+  if (!activeLedgerClientName) return;
+  const stats = getClientCalculatedLedger(activeLedgerClientName);
+  const printTemplate = document.getElementById('print-template');
+
+  printTemplate.innerHTML = `
+    <div class="print-header">
+      ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
+      <h1>كشف حساب عميل</h1>
+      <h2>${storeProfile.name}</h2>
+      <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
+      <p>${storeProfile.address || ''}</p>
+      <hr>
+      <p><strong>اسم العميل:</strong> ${activeLedgerClientName}</p>
+      <p><strong>تاريخ التقرير:</strong> ${new Date().toLocaleDateString('ar-EG')}</p>
+    </div>
+
+    <div style="margin: 15px 0; padding: 10px; border: 1px solid #000; border-radius: 6px;">
+      <p><strong>إجمالي التعاملات:</strong> ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}</p>
+      <p><strong>إجمالي المدفوعات:</strong> ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}</p>
+      <p style="font-size: 1.1rem; font-weight: bold; margin-top: 5px;"><strong>الرصيد المتبقي / المديونية:</strong> ${stats.balance.toFixed(2)} ${storeProfile.currency}</p>
+    </div>
+
+    <h3>سجل الحركة الحسابية التفصيلي:</h3>
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>بيان المعاملة</th>
+          <th>التاريخ</th>
+          <th>المبلغ</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${stats.clientInvoices.map(inv => `
+          <tr>
+            <td>فاتورة مبيعات #${inv.id} (${inv.items.length} أصناف - ${inv.status})</td>
+            <td>${inv.date}</td>
+            <td>${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</td>
+          </tr>
+        `).join('')}
+        ${stats.payments.map(p => `
+          <tr>
+            <td>دفعة سداد نقدي 💵</td>
+            <td>${p.date}</td>
+            <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+
+  window.print();
 });
 
 document.getElementById('submit-payment-btn').addEventListener('click', async () => {
