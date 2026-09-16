@@ -1,6 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { 
+  getFirestore, doc, setDoc, getDoc, collection, onSnapshot, 
+  enableIndexedDbPersistence 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { 
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
+  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
@@ -14,7 +20,118 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
+// 1. تفعيل التخزين والمزامنة غير المتصلة (Offline-First Architecture)
+enableIndexedDbPersistence(db).catch(() => {});
+
+// 2. محرك الترجمة متعدد اللغات (i18n Engine)
+const translations = {
+  ar: {
+    login: "تسجيل الدخول", register: "حساب جديد", googleAuth: "متابعة بواسطة Google",
+    or: "أو", email: "البريد الإلكتروني", password: "كلمة المرور", loginBtn: "دخول التطبيق",
+    storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب طلب تفعيل", logout: "تسجيل الخروج",
+    accountDisabled: "⚠️ الحساب معطل أو بانتظار التفعيل",
+    accountDisabledDesc: "تم تسجيل حسابك بنجاح. يرجى التواصل مع الإدارة لتفعيل الرخصة السحابية.",
+    tabInvoices: "🧾 الفواتير", tabProducts: "📦 المخزن", tabClients: "👥 العملاء", tabExpenses: "💸 الخزينة",
+    totalSales: "إجمالي المبيعات", netProfit: "صافي الأرباح", expenses: "المصروفات", invoiceCount: "عدد الفواتير",
+    newInvoice: "فاتورة مبيعات جديدة", invNo: "رقم الفاتورة:", clientName: "اسم العميل / الشركة",
+    clientPhone: "رقم الهاتف (للواتساب)", itemTitle: "الصنف / الخدمة", qtyTitle: "الكمية", priceTitle: "السعر",
+    subtotalTitle: "الإجمالي", addItem: "+ إضافة صنف جديد", subtotal: "المجموع الفرعي:", discount: "الخصم:",
+    tax: "الضريبة (%):", payStatus: "حالة الدفع:", grandTotal: "الإجمالي النهائي:", saveInv: "حفظ الفاتورة",
+    sendWhatsApp: "واتساب 💬", print: "طباعة 🖨️", invHistory: "سجل الفواتير السحابي", addProduct: "إضافة منتج للمخزن",
+    pName: "اسم المنتج", pPrice: "سعر البيع", pCost: "سعر التكلفة", pStock: "الكمية بالمخزن", saveProduct: "حفظ المنتج",
+    productList: "قائمة المنتجات المخزنة", clientDb: "سجل العملاء والمديونيات", addExpense: "تسجيل مصروف جديد",
+    expTitle: "بند المصروف", expAmount: "المبلغ", saveExpense: "تسجيل المصروف", expList: "سجل المصروفات",
+    previewTitle: "👁️ معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼️", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
+    theme: "مظهر التطبيق", currency: "العملة الرئيسية", vatNo: "الرقم الضريبي للمنشأة (VAT)", logo: "شعار الشركة", address: "العنوان", saveSettings: "حفظ التغييرات السحابية"
+  },
+  en: {
+    login: "Sign In", register: "Register", googleAuth: "Continue with Google",
+    or: "OR", email: "Email Address", password: "Password", loginBtn: "Access App",
+    storeName: "Business Name", registerBtn: "Request Account Activation", logout: "Sign Out",
+    accountDisabled: "⚠️ Account Locked or Pending Approval",
+    accountDisabledDesc: "Your account is created. Please contact admin to activate your cloud license.",
+    tabInvoices: "🧾 Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients", tabExpenses: "💸 Expenses",
+    totalSales: "Total Sales", netProfit: "Net Profit", expenses: "Expenses", invoiceCount: "Total Invoices",
+    newInvoice: "New Sales Invoice", invNo: "Invoice #:", clientName: "Client / Company Name",
+    clientPhone: "Client Phone (WhatsApp)", itemTitle: "Item / Service", qtyTitle: "Qty", priceTitle: "Price",
+    subtotalTitle: "Total", addItem: "+ Add Item", subtotal: "Subtotal:", discount: "Discount:",
+    tax: "VAT (%):", payStatus: "Payment Status:", grandTotal: "Grand Total:", saveInv: "Save Invoice",
+    sendWhatsApp: "WhatsApp 💬", print: "Print 🖨️", invHistory: "Cloud Invoice Logs", addProduct: "Add Product",
+    pName: "Product Name", pPrice: "Selling Price", pCost: "Cost Price", pStock: "Stock Quantity", saveProduct: "Save Product",
+    productList: "Stocked Items", clientDb: "Client Accounts", addExpense: "Add Expense",
+    expTitle: "Expense Category", expAmount: "Amount", saveExpense: "Record Expense", expList: "Expense Log",
+    previewTitle: "👁️ E-Invoice Preview", downloadImg: "Download Image 🖼️", settingsTitle: "⚙️ Enterprise Settings",
+    theme: "UI Theme", currency: "Base Currency", vatNo: "VAT Number", logo: "Company Logo", address: "Address", saveSettings: "Save Cloud Settings"
+  }
+};
+
+let currentLang = localStorage.getItem('app_lang') || 'ar';
+
+function applyLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('app_lang', lang);
+  document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+  document.documentElement.setAttribute('lang', lang);
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (translations[lang][key]) {
+      el.textContent = translations[lang][key];
+    }
+  });
+}
+
+document.getElementById('toggle-lang-btn').addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
+document.getElementById('auth-lang-btn').addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
+
+// 3. خوارزمية تشفير الفاتورة الإلكترونية ZATCA / ETA TLV Base64
+function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAmount) {
+  function getTlvTag(tag, value) {
+    const encoder = new TextEncoder();
+    const valBytes = encoder.encode(value);
+    const buf = new Uint8Array(2 + valBytes.length);
+    buf[0] = tag;
+    buf[1] = valBytes.length;
+    buf.set(valBytes, 2);
+    return buf;
+  }
+
+  const tag1 = getTlvTag(1, sellerName || "Store");
+  const tag2 = getTlvTag(2, vatNo || "000000000000000");
+  const tag3 = getTlvTag(3, timeStamp || new Date().toISOString());
+  const tag4 = getTlvTag(4, totalAmount.toFixed(2));
+  const tag5 = getTlvTag(5, vatAmount.toFixed(2));
+
+  const combined = new Uint8Array(tag1.length + tag2.length + tag3.length + tag4.length + tag5.length);
+  let offset = 0;
+  [tag1, tag2, tag3, tag4, tag5].forEach(tag => {
+    combined.set(tag, offset);
+    offset += tag.length;
+  });
+
+  let binary = '';
+  combined.forEach(byte => binary += String.fromCharCode(byte));
+  return btoa(binary);
+}
+
+function renderQrCode(containerId, dataText) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  if (typeof QRCode !== 'undefined' && dataText) {
+    new QRCode(container, {
+      text: dataText,
+      width: 90,
+      height: 90,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+}
+
+// 4. عناصر الواجهة الأساسية
 const loginScreen = document.getElementById('login-screen');
 const lockScreen = document.getElementById('lock-screen');
 const mainApp = document.getElementById('main-app');
@@ -24,8 +141,14 @@ const registerForm = document.getElementById('register-form');
 const authError = document.getElementById('auth-error');
 const authSuccess = document.getElementById('auth-success');
 
-// 1. إدارة تبويبات الدخول والتسجيل
-document.getElementById('tab-login-btn').addEventListener('click', (e) => {
+let currentUser = null;
+let invoicesDB = [];
+let productsDB = [];
+let expensesDB = [];
+let storeProfile = { name: "نظام إدارة الأعمال", phone: "01000000000", address: "", currency: "ج.م", vatNo: "", logo: "" };
+let activeUnsubscribers = [];
+
+document.getElementById('tab-login-btn').addEventListener('click', () => {
   document.getElementById('tab-login-btn').classList.add('active');
   document.getElementById('tab-register-btn').classList.remove('active');
   loginForm.classList.remove('hidden');
@@ -33,7 +156,7 @@ document.getElementById('tab-login-btn').addEventListener('click', (e) => {
   clearAuthMsgs();
 });
 
-document.getElementById('tab-register-btn').addEventListener('click', (e) => {
+document.getElementById('tab-register-btn').addEventListener('click', () => {
   document.getElementById('tab-register-btn').classList.add('active');
   document.getElementById('tab-login-btn').classList.remove('active');
   registerForm.classList.remove('hidden');
@@ -46,50 +169,111 @@ function clearAuthMsgs() {
   authSuccess.classList.add('hidden');
 }
 
-// 2. معالجة التسجيل الحقيقي للحساب وإلغاء ثغرة المعرف الموحد
-let licenseUnsubscribe = null;
-
-onAuthStateChanged(auth, (user) => {
+// 5. إدارة جلسات Firebase التنافسية وتراخيص الحسابات
+onAuthStateChanged(auth, async (user) => {
   if (user) {
+    currentUser = user;
     loginScreen.classList.add('hidden');
-    document.getElementById('user-uid-tag').textContent = `كود الحساب (UID): ${user.uid}`;
+    document.getElementById('user-uid-tag').textContent = `UID: ${user.uid}`;
     
-    // مراقبة ترخيص UID الخاص بالمستخدم مباشرة لمنع الاختراق
-    if (licenseUnsubscribe) licenseUnsubscribe();
-    licenseUnsubscribe = onSnapshot(doc(db, "licenses", user.uid), (snapshot) => {
+    // مراقبة ترخيص UID الحقيقي
+    onSnapshot(doc(db, "licenses", user.uid), (snapshot) => {
       if (snapshot.exists() && snapshot.data().isActive === true) {
         lockScreen.classList.add('hidden');
         mainApp.classList.remove('hidden');
+        attachCloudRealtimeSync(user.uid);
       } else {
         mainApp.classList.add('hidden');
         lockScreen.classList.remove('hidden');
+        detachCloudSync();
       }
     });
-
   } else {
-    if (licenseUnsubscribe) licenseUnsubscribe();
+    currentUser = null;
+    detachCloudSync();
     mainApp.classList.add('hidden');
     lockScreen.classList.add('hidden');
     loginScreen.classList.remove('hidden');
   }
 });
 
-// نموذج الدخول
+function attachCloudRealtimeSync(uid) {
+  detachCloudSync();
+
+  // مزامنة ملف المنشأة
+  const unsubProfile = onSnapshot(doc(db, "users", uid, "data", "profile"), (snap) => {
+    if (snap.exists()) {
+      storeProfile = { ...storeProfile, ...snap.data() };
+      updateHeaderUI();
+    }
+  });
+
+  // مزامنة الفواتير السحابية
+  const unsubInvoices = onSnapshot(doc(db, "users", uid, "data", "invoices"), (snap) => {
+    invoicesDB = snap.exists() ? snap.data().list || [] : [];
+    renderAllModules();
+  });
+
+  // مزامنة المنتجات
+  const unsubProducts = onSnapshot(doc(db, "users", uid, "data", "products"), (snap) => {
+    productsDB = snap.exists() ? snap.data().list || [] : [];
+    renderAllModules();
+  });
+
+  // مزامنة المصروفات
+  const unsubExpenses = onSnapshot(doc(db, "users", uid, "data", "expenses"), (snap) => {
+    expensesDB = snap.exists() ? snap.data().list || [] : [];
+    renderAllModules();
+  });
+
+  activeUnsubscribers = [unsubProfile, unsubInvoices, unsubProducts, unsubExpenses];
+}
+
+function detachCloudSync() {
+  activeUnsubscribers.forEach(unsub => unsub());
+  activeUnsubscribers = [];
+}
+
+async function syncDocToCloud(docName, payload) {
+  if (!currentUser) return;
+  await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
+}
+
+// تسجيل الدخول العادي
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value.trim();
-
   try {
-    await signInWithEmailAndPassword(auth, email, password);
+    await signInWithEmailAndPassword(auth, document.getElementById('login-email').value.trim(), document.getElementById('login-password').value.trim());
   } catch (err) {
     authError.textContent = "بيانات الدخول غير صحيحة";
     authError.classList.remove('hidden');
   }
 });
 
-// نموذج إنشاء حساب جديد (يتم إخضاع الحساب لانتظار التفعيل آلياً)
+// تسجيل الدخول بواسطة Google
+document.getElementById('google-login-btn').addEventListener('click', async () => {
+  clearAuthMsgs();
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const u = result.user;
+    const userRef = doc(db, "licenses", u.uid);
+    const docSnap = await getDoc(userRef);
+    if (!docSnap.exists()) {
+      await setDoc(userRef, {
+        email: u.email,
+        storeName: u.displayName || "نشاط جديد",
+        isActive: false,
+        createdAt: new Date().toISOString()
+      });
+    }
+  } catch (err) {
+    authError.textContent = "تعذر تسجيل الدخول بواسطة Google";
+    authError.classList.remove('hidden');
+  }
+});
+
+// إنشاء حساب
 registerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
@@ -99,27 +283,24 @@ registerForm.addEventListener('submit', async (e) => {
 
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    // تسجيل بيانات المستخدم في Firestore بـ (isActive: false) حتى يفعله الأدمن
     await setDoc(doc(db, "licenses", cred.user.uid), {
       email: email,
       storeName: storeName,
       isActive: false,
       createdAt: new Date().toISOString()
     });
-    
     authSuccess.textContent = "تم إنشاء الحساب بنجاح! بانتظار تفعيل الأدمن.";
     authSuccess.classList.remove('hidden');
   } catch (err) {
-    authError.textContent = err.message.includes('email-already-in-use') ? "البريد مستخدم بالفعل" : "خطأ في إنشاء الحساب";
+    authError.textContent = err.message.includes('email-already-in-use') ? "البريد مستخدم بالفعل" : "خطأ في التسجيل";
     authError.classList.remove('hidden');
   }
 });
 
-// تسجيل الخروج
 document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 document.getElementById('logout-lock-btn').addEventListener('click', () => signOut(auth));
 
-// 3. إدارة التبويبات والمظهر
+// 6. إدارة التبويبات والمظهر
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -134,18 +315,6 @@ function applyTheme(themeName) {
   localStorage.setItem('app_theme', themeName);
 }
 
-// 4. قاعدة البيانات المحلية والنظام
-let storeProfile = JSON.parse(localStorage.getItem('store_profile') || JSON.stringify({
-  name: "نظام إدارة الأعمال",
-  phone: "01000000000",
-  address: "",
-  currency: "ج.م",
-  logo: ""
-}));
-let products = JSON.parse(localStorage.getItem('products_db') || '[]');
-let expenses = JSON.parse(localStorage.getItem('expenses_db') || '[]');
-let currentActiveInvoiceForPreview = null;
-
 function updateHeaderUI() {
   document.getElementById('header-store-name').textContent = storeProfile.name;
   document.getElementById('header-store-phone').textContent = storeProfile.phone;
@@ -159,7 +328,7 @@ function updateHeaderUI() {
   }
 }
 
-// 5. إدارة الفواتير
+// 7. محرك الفواتير والحسابات
 let activeItems = [];
 const itemsBody = document.getElementById('items-body');
 const discountInput = document.getElementById('discount-input');
@@ -173,17 +342,31 @@ invNumberDisplay.textContent = `#${nextInvNum}`;
 
 function updateProductsDatalist() {
   const datalist = document.getElementById('products-datalist');
-  datalist.innerHTML = products.map(p => `<option value="${p.name}">${p.price} ${storeProfile.currency}</option>`).join('');
+  datalist.innerHTML = productsDB.map(p => `<option value="${p.name}">${p.price} ${storeProfile.currency}</option>`).join('');
 }
 
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
-    <tr>
-      <td><input type="text" list="products-datalist" value="${item.name}" placeholder="اسم الصنف" onchange="onItemNameChange(${index}, this.value)"></td>
-      <td><input type="number" value="${item.qty}" min="1" onchange="updateItem(${index}, 'qty', this.value)"></td>
-      <td><input type="number" value="${item.price}" min="0" step="0.5" onchange="updateItem(${index}, 'price', this.value)"></td>
-      <td><strong>${(item.qty * item.price).toFixed(2)}</strong></td>
-      <td><button type="button" class="btn-remove" onclick="removeItem(${index})">✕</button></td>
+    <tr class="item-row">
+      <td class="col-name">
+        <label class="mobile-label">${translations[currentLang].itemTitle}</label>
+        <input type="text" list="products-datalist" value="${item.name}" placeholder="اسم الصنف" onchange="onItemNameChange(${index}, this.value)">
+      </td>
+      <td class="col-qty">
+        <label class="mobile-label">${translations[currentLang].qtyTitle}</label>
+        <input type="number" value="${item.qty}" min="1" onchange="updateItem(${index}, 'qty', this.value)">
+      </td>
+      <td class="col-price">
+        <label class="mobile-label">${translations[currentLang].priceTitle}</label>
+        <input type="number" value="${item.price}" min="0" step="0.5" onchange="updateItem(${index}, 'price', this.value)">
+      </td>
+      <td class="col-total">
+        <span class="mobile-label">${translations[currentLang].subtotalTitle}:</span>
+        <span class="total-amount">${(item.qty * item.price).toFixed(2)} ${storeProfile.currency}</span>
+      </td>
+      <td class="col-action">
+        <button type="button" class="btn-remove" onclick="removeItem(${index})" title="حذف">✕</button>
+      </td>
     </tr>
   `).join('');
   calculateTotals();
@@ -191,7 +374,7 @@ function renderItemsTable() {
 
 window.onItemNameChange = (index, val) => {
   activeItems[index].name = val;
-  const matchedProd = products.find(p => p.name === val);
+  const matchedProd = productsDB.find(p => p.name === val);
   if (matchedProd) activeItems[index].price = matchedProd.price;
   renderItemsTable();
 };
@@ -222,18 +405,23 @@ function calculateTotals() {
 
   subtotalDisplay.textContent = `${subtotal.toFixed(2)} ${storeProfile.currency}`;
   grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ${storeProfile.currency}`;
-  return { subtotal, discount, taxPercent, grandTotal };
+  return { subtotal, discount, taxPercent, taxAmount, grandTotal };
 }
 
 discountInput.addEventListener('input', calculateTotals);
 taxInput.addEventListener('input', calculateTotals);
 
-function saveInvoiceData() {
+async function saveInvoiceData() {
   const clientName = document.getElementById('client-name').value.trim();
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
   if (activeItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل'); return null; }
 
   const totals = calculateTotals();
+  const isoTime = new Date().toISOString();
+  
+  // توليد كود التشفير ZATCA/ETA
+  const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
+
   const invoice = {
     id: nextInvNum,
     client: clientName,
@@ -241,12 +429,13 @@ function saveInvoiceData() {
     status: document.getElementById('payment-status-select').value,
     items: [...activeItems],
     ...totals,
-    date: new Date().toLocaleDateString('ar-EG')
+    date: new Date().toLocaleDateString('ar-EG'),
+    isoTime: isoTime,
+    zatcaQr: zatcaBase64
   };
 
-  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
-  invoices.unshift(invoice);
-  localStorage.setItem('invoices_db', JSON.stringify(invoices));
+  invoicesDB.unshift(invoice);
+  await syncDocToCloud('invoices', { list: invoicesDB });
 
   nextInvNum++;
   localStorage.setItem('last_inv_num', nextInvNum.toString());
@@ -257,19 +446,19 @@ function saveInvoiceData() {
   return invoice;
 }
 
-document.getElementById('save-btn').addEventListener('click', () => {
-  const inv = saveInvoiceData();
-  if (inv) alert('تم حفظ الفاتورة بنجاح');
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const inv = await saveInvoiceData();
+  if (inv) alert('تم حفظ الفاتورة سحابياً بنجاح');
 });
 
-// 6. الميزات (واتساب، معاينة، صور)
+// 8. ميزات المعاينة، الطباعة الحرارية ورابط الدفع الرقمي
 function sendWhatsApp(inv) {
   let phone = inv.phone.replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
   if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
   let msg = `*${storeProfile.name}*\n`;
-  msg += `🧾 *فاتورة مبيعات رقم:* #${inv.id}\n`;
+  msg += `🧾 *فاتورة مبيعات إلكترونية رقم:* #${inv.id}\n`;
   msg += `👤 *العميل:* ${inv.client}\n`;
   msg += `📅 *التاريخ:* ${inv.date}\n`;
   msg += `-----------------------------------\n`;
@@ -284,10 +473,12 @@ function sendWhatsApp(inv) {
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-document.getElementById('whatsapp-btn').addEventListener('click', () => {
-  const inv = saveInvoiceData();
+document.getElementById('whatsapp-btn').addEventListener('click', async () => {
+  const inv = await saveInvoiceData();
   if (inv) sendWhatsApp(inv);
 });
+
+let currentActiveInvoiceForPreview = null;
 
 function openInvoicePreview(inv) {
   currentActiveInvoiceForPreview = inv;
@@ -301,6 +492,7 @@ function openInvoicePreview(inv) {
 
   document.getElementById('v-store-name').textContent = storeProfile.name;
   document.getElementById('v-store-phone').textContent = storeProfile.phone;
+  document.getElementById('v-store-vat').textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
   document.getElementById('v-store-address').textContent = storeProfile.address;
   document.getElementById('v-inv-id').textContent = `رقم الفاتورة: #${inv.id}`;
   document.getElementById('v-date').textContent = `التاريخ: ${inv.date}`;
@@ -316,6 +508,9 @@ function openInvoicePreview(inv) {
     <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
   `).join('');
 
+  // عرض QR Code المعتمد
+  renderQrCode('preview-qrcode', inv.zatcaQr || generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime || new Date().toISOString(), inv.grandTotal, inv.taxAmount || 0));
+
   document.getElementById('view-modal').classList.remove('hidden');
 }
 
@@ -327,7 +522,7 @@ document.getElementById('download-img-btn').addEventListener('click', () => {
   const previewCard = document.getElementById('invoice-card-preview');
   html2canvas(previewCard, { scale: 2 }).then(canvas => {
     const link = document.createElement('a');
-    link.download = `Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
+    link.download = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   });
@@ -337,8 +532,8 @@ document.getElementById('print-view-btn').addEventListener('click', () => {
   if (currentActiveInvoiceForPreview) printInvoice(currentActiveInvoiceForPreview);
 });
 
-document.getElementById('print-btn').addEventListener('click', () => {
-  const inv = saveInvoiceData();
+document.getElementById('print-btn').addEventListener('click', async () => {
+  const inv = await saveInvoiceData();
   if (inv) printInvoice(inv);
 });
 
@@ -353,6 +548,7 @@ function printInvoice(inv) {
 
   document.getElementById('p-store-name').textContent = storeProfile.name;
   document.getElementById('p-store-phone').textContent = storeProfile.phone;
+  document.getElementById('p-store-vat').textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
   document.getElementById('p-store-address').textContent = storeProfile.address;
   document.getElementById('p-inv-id').textContent = `رقم الفاتورة: #${inv.id}`;
   document.getElementById('p-date').textContent = `التاريخ: ${inv.date}`;
@@ -367,6 +563,9 @@ function printInvoice(inv) {
   document.getElementById('p-items-body').innerHTML = inv.items.map(item => `
     <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
   `).join('');
+
+  renderQrCode('print-qrcode', inv.zatcaQr || generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime || new Date().toISOString(), inv.grandTotal, inv.taxAmount || 0));
+
   window.print();
 }
 
@@ -375,15 +574,14 @@ function resetForm() {
   document.getElementById('client-phone').value = '';
   activeItems = [];
   discountInput.value = 0;
-  taxInput.value = 0;
+  taxInput.value = 14;
   document.getElementById('add-item-btn').click();
 }
 
-// 7. عرض باقي البيانات والإعدادات
+// 9. عرض باقي الأقسام والمزامن السحابية
 function renderSavedInvoices(filter = '') {
-  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const container = document.getElementById('invoices-container');
-  const filtered = invoices.filter(inv => inv.client.toLowerCase().includes(filter.toLowerCase()) || inv.id.toString().includes(filter) || inv.phone.includes(filter));
+  const filtered = invoicesDB.filter(inv => inv.client.toLowerCase().includes(filter.toLowerCase()) || inv.id.toString().includes(filter) || inv.phone.includes(filter));
 
   container.innerHTML = filtered.map(inv => `
     <li>
@@ -403,50 +601,43 @@ function renderSavedInvoices(filter = '') {
 }
 
 window.viewInvoiceById = (id) => {
-  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
-  const inv = invoices.find(i => i.id === id);
+  const inv = invoicesDB.find(i => i.id === id);
   if (inv) openInvoicePreview(inv);
 };
 
 window.sendWhatsAppById = (id) => {
-  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
-  const inv = invoices.find(i => i.id === id);
+  const inv = invoicesDB.find(i => i.id === id);
   if (inv) sendWhatsApp(inv);
 };
 
 window.reprintInvoice = (id) => {
-  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
-  const inv = invoices.find(i => i.id === id);
+  const inv = invoicesDB.find(i => i.id === id);
   if (inv) printInvoice(inv);
 };
 
-window.deleteInvoice = (id) => {
+window.deleteInvoice = async (id) => {
   if (!confirm('تأكيد حذف الفاتورة؟')) return;
-  let invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
-  invoices = invoices.filter(i => i.id !== id);
-  localStorage.setItem('invoices_db', JSON.stringify(invoices));
-  renderAllModules();
+  invoicesDB = invoicesDB.filter(i => i.id !== id);
+  await syncDocToCloud('invoices', { list: invoicesDB });
 };
 
 document.getElementById('search-input').addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
-document.getElementById('product-form').addEventListener('submit', (e) => {
+document.getElementById('product-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('p-name').value;
   const price = parseFloat(document.getElementById('p-price').value) || 0;
   const cost = parseFloat(document.getElementById('p-cost').value) || 0;
   const stock = parseInt(document.getElementById('p-stock').value) || 0;
 
-  products.push({ id: Date.now(), name, price, cost, stock });
-  localStorage.setItem('products_db', JSON.stringify(products));
+  productsDB.push({ id: Date.now(), name, price, cost, stock });
+  await syncDocToCloud('products', { list: productsDB });
   e.target.reset();
-  renderProducts();
-  updateProductsDatalist();
 });
 
 function renderProducts() {
   const container = document.getElementById('products-list-container');
-  container.innerHTML = products.map((p, idx) => `
+  container.innerHTML = productsDB.map((p, idx) => `
     <li>
       <div>
         <strong>${p.name}</strong>
@@ -460,18 +651,15 @@ function renderProducts() {
   `).join('');
 }
 
-window.deleteProduct = (idx) => {
-  products.splice(idx, 1);
-  localStorage.setItem('products_db', JSON.stringify(products));
-  renderProducts();
-  updateProductsDatalist();
+window.deleteProduct = async (idx) => {
+  productsDB.splice(idx, 1);
+  await syncDocToCloud('products', { list: productsDB });
 };
 
 function renderClients() {
-  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const clientsMap = {};
 
-  invoices.forEach(inv => {
+  invoicesDB.forEach(inv => {
     if (!clientsMap[inv.client]) clientsMap[inv.client] = { phone: inv.phone, totalPurchases: 0, unpaid: 0 };
     clientsMap[inv.client].totalPurchases += inv.grandTotal;
     if (inv.status !== 'مدفوعة') clientsMap[inv.client].unpaid += inv.grandTotal;
@@ -496,21 +684,19 @@ function renderClients() {
   `).join('');
 }
 
-document.getElementById('expense-form').addEventListener('submit', (e) => {
+document.getElementById('expense-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const title = document.getElementById('exp-title').value;
   const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
 
-  expenses.push({ id: Date.now(), title, amount, date: new Date().toLocaleDateString('ar-EG') });
-  localStorage.setItem('expenses_db', JSON.stringify(expenses));
+  expensesDB.push({ id: Date.now(), title, amount, date: new Date().toLocaleDateString('ar-EG') });
+  await syncDocToCloud('expenses', { list: expensesDB });
   e.target.reset();
-  renderExpenses();
-  updateDashboardStats();
 });
 
 function renderExpenses() {
   const container = document.getElementById('expenses-list-container');
-  container.innerHTML = expenses.map((exp, idx) => `
+  container.innerHTML = expensesDB.map((exp, idx) => `
     <li>
       <div>
         <strong>${exp.title}</strong>
@@ -524,38 +710,34 @@ function renderExpenses() {
   `).join('');
 }
 
-window.deleteExpense = (idx) => {
-  expenses.splice(idx, 1);
-  localStorage.setItem('expenses_db', JSON.stringify(expenses));
-  renderExpenses();
-  updateDashboardStats();
+window.deleteExpense = async (idx) => {
+  expensesDB.splice(idx, 1);
+  await syncDocToCloud('expenses', { list: expensesDB });
 };
 
 function updateDashboardStats() {
-  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
-  const totalSales = invoices.reduce((acc, i) => acc + i.grandTotal, 0);
-  const totalExpensesAmount = expenses.reduce((acc, e) => acc + e.amount, 0);
+  const totalSales = invoicesDB.reduce((acc, i) => acc + i.grandTotal, 0);
+  const totalExpensesAmount = expensesDB.reduce((acc, e) => acc + e.amount, 0);
   const netProfit = totalSales - totalExpensesAmount;
 
   document.getElementById('stat-total-sales').textContent = `${totalSales.toFixed(2)} ${storeProfile.currency}`;
   document.getElementById('stat-expenses').textContent = `${totalExpensesAmount.toFixed(2)} ${storeProfile.currency}`;
   document.getElementById('stat-net-profit').textContent = `${netProfit.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('stat-count').textContent = invoices.length;
+  document.getElementById('stat-count').textContent = invoicesDB.length;
 }
 
 document.getElementById('export-json-btn').addEventListener('click', () => {
-  const data = { invoices: JSON.parse(localStorage.getItem('invoices_db') || '[]'), products, expenses, storeProfile };
+  const data = { invoices: invoicesDB, products: productsDB, expenses: expensesDB, storeProfile };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `backup_${Date.now()}.json`;
+  a.download = `backup_cloud_${Date.now()}.json`;
   a.click();
 });
 
 document.getElementById('export-csv-btn').addEventListener('click', () => {
-  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   let csv = 'رقم الفاتورة,العميل,الهاتف,الحالة,التاريخ,الإجمالي\n';
-  invoices.forEach(inv => {
+  invoicesDB.forEach(inv => {
     csv += `${inv.id},"${inv.client}","${inv.phone}",${inv.status},${inv.date},${inv.grandTotal}\n`;
   });
   const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
@@ -568,30 +750,31 @@ document.getElementById('export-csv-btn').addEventListener('click', () => {
 const settingsModal = document.getElementById('settings-modal');
 document.getElementById('open-settings-btn').addEventListener('click', () => {
   document.getElementById('theme-select').value = localStorage.getItem('app_theme') || 'dark';
+  document.getElementById('currency-select').value = storeProfile.currency || 'ج.م';
   document.getElementById('store-name-input').value = storeProfile.name;
   document.getElementById('store-phone-input').value = storeProfile.phone;
+  document.getElementById('store-vat-input').value = storeProfile.vatNo || '';
   document.getElementById('store-address-input').value = storeProfile.address;
-  document.getElementById('currency-symbol-input').value = storeProfile.currency;
   settingsModal.classList.remove('hidden');
 });
 
 document.getElementById('close-settings-btn').addEventListener('click', () => settingsModal.classList.add('hidden'));
 
 document.getElementById('save-settings-btn').addEventListener('click', () => {
-  const selectedTheme = document.getElementById('theme-select').value;
-  applyTheme(selectedTheme);
+  applyTheme(document.getElementById('theme-select').value);
 
   const logoInput = document.getElementById('store-logo-input');
   
-  const saveProfileData = (logoBase64) => {
+  const saveProfileData = async (logoBase64) => {
     storeProfile = {
       name: document.getElementById('store-name-input').value || "نظام إدارة الأعمال",
       phone: document.getElementById('store-phone-input').value,
+      vatNo: document.getElementById('store-vat-input').value.trim(),
       address: document.getElementById('store-address-input').value,
-      currency: document.getElementById('currency-symbol-input').value || "ج.م",
+      currency: document.getElementById('currency-select').value || "ج.م",
       logo: logoBase64 !== null ? logoBase64 : storeProfile.logo
     };
-    localStorage.setItem('store_profile', JSON.stringify(storeProfile));
+    await syncDocToCloud('profile', storeProfile);
     updateHeaderUI();
     renderAllModules();
     settingsModal.classList.add('hidden');
@@ -599,9 +782,7 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
 
   if (logoInput.files && logoInput.files[0]) {
     const reader = new FileReader();
-    reader.onload = function (e) {
-      saveProfileData(e.target.result);
-    };
+    reader.onload = function (e) { saveProfileData(e.target.result); };
     reader.readAsDataURL(logoInput.files[0]);
   } else {
     saveProfileData(null);
@@ -617,8 +798,8 @@ function renderAllModules() {
   updateDashboardStats();
 }
 
-const savedTheme = localStorage.getItem('app_theme') || 'dark';
-applyTheme(savedTheme);
+applyTheme(localStorage.getItem('app_theme') || 'dark');
+applyLanguage(currentLang);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
@@ -626,4 +807,3 @@ if ('serviceWorker' in navigator) {
 
 updateHeaderUI();
 document.getElementById('add-item-btn').click();
-renderAllModules();
