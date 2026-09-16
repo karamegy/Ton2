@@ -30,9 +30,9 @@ const translations = {
   ar: {
     login: "تسجيل الدخول", register: "حساب جديد", googleAuth: "متابعة بواسطة Google",
     or: "أو", email: "البريد الإلكتروني", password: "كلمة المرور", loginBtn: "دخول التطبيق",
-    storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب طلب تفعيل", logout: "تسجيل الخروج",
-    accountDisabled: "⚠️ الحساب معطل أو بانتظار التفعيل",
-    accountDisabledDesc: "تم تسجيل حسابك بنجاح. يرجى التواصل مع الإدارة لتفعيل الرخصة السحابية.",
+    storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب تلقائي مجاني", logout: "تسجيل الخروج",
+    accountDisabled: "⚠️ الحساب معطل من قبل الإدارة",
+    accountDisabledDesc: "تم تعطيل رخصة هذا الحساب. يرجى التواصل مع Admin Master (haretg@gmail.com).",
     tabInvoices: "🧾 الفواتير", tabProducts: "📦 المخزن", tabClients: "👥 العملاء", tabExpenses: "💸 الخزينة",
     totalSales: "إجمالي المبيعات", netProfit: "صافي الأرباح", expenses: "المصروفات", invoiceCount: "عدد الفواتير",
     newInvoice: "فاتورة مبيعات جديدة", invNo: "رقم الفاتورة:", clientName: "اسم العميل / الشركة",
@@ -49,9 +49,9 @@ const translations = {
   en: {
     login: "Sign In", register: "Register", googleAuth: "Continue with Google",
     or: "OR", email: "Email Address", password: "Password", loginBtn: "Access App",
-    storeName: "Business Name", registerBtn: "Request Account Activation", logout: "Sign Out",
-    accountDisabled: "⚠️ Account Locked or Pending Approval",
-    accountDisabledDesc: "Your account is created. Please contact admin to activate your cloud license.",
+    storeName: "Business Name", registerBtn: "Create Free Instant Account", logout: "Sign Out",
+    accountDisabled: "⚠️ Account Disabled by Admin",
+    accountDisabledDesc: "This license has been suspended. Contact Admin Master (haretg@gmail.com).",
     tabInvoices: "🧾 Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients", tabExpenses: "💸 Expenses",
     totalSales: "Total Sales", netProfit: "Net Profit", expenses: "Expenses", invoiceCount: "Total Invoices",
     newInvoice: "New Sales Invoice", invNo: "Invoice #:", clientName: "Client / Company Name",
@@ -169,15 +169,30 @@ function clearAuthMsgs() {
   authSuccess.classList.add('hidden');
 }
 
-// 5. إدارة جلسات Firebase التنافسية وتراخيص الحسابات
+// 5. إدارة الجلسات ومراقبة التراخيص الفورية
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     loginScreen.classList.add('hidden');
-    document.getElementById('user-uid-tag').textContent = `UID: ${user.uid}`;
+    const isAdmin = user.email === 'haretg@gmail.com';
+    document.getElementById('user-uid-tag').textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
     
-    // مراقبة ترخيص UID الحقيقي
-    onSnapshot(doc(db, "licenses", user.uid), (snapshot) => {
+    // فحص رخصة المستخدم تلقائياً
+    const userRef = doc(db, "licenses", user.uid);
+    const docSnap = await getDoc(userRef);
+
+    // إنشاء الرخصة المفعلة تلقائياً مجاناً إذا لم تكن موجودة
+    if (!docSnap.exists()) {
+      await setDoc(userRef, {
+        email: user.email,
+        storeName: user.displayName || "نشاط تجاري مجاني",
+        isActive: true,
+        role: isAdmin ? "admin_master" : "user",
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    onSnapshot(userRef, (snapshot) => {
       if (snapshot.exists() && snapshot.data().isActive === true) {
         lockScreen.classList.add('hidden');
         mainApp.classList.remove('hidden');
@@ -200,7 +215,6 @@ onAuthStateChanged(auth, async (user) => {
 function attachCloudRealtimeSync(uid) {
   detachCloudSync();
 
-  // مزامنة ملف المنشأة
   const unsubProfile = onSnapshot(doc(db, "users", uid, "data", "profile"), (snap) => {
     if (snap.exists()) {
       storeProfile = { ...storeProfile, ...snap.data() };
@@ -208,19 +222,16 @@ function attachCloudRealtimeSync(uid) {
     }
   });
 
-  // مزامنة الفواتير السحابية
   const unsubInvoices = onSnapshot(doc(db, "users", uid, "data", "invoices"), (snap) => {
     invoicesDB = snap.exists() ? snap.data().list || [] : [];
     renderAllModules();
   });
 
-  // مزامنة المنتجات
   const unsubProducts = onSnapshot(doc(db, "users", uid, "data", "products"), (snap) => {
     productsDB = snap.exists() ? snap.data().list || [] : [];
     renderAllModules();
   });
 
-  // مزامنة المصروفات
   const unsubExpenses = onSnapshot(doc(db, "users", uid, "data", "expenses"), (snap) => {
     expensesDB = snap.exists() ? snap.data().list || [] : [];
     renderAllModules();
@@ -239,7 +250,7 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
-// تسجيل الدخول العادي
+// تسجيل الدخول بالبريد
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
@@ -251,7 +262,7 @@ loginForm.addEventListener('submit', async (e) => {
   }
 });
 
-// تسجيل الدخول بواسطة Google
+// تسجيل الدخول بواسطة Google مع التفعيل المجاني التلقائي
 document.getElementById('google-login-btn').addEventListener('click', async () => {
   clearAuthMsgs();
   try {
@@ -263,7 +274,8 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
       await setDoc(userRef, {
         email: u.email,
         storeName: u.displayName || "نشاط جديد",
-        isActive: false,
+        isActive: true,
+        role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
         createdAt: new Date().toISOString()
       });
     }
@@ -273,7 +285,7 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
   }
 });
 
-// إنشاء حساب
+// إنشاء حساب جديد وتفعيله مجاناً وبشكل فوري
 registerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
@@ -286,10 +298,11 @@ registerForm.addEventListener('submit', async (e) => {
     await setDoc(doc(db, "licenses", cred.user.uid), {
       email: email,
       storeName: storeName,
-      isActive: false,
+      isActive: true,
+      role: email === 'haretg@gmail.com' ? "admin_master" : "user",
       createdAt: new Date().toISOString()
     });
-    authSuccess.textContent = "تم إنشاء الحساب بنجاح! بانتظار تفعيل الأدمن.";
+    authSuccess.textContent = "تم إنشاء وتفعيل حسابك المجاني بنجاح!";
     authSuccess.classList.remove('hidden');
   } catch (err) {
     authError.textContent = err.message.includes('email-already-in-use') ? "البريد مستخدم بالفعل" : "خطأ في التسجيل";
@@ -419,7 +432,6 @@ async function saveInvoiceData() {
   const totals = calculateTotals();
   const isoTime = new Date().toISOString();
   
-  // توليد كود التشفير ZATCA/ETA
   const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
 
   const invoice = {
@@ -451,7 +463,7 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   if (inv) alert('تم حفظ الفاتورة سحابياً بنجاح');
 });
 
-// 8. ميزات المعاينة، الطباعة الحرارية ورابط الدفع الرقمي
+// 8. ميزات المعاينة، الطباعة والواتساب
 function sendWhatsApp(inv) {
   let phone = inv.phone.replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
@@ -508,7 +520,6 @@ function openInvoicePreview(inv) {
     <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
   `).join('');
 
-  // عرض QR Code المعتمد
   renderQrCode('preview-qrcode', inv.zatcaQr || generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime || new Date().toISOString(), inv.grandTotal, inv.taxAmount || 0));
 
   document.getElementById('view-modal').classList.remove('hidden');
@@ -578,7 +589,7 @@ function resetForm() {
   document.getElementById('add-item-btn').click();
 }
 
-// 9. عرض باقي الأقسام والمزامن السحابية
+// 9. وحدة الإدارة والعرض السحابي
 function renderSavedInvoices(filter = '') {
   const container = document.getElementById('invoices-container');
   const filtered = invoicesDB.filter(inv => inv.client.toLowerCase().includes(filter.toLowerCase()) || inv.id.toString().includes(filter) || inv.phone.includes(filter));
@@ -741,8 +752,7 @@ document.getElementById('export-csv-btn').addEventListener('click', () => {
     csv += `${inv.id},"${inv.client}","${inv.phone}",${inv.status},${inv.date},${inv.grandTotal}\n`;
   });
   const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  const a = document.href = URL.createObjectURL(blob);
   a.download = `sales_report_${Date.now()}.csv`;
   a.click();
 });
