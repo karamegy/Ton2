@@ -81,6 +81,10 @@
 
       <div id="auth-error" class="auth-msg error hidden"></div>
       <div id="auth-success" class="auth-msg success hidden"></div>
+
+      <div style="margin-top: 15px; text-align: center;">
+        <button type="button" id="open-privacy-auth-btn" class="btn-ghost" style="font-size: 0.75rem; text-decoration: underline;">🔒 سياسة الخصوصية (Privacy Policy)</button>
+      </div>
     </div>
   </div>
 
@@ -365,7 +369,7 @@
     </section>
   </div>
 
-  <!-- Modal كشف حساب عميل مجمع والتسديد مع أزرار الطباعة والواتساب والتنزيل -->
+  <!-- Modal كشف حساب عميل مجمع والتسديد -->
   <div id="client-ledger-modal" class="modal hidden">
     <div class="modal-content ledger-modal-content">
       <div class="modal-header">
@@ -405,7 +409,6 @@
         </div>
       </div>
 
-      <!-- أزرار الإجراءات المباشرة لكشف الحساب -->
       <div class="modal-actions-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
         <button id="ledger-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
         <button id="ledger-download-btn" class="btn-primary">صورة 🖼️</button>
@@ -414,7 +417,7 @@
     </div>
   </div>
 
-  <!-- Modal معاينة الفاتورة الإلكترونية المعيارية ZATCA/ETA -->
+  <!-- Modal معاينة الفاتورة الإلكترونية -->
   <div id="view-modal" class="modal hidden">
     <div class="modal-content preview-modal-content">
       <div class="modal-header">
@@ -512,47 +515,46 @@
         <input type="text" id="store-address-input">
       </div>
       <button id="save-settings-btn" class="btn-primary" style="margin-top: 15px;" data-i18n="saveSettings">حفظ التغييرات السحابية</button>
+      
+      <div style="margin-top: 15px; border-top: 1px dashed var(--border-color); padding-top: 12px; text-align: center;">
+        <button type="button" id="open-privacy-settings-btn" class="btn-secondary">🔒 عرض سياسة الخصوصية</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal نافذة سياسة الخصوصية الرسمية -->
+  <div id="privacy-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>🔒 سياسة الخصوصية (Privacy Policy)</h3>
+        <button id="close-privacy-btn" class="btn-close">✕</button>
+      </div>
+      <div class="privacy-text-content" style="max-height: 65vh; overflow-y: auto; text-align: right; font-size: 0.85rem; line-height: 1.8; color: var(--text-main); padding-left: 6px;">
+        <h4 style="color: var(--accent); margin-bottom: 8px;">1. المقدمة والشروط العامة</h4>
+        <p>مرحباً بك في تطبيق <strong>GITI Enterprise ERP</strong>. نحن نلتزم بحماية خصوصية بياناتك التجارية والشخصية والتأكد من أمانها التام وفقاً لأعلى معايير الحماية والأمان الرقمي.</p>
+
+        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">2. البيانات التي نجمعها وكيفية استخدامها</h4>
+        <p>• <strong>الحساب الشخصي:</strong> نجمع البريد الإلكتروني واسم النشاط التجاري عند التسجيل لإنشاء وتفعيل الرخصة السحابية وتأمين الدخول عبر Firebase Authentication و Google Sign-In.</p>
+        <p>• <strong>بيانات النشاط الحسابي:</strong> الفواتير، بيانات العملاء، سجلات المصروفات، والمنتجات المخزنة يتم رفعها وتخزينها سحابياً على خوادم مشفرة (Google Firebase Cloud Firestore) لتسهيل المزامنة الفورية بين أجهزتك ولا يتم الاطلاع عليها بواسطة أي طرف ثالث.</p>
+
+        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">3. مشاركة وحماية البيانات</h4>
+        <p>نحن لا نبيع، ولا نؤجر، ولا نشارك أي بيانات شخصية أو حسابية خاصة بنشاطك التجاري مع أي جهة خارجية. تُستخدم أدوات التحليل والإعلانات المعيارية (Google AdSense) وفق إرشادات حماية الخصوصية الرقمية.</p>
+
+        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">4. الأذونات المطلوبة والتخزين المحلي</h4>
+        <p>يستخدم التطبيق التخزين المحلي (IndexedDB & LocalStorage) للعمل بكفاءة في حالة عدم توفر الاتصال بالإنترنت (Offline Persistence)، بالإضافة إلى إذن حفظ الصور لتمكينك من تحميل وتنزيل الفواتير وكشوف الحسابات كصور.</p>
+
+        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">5. حذف البيانات والحساب</h4>
+        <p>يمكنك طلب حذف كامل حسابك وبياناتك المخزنة سحابياً في أي وقت عبر التواصل المباشر مع مدير النظام عبر البريد الإلكتروني: <a href="mailto:haretg@gmail.com" style="color: var(--accent);">haretg@gmail.com</a>.</p>
+
+        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">6. التواصل والدعم الفني</h4>
+        <p>لأي استفسارات بخصوص سياسة الخصوصية أو حماية البيانات الخاصة بك، يمكن التواصل المباشر مع الدعم الفني: <strong>haretg@gmail.com</strong></p>
+      </div>
+      <button id="accept-privacy-btn" class="btn-primary" style="width: 100%; margin-top: 15px;">موافق وإغلاق</button>
     </div>
   </div>
 
   <!-- قالب الطباعة الحراري المعياري -->
-  <div id="print-template" class="print-only">
-    <div class="print-header">
-      <img id="p-logo" class="print-logo hidden" alt="Store Logo">
-      <h1 id="p-store-name">فاتورة مبيعات إلكترونية</h1>
-      <p id="p-store-phone"></p>
-      <p id="p-store-vat"></p>
-      <p id="p-store-address"></p>
-      <hr>
-      <p id="p-inv-id"></p>
-      <p id="p-date"></p>
-    </div>
-    <div class="print-client">
-      <p><strong>العميل:</strong> <span id="p-client-name"></span></p>
-      <p><strong>الهاتف:</strong> <span id="p-client-phone"></span></p>
-      <p><strong>حالة الدفع:</strong> <span id="p-payment-status"></span></p>
-    </div>
-    <table class="print-table">
-      <thead>
-        <tr>
-          <th>الصنف</th>
-          <th>الكمية</th>
-          <th>السعر</th>
-          <th>الإجمالي</th>
-        </tr>
-      </thead>
-      <tbody id="p-items-body"></tbody>
-    </table>
-    <div class="print-footer-container">
-      <div class="print-totals">
-        <p>المجموع الفرعي: <span id="p-subtotal"></span></p>
-        <p>الخصم: <span id="p-discount"></span></p>
-        <p>الضريبة: <span id="p-tax"></span></p>
-        <h3>الإجمالي الكلي: <span id="p-total"></span></h3>
-      </div>
-      <div id="print-qrcode" class="qrcode-wrapper"></div>
-    </div>
-  </div>
+  <div id="print-template" class="print-only"></div>
 
   <datalist id="products-datalist"></datalist>
 
