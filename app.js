@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// 1. Firebase License Control (Kill-Switch)
+// 1. Firebase License Check (Kill-Switch)
 const firebaseConfig = {
   apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
   authDomain: "giti-68750.firebaseapp.com",
@@ -31,7 +31,7 @@ onSnapshot(doc(db, "licenses", DEVICE_ID), (snapshot) => {
   }
 });
 
-// 2. إدارة التبويبات (Tabs Navigation)
+// 2. إدارة التبويبات
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -41,17 +41,31 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
   });
 });
 
-// 3. قاعدة البيانات المحلية (Local Storage DBs)
-let storeProfile = JSON.parse(localStorage.getItem('store_profile') || JSON.stringify({ name: "نظام الفواتير والشركات", phone: "01000000000", address: "", currency: "ج.م" }));
+// 3. قاعدة البيانات المحلية
+let storeProfile = JSON.parse(localStorage.getItem('store_profile') || JSON.stringify({
+  name: "نظام إدارة الأعمال",
+  phone: "01000000000",
+  address: "",
+  currency: "ج.م",
+  logo: ""
+}));
 let products = JSON.parse(localStorage.getItem('products_db') || '[]');
 let expenses = JSON.parse(localStorage.getItem('expenses_db') || '[]');
 
 function updateHeaderUI() {
   document.getElementById('header-store-name').textContent = storeProfile.name;
   document.getElementById('header-store-phone').textContent = storeProfile.phone;
+  
+  const headerLogo = document.getElementById('header-logo');
+  if (storeProfile.logo) {
+    headerLogo.src = storeProfile.logo;
+    headerLogo.classList.remove('hidden');
+  } else {
+    headerLogo.classList.add('hidden');
+  }
 }
 
-// 4. نظام الفواتير المطور
+// 4. نظام الفواتير
 let activeItems = [];
 const itemsBody = document.getElementById('items-body');
 const discountInput = document.getElementById('discount-input');
@@ -153,11 +167,11 @@ document.getElementById('save-btn').addEventListener('click', () => {
   if (saveInvoiceData()) alert('تم حفظ الفاتورة بنجاح');
 });
 
-// 5. ميزة الإرسال المباشر عبر WhatsApp
+// 5. واتساب والطباعة مع الشعار
 function sendWhatsApp(inv) {
   let phone = inv.phone.replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
-  if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone; // ضبط كود مصر تلقائياً
+  if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
   let msg = `*${storeProfile.name}*\n`;
   msg += `🧾 *فاتورة مبيعات رقم:* #${inv.id}\n`;
@@ -186,6 +200,14 @@ document.getElementById('print-btn').addEventListener('click', () => {
 });
 
 function printInvoice(inv) {
+  const printLogo = document.getElementById('p-logo');
+  if (storeProfile.logo) {
+    printLogo.src = storeProfile.logo;
+    printLogo.classList.remove('hidden');
+  } else {
+    printLogo.classList.add('hidden');
+  }
+
   document.getElementById('p-store-name').textContent = storeProfile.name;
   document.getElementById('p-store-phone').textContent = storeProfile.phone;
   document.getElementById('p-store-address').textContent = storeProfile.address;
@@ -214,7 +236,7 @@ function resetForm() {
   document.getElementById('add-item-btn').click();
 }
 
-// 6. عرض الفواتير وسجل العملاء الإحصائي
+// 6. عرض القوائم والبحث
 function renderSavedInvoices(filter = '') {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const container = document.getElementById('invoices-container');
@@ -258,7 +280,7 @@ window.deleteInvoice = (id) => {
 
 document.getElementById('search-input').addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
-// 7. قسم المنتجات والمخزن
+// 7. المخزن
 document.getElementById('product-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const name = document.getElementById('p-name').value;
@@ -296,7 +318,7 @@ window.deleteProduct = (idx) => {
   updateProductsDatalist();
 };
 
-// 8. قسم دليل العملاء وتجميع المديونيات
+// 8. سجل العملاء والمديونيات
 function renderClients() {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const clientsMap = {};
@@ -326,7 +348,7 @@ function renderClients() {
   `).join('');
 }
 
-// 9. قسم المصروفات والخزينة
+// 9. المصروفات
 document.getElementById('expense-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const title = document.getElementById('exp-title').value;
@@ -362,7 +384,7 @@ window.deleteExpense = (idx) => {
   updateDashboardStats();
 };
 
-// 10. الإحصائيات الشاملة وأرباح الخزينة
+// 10. الإحصائيات الشاملة
 function updateDashboardStats() {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const totalSales = invoices.reduce((acc, i) => acc + i.grandTotal, 0);
@@ -375,12 +397,9 @@ function updateDashboardStats() {
   document.getElementById('stat-count').textContent = invoices.length;
 }
 
-// 11. التصدير والنسخ الاحتياطي
+// 11. النسخ الاحتياطي
 document.getElementById('export-json-btn').addEventListener('click', () => {
-  const data = {
-    invoices: JSON.parse(localStorage.getItem('invoices_db') || '[]'),
-    products, expenses, storeProfile
-  };
+  const data = { invoices: JSON.parse(localStorage.getItem('invoices_db') || '[]'), products, expenses, storeProfile };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -401,7 +420,7 @@ document.getElementById('export-csv-btn').addEventListener('click', () => {
   a.click();
 });
 
-// 12. modal الإعدادات
+// 12. Modal الإعدادات وحفظ الشعار (Base64)
 const settingsModal = document.getElementById('settings-modal');
 document.getElementById('open-settings-btn').addEventListener('click', () => {
   document.getElementById('store-name-input').value = storeProfile.name;
@@ -414,16 +433,31 @@ document.getElementById('open-settings-btn').addEventListener('click', () => {
 document.getElementById('close-settings-btn').addEventListener('click', () => settingsModal.classList.add('hidden'));
 
 document.getElementById('save-settings-btn').addEventListener('click', () => {
-  storeProfile = {
-    name: document.getElementById('store-name-input').value || "نظام الفواتير والشركات",
-    phone: document.getElementById('store-phone-input').value,
-    address: document.getElementById('store-address-input').value,
-    currency: document.getElementById('currency-symbol-input').value || "ج.م"
+  const logoInput = document.getElementById('store-logo-input');
+  
+  const saveProfileData = (logoBase64) => {
+    storeProfile = {
+      name: document.getElementById('store-name-input').value || "نظام إدارة الأعمال",
+      phone: document.getElementById('store-phone-input').value,
+      address: document.getElementById('store-address-input').value,
+      currency: document.getElementById('currency-symbol-input').value || "ج.م",
+      logo: logoBase64 !== null ? logoBase64 : storeProfile.logo
+    };
+    localStorage.setItem('store_profile', JSON.stringify(storeProfile));
+    updateHeaderUI();
+    renderAllModules();
+    settingsModal.classList.add('hidden');
   };
-  localStorage.setItem('store_profile', JSON.stringify(storeProfile));
-  updateHeaderUI();
-  renderAllModules();
-  settingsModal.classList.add('hidden');
+
+  if (logoInput.files && logoInput.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      saveProfileData(e.target.result);
+    };
+    reader.readAsDataURL(logoInput.files[0]);
+  } else {
+    saveProfileData(null);
+  }
 });
 
 function renderAllModules() {
@@ -435,7 +469,6 @@ function renderAllModules() {
   updateDashboardStats();
 }
 
-// التشغيل الأولي
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
