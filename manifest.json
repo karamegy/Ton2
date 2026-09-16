@@ -1,11 +1,13 @@
 {
-  "name": "GITI - Global ERP & E-Invoicing System",
+  "name": "GITI - Enterprise ERP 2027",
   "short_name": "GITI",
   "description": "نظام إدارة الأعمال والفواتير الإلكترونية السحابي",
+  "id": "/Ton2/",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -22,4 +24,3 @@
     }
   ]
 }
-
