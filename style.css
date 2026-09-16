@@ -258,17 +258,22 @@ li { background: var(--input-bg); padding: 10px; border-radius: 6px; margin-bott
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-/* حاويات الإعلانات التجاوبية (AdSense Containers) */
+/* حاويات الإعلانات التجاوبية (AdSense Containers) - مخفية تماماً افتراضياً ولا تترك مساحة */
 .giti-ad-wrapper {
+  display: none !important;
+}
+
+/* تظهر الحاوية تلقائياً فقط عندما يقوم أدسينس بتحميل الإعلان بنجاح وتغيير الحالة إلى filled */
+.giti-ad-wrapper:has(ins[data-ad-status="filled"]) {
+  display: block !important;
   width: 100%;
-  margin: 12px 0;
+  margin-bottom: 12px;
   background: var(--card-bg);
   border: 1px dashed var(--border-color);
   border-radius: 10px;
-  padding: 8px;
+  padding: 4px;
   overflow: hidden;
   text-align: center;
-  min-height: 90px;
 }
 
 .hidden { display: none !important; }
