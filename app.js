@@ -31,7 +31,7 @@ onSnapshot(doc(db, "licenses", DEVICE_ID), (snapshot) => {
   }
 });
 
-// 2. إدارة التبويبات
+// 2. إدارة التبويبات والمظهر (Thremes)
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -41,7 +41,12 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
   });
 });
 
-// 3. قاعدة البيانات المحلية
+function applyTheme(themeName) {
+  document.documentElement.setAttribute('data-theme', themeName);
+  localStorage.setItem('app_theme', themeName);
+}
+
+// 3. البيانات المحلية
 let storeProfile = JSON.parse(localStorage.getItem('store_profile') || JSON.stringify({
   name: "نظام إدارة الأعمال",
   phone: "01000000000",
@@ -51,6 +56,7 @@ let storeProfile = JSON.parse(localStorage.getItem('store_profile') || JSON.stri
 }));
 let products = JSON.parse(localStorage.getItem('products_db') || '[]');
 let expenses = JSON.parse(localStorage.getItem('expenses_db') || '[]');
+let currentActiveInvoiceForPreview = null;
 
 function updateHeaderUI() {
   document.getElementById('header-store-name').textContent = storeProfile.name;
@@ -164,10 +170,11 @@ function saveInvoiceData() {
 }
 
 document.getElementById('save-btn').addEventListener('click', () => {
-  if (saveInvoiceData()) alert('تم حفظ الفاتورة بنجاح');
+  const inv = saveInvoiceData();
+  if (inv) alert('تم حفظ الفاتورة بنجاح');
 });
 
-// 5. واتساب والطباعة مع الشعار
+// 5. الواتساب والمعاينة والتحميل كصورة
 function sendWhatsApp(inv) {
   let phone = inv.phone.replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
@@ -192,6 +199,56 @@ function sendWhatsApp(inv) {
 document.getElementById('whatsapp-btn').addEventListener('click', () => {
   const inv = saveInvoiceData();
   if (inv) sendWhatsApp(inv);
+});
+
+// فتح نافذة معاينة الفاتورة داخل التطبيق
+function openInvoicePreview(inv) {
+  currentActiveInvoiceForPreview = inv;
+  const vLogo = document.getElementById('v-logo');
+  if (storeProfile.logo) {
+    vLogo.src = storeProfile.logo;
+    vLogo.classList.remove('hidden');
+  } else {
+    vLogo.classList.add('hidden');
+  }
+
+  document.getElementById('v-store-name').textContent = storeProfile.name;
+  document.getElementById('v-store-phone').textContent = storeProfile.phone;
+  document.getElementById('v-store-address').textContent = storeProfile.address;
+  document.getElementById('v-inv-id').textContent = `رقم الفاتورة: #${inv.id}`;
+  document.getElementById('v-date').textContent = `التاريخ: ${inv.date}`;
+  document.getElementById('v-client-name').textContent = inv.client;
+  document.getElementById('v-client-phone').textContent = inv.phone || '-';
+  document.getElementById('v-payment-status').textContent = inv.status;
+  document.getElementById('v-subtotal').textContent = `${inv.subtotal.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('v-discount').textContent = `${inv.discount.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('v-tax').textContent = `${inv.taxPercent}%`;
+  document.getElementById('v-total').textContent = `${inv.grandTotal.toFixed(2)} ${storeProfile.currency}`;
+
+  document.getElementById('v-items-body').innerHTML = inv.items.map(item => `
+    <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
+  `).join('');
+
+  document.getElementById('view-modal').classList.remove('hidden');
+}
+
+document.getElementById('close-view-btn').addEventListener('click', () => {
+  document.getElementById('view-modal').classList.add('hidden');
+});
+
+// تحميل الفاتورة كصورة PNG
+document.getElementById('download-img-btn').addEventListener('click', () => {
+  const previewCard = document.getElementById('invoice-card-preview');
+  html2canvas(previewCard, { scale: 2 }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+});
+
+document.getElementById('print-view-btn').addEventListener('click', () => {
+  if (currentActiveInvoiceForPreview) printInvoice(currentActiveInvoiceForPreview);
 });
 
 document.getElementById('print-btn').addEventListener('click', () => {
@@ -236,7 +293,7 @@ function resetForm() {
   document.getElementById('add-item-btn').click();
 }
 
-// 6. عرض القوائم والبحث
+// 6. عرض الفواتير المسجلة
 function renderSavedInvoices(filter = '') {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const container = document.getElementById('invoices-container');
@@ -246,17 +303,24 @@ function renderSavedInvoices(filter = '') {
     <li>
       <div>
         <strong>#${inv.id} - ${inv.client}</strong> (${inv.status})
-        <br><small style="color:#94a3b8">${inv.date} • ${inv.items.length} أصناف</small>
+        <br><small style="color:var(--text-muted)">${inv.date} • ${inv.items.length} أصناف</small>
         <div class="inv-actions">
+          <button class="btn-sm" style="background:var(--accent); color:#0f172a" onclick='viewInvoiceById(${inv.id})'>👁️ معاينة</button>
           <button class="btn-sm" style="background:#25d366; color:#fff" onclick='sendWhatsAppById(${inv.id})'>💬 واتساب</button>
           <button class="btn-sm" onclick="reprintInvoice(${inv.id})">🖨️ طباعة</button>
-          <button class="btn-sm" style="color:#ef4444" onclick="deleteInvoice(${inv.id})">🗑️</button>
+          <button class="btn-sm" style="color:var(--danger)" onclick="deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </div>
-      <strong style="color:#38bdf8">${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</strong>
+      <strong style="color:var(--accent)">${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</strong>
     </li>
   `).join('');
 }
+
+window.viewInvoiceById = (id) => {
+  const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
+  const inv = invoices.find(i => i.id === id);
+  if (inv) openInvoicePreview(inv);
+};
 
 window.sendWhatsAppById = (id) => {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
@@ -301,11 +365,11 @@ function renderProducts() {
     <li>
       <div>
         <strong>${p.name}</strong>
-        <br><small style="color:#94a3b8">سعر التكلفة: ${p.cost} ${storeProfile.currency} | المخزون: ${p.stock}</small>
+        <br><small style="color:var(--text-muted)">التكلفة: ${p.cost} ${storeProfile.currency} | المخزون: ${p.stock}</small>
       </div>
       <div>
-        <strong style="color:#22c55e">${p.price} ${storeProfile.currency}</strong>
-        <button class="btn-sm" style="color:#ef4444; margin-right:8px;" onclick="deleteProduct(${idx})">🗑️</button>
+        <strong style="color:var(--success)">${p.price} ${storeProfile.currency}</strong>
+        <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="deleteProduct(${idx})">🗑️</button>
       </div>
     </li>
   `).join('');
@@ -318,7 +382,7 @@ window.deleteProduct = (idx) => {
   updateProductsDatalist();
 };
 
-// 8. سجل العملاء والمديونيات
+// 8. سجل العملاء
 function renderClients() {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const clientsMap = {};
@@ -337,10 +401,10 @@ function renderClients() {
     <li>
       <div>
         <strong>👤 ${cName}</strong> (${clientsMap[cName].phone || 'بدون هاتف'})
-        <br><small style="color:#94a3b8">إجمالي التعاملات: ${clientsMap[cName].totalPurchases.toFixed(2)} ${storeProfile.currency}</small>
+        <br><small style="color:var(--text-muted)">إجمالي التعاملات: ${clientsMap[cName].totalPurchases.toFixed(2)} ${storeProfile.currency}</small>
       </div>
       <div>
-        <span style="color:${clientsMap[cName].unpaid > 0 ? '#ef4444' : '#22c55e'}">
+        <span style="color:${clientsMap[cName].unpaid > 0 ? 'var(--danger)' : 'var(--success)'}">
           ${clientsMap[cName].unpaid > 0 ? `مستحق: ${clientsMap[cName].unpaid.toFixed(2)}` : 'خالي المديونية'}
         </span>
       </div>
@@ -367,11 +431,11 @@ function renderExpenses() {
     <li>
       <div>
         <strong>${exp.title}</strong>
-        <br><small style="color:#94a3b8">${exp.date}</small>
+        <br><small style="color:var(--text-muted)">${exp.date}</small>
       </div>
       <div>
-        <strong style="color:#ef4444">-${exp.amount.toFixed(2)} ${storeProfile.currency}</strong>
-        <button class="btn-sm" style="color:#ef4444; margin-right:8px;" onclick="deleteExpense(${idx})">🗑️</button>
+        <strong style="color:var(--danger)">-${exp.amount.toFixed(2)} ${storeProfile.currency}</strong>
+        <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="deleteExpense(${idx})">🗑️</button>
       </div>
     </li>
   `).join('');
@@ -397,7 +461,7 @@ function updateDashboardStats() {
   document.getElementById('stat-count').textContent = invoices.length;
 }
 
-// 11. النسخ الاحتياطي
+// 11. النسخ الاحتياطي وتصدير CSV
 document.getElementById('export-json-btn').addEventListener('click', () => {
   const data = { invoices: JSON.parse(localStorage.getItem('invoices_db') || '[]'), products, expenses, storeProfile };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -420,9 +484,10 @@ document.getElementById('export-csv-btn').addEventListener('click', () => {
   a.click();
 });
 
-// 12. Modal الإعدادات وحفظ الشعار (Base64)
+// 12. Modal الإعدادات والثيمات
 const settingsModal = document.getElementById('settings-modal');
 document.getElementById('open-settings-btn').addEventListener('click', () => {
+  document.getElementById('theme-select').value = localStorage.getItem('app_theme') || 'dark';
   document.getElementById('store-name-input').value = storeProfile.name;
   document.getElementById('store-phone-input').value = storeProfile.phone;
   document.getElementById('store-address-input').value = storeProfile.address;
@@ -433,6 +498,9 @@ document.getElementById('open-settings-btn').addEventListener('click', () => {
 document.getElementById('close-settings-btn').addEventListener('click', () => settingsModal.classList.add('hidden'));
 
 document.getElementById('save-settings-btn').addEventListener('click', () => {
+  const selectedTheme = document.getElementById('theme-select').value;
+  applyTheme(selectedTheme);
+
   const logoInput = document.getElementById('store-logo-input');
   
   const saveProfileData = (logoBase64) => {
@@ -468,6 +536,10 @@ function renderAllModules() {
   updateProductsDatalist();
   updateDashboardStats();
 }
+
+// التشغيل الأولي
+const savedTheme = localStorage.getItem('app_theme') || 'dark';
+applyTheme(savedTheme);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
