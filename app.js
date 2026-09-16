@@ -25,6 +25,15 @@ const googleProvider = new GoogleAuthProvider();
 // 1. تفعيل التخزين والمزامنة غير المتصلة (Offline-First Architecture)
 enableIndexedDbPersistence(db).catch(() => {});
 
+// محرك تفعيل الإعلانات التلقائي
+function triggerAds() {
+  try {
+    document.querySelectorAll('.adsbygoogle').forEach(() => {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    });
+  } catch (e) {}
+}
+
 // 2. محرك الترجمة متعدد اللغات (i18n Engine)
 const translations = {
   ar: {
@@ -197,6 +206,7 @@ onAuthStateChanged(auth, async (user) => {
         lockScreen.classList.add('hidden');
         mainApp.classList.remove('hidden');
         attachCloudRealtimeSync(user.uid);
+        triggerAds();
       } else {
         mainApp.classList.add('hidden');
         lockScreen.classList.remove('hidden');
@@ -752,7 +762,8 @@ document.getElementById('export-csv-btn').addEventListener('click', () => {
     csv += `${inv.id},"${inv.client}","${inv.phone}",${inv.status},${inv.date},${inv.grandTotal}\n`;
   });
   const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
   a.download = `sales_report_${Date.now()}.csv`;
   a.click();
 });
