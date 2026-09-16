@@ -8,7 +8,7 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
@@ -31,7 +31,7 @@
       <div class="giti-brand-auth">
         <img src="logo.png" alt="GITI Logo" class="giti-logo-auth">
         <h1 class="giti-title-auth">GITI ERP</h1>
-        <p class="giti-sub-auth">منظومة الفواتير والحسابات الذكية</p>
+        <p class="giti-sub-auth">منظومة الفواتير والحسابات الذكية 2027</p>
       </div>
 
       <div class="auth-tabs">
@@ -111,7 +111,7 @@
         <img id="header-logo" class="store-logo hidden" alt="Store Logo">
         <div>
           <h1 id="header-store-name">GITI ERP</h1>
-          <p class="subtitle" id="header-store-phone">نظام إدارة الفواتير والعملاء</p>
+          <p class="subtitle" id="header-store-phone">منظومة الفواتير والعملاء</p>
         </div>
       </div>
       <div class="header-actions">
@@ -122,12 +122,13 @@
     </header>
 
     <nav class="app-nav">
-      <button class="nav-tab active" data-tab="invoices" data-i18n="tabInvoices">🧾 الفواتير</button>
+      <button class="nav-tab active" data-tab="invoices" data-i18n="tabInvoices">🧾 الفواتير الحية</button>
       <button class="nav-tab" data-tab="clients" data-i18n="tabClients">👥 العملاء والدفاتر</button>
       <button class="nav-tab" data-tab="products" data-i18n="tabProducts">📦 المخزن</button>
       <button class="nav-tab" data-tab="expenses" data-i18n="tabExpenses">💸 الخزينة</button>
     </nav>
 
+    <!-- شريط الإحصائيات ذو الزجاج العصري -->
     <section class="stats-grid">
       <div class="stat-card">
         <span class="stat-title" data-i18n="totalSales">إجمالي المبيعات</span>
@@ -147,19 +148,27 @@
       </div>
     </section>
 
-    <!-- تبويب الفواتير -->
+    <!-- تبويب الفواتير الحية التفاعلية -->
     <main id="tab-invoices" class="tab-content active">
       <div class="dashboard-grid">
-        <section class="card invoice-form-section">
-          <div class="card-header">
-            <h3 data-i18n="newInvoice">فاتورة مبيعات جديدة</h3>
-            <span class="invoice-number-tag"><span data-i18n="invNo">رقم:</span> <strong id="inv-number-display">#1001</strong></span>
+        
+        <!-- ورقة الفاتورة التفاعلية الحية -->
+        <section class="invoice-paper-card">
+          <div class="paper-header">
+            <div class="paper-brand">
+              <span class="live-badge">🔴 محرّر حي مباشر</span>
+              <h2>فاتورة مبيعات إلكترونية</h2>
+            </div>
+            <div class="paper-inv-badge">
+              <span data-i18n="invNo">رقم الفاتورة</span>
+              <strong id="inv-number-display">#1001</strong>
+            </div>
           </div>
 
-          <div class="form-row">
+          <div class="form-row invoice-client-section">
             <div class="form-group">
               <label data-i18n="clientName">اسم العميل / الشركة</label>
-              <input type="text" id="client-name" list="clients-datalist" placeholder="اختر أو اكتب اسم العميل">
+              <input type="text" id="client-name" list="clients-datalist" placeholder="اختر أو اكتب اسم العميل تلقائياً...">
               <datalist id="clients-datalist"></datalist>
             </div>
             <div class="form-group">
@@ -168,65 +177,84 @@
             </div>
           </div>
 
-          <div class="items-table-wrapper">
-            <table id="items-table" class="responsive-items-table">
+          <!-- جدول أصناف مدمج ومنسق بدقة -->
+          <div class="modern-table-container">
+            <table class="modern-items-table">
               <thead>
                 <tr>
-                  <th style="width: 45%;" data-i18n="itemTitle">الصنف / الخدمة</th>
-                  <th style="width: 15%;" data-i18n="qtyTitle">الكمية</th>
-                  <th style="width: 20%;" data-i18n="priceTitle">السعر</th>
-                  <th style="width: 15%;" data-i18n="subtotalTitle">الإجمالي</th>
-                  <th style="width: 5%;"></th>
+                  <th style="width: 42%;">اسم الصنف / الخدمة</th>
+                  <th style="width: 18%;">الكمية</th>
+                  <th style="width: 20%;">السعر</th>
+                  <th style="width: 20%;">الإجمالي</th>
+                  <th style="width: 40px;"></th>
                 </tr>
               </thead>
               <tbody id="items-body"></tbody>
             </table>
-            <button type="button" id="add-item-btn" class="btn-secondary" data-i18n="addItem">+ إضافة صنف جديد</button>
+            <button type="button" id="add-item-btn" class="btn-add-row">+ إضافة بند جديد للفاتورة</button>
           </div>
 
-          <div class="calc-summary">
-            <div class="calc-row">
-              <span data-i18n="subtotal">المجموع الفرعي:</span>
-              <span id="subtotal-val">0.00</span>
+          <!-- شريط الحسابات الفورية المباشرة -->
+          <div class="live-summary-box">
+            <div class="summary-line">
+              <span>المجموع قبل الخصم:</span>
+              <strong id="subtotal-val">0.00</strong>
             </div>
-            <div class="calc-row inputs-row">
-              <label><span data-i18n="discount">الخصم:</span>
-                <input type="number" id="discount-input" value="0" min="0">
-              </label>
-              <label><span data-i18n="tax">الضريبة (%):</span>
-                <input type="number" id="tax-input" value="14" min="0">
-              </label>
+
+            <div class="summary-inputs-grid">
+              <div class="input-pill">
+                <label>الخصم المباشر:</label>
+                <input type="number" id="discount-input" value="0" min="0" step="0.5" placeholder="0.00">
+              </div>
+              <div class="input-pill">
+                <label>الضريبة (%):</label>
+                <input type="number" id="tax-input" value="14" min="0" placeholder="14">
+              </div>
             </div>
-            <div class="calc-row inputs-row">
-              <label><span data-i18n="payStatus">حالة الدفع:</span>
+
+            <div class="summary-line highlight-discount hidden" id="discount-applied-row">
+              <span>قيمة الخصم المخصوم:</span>
+              <span id="discount-amount-display" class="text-danger">-0.00</span>
+            </div>
+
+            <div class="summary-inputs-grid" style="margin-top: 10px;">
+              <div class="input-pill" style="grid-column: 1 / -1;">
+                <label>حالة الدفع والتسديد:</label>
                 <select id="payment-status-select">
-                  <option value="مدفوعة">✅ مدفوعة بالكامل</option>
-                  <option value="آجل / غير مدفوعة">❌ آجل / على الحساب</option>
-                  <option value="مدفوعة جزئياً">⚠️ مدفوع جزء (جزئي)</option>
+                  <option value="مدفوعة">✅ مدفوعة بالكامل (نقدي / تحويل)</option>
+                  <option value="آجل / غير مدفوعة">❌ آجل / على الحساب بالكامل</option>
+                  <option value="مدفوعة جزئياً">⚠️ مدفوع جزء من المبلغ (جزئي)</option>
                 </select>
-              </label>
-              <label id="paid-amount-wrapper" class="hidden"><span>المبلغ المدفوع:</span>
-                <input type="number" id="paid-amount-input" value="0" min="0" placeholder="0.00">
-              </label>
+              </div>
             </div>
-            <div class="calc-row grand-total">
-              <span data-i18n="grandTotal">الإجمالي النهائي:</span>
-              <strong id="grand-total-val">0.00</strong>
+
+            <div class="input-pill hidden" id="paid-amount-wrapper" style="margin-top: 10px;">
+              <label>المبلغ المدفوع كاش:</label>
+              <input type="number" id="paid-amount-input" value="0" min="0" placeholder="0.00">
+            </div>
+
+            <div class="grand-total-banner">
+              <div>
+                <small>الصافي النهائي المطلوب:</small>
+                <h3 id="grand-total-val">0.00</h3>
+              </div>
+              <span id="currency-tag-display" class="currency-tag">ج.م</span>
             </div>
           </div>
 
           <div class="form-actions">
-            <button id="save-btn" class="btn-primary" data-i18n="saveInv">حفظ وتسجيل الفاتورة</button>
-            <button id="whatsapp-btn" class="btn-whatsapp" data-i18n="sendWhatsApp">واتساب 💬</button>
-            <button id="print-btn" class="btn-success" data-i18n="print">طباعة 🖨️</button>
+            <button id="save-btn" class="btn-primary" data-i18n="saveInv">💾 حفظ الفاتورة بالحسابات</button>
+            <button id="whatsapp-btn" class="btn-whatsapp" data-i18n="sendWhatsApp">💬 واتساب</button>
+            <button id="print-btn" class="btn-success" data-i18n="print">🖨️ طباعة الفاتورة</button>
           </div>
         </section>
 
+        <!-- سجل الفواتير السريع -->
         <section class="card invoice-list-section">
           <div class="card-header">
             <h3 data-i18n="invHistory">سجل الفواتير السحابي</h3>
             <div class="backup-btns">
-              <button id="export-json-btn" class="btn-sm">💾 النسخة الاحتياطية</button>
+              <button id="export-json-btn" class="btn-sm">💾 نسخة احتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
             </div>
           </div>
@@ -240,7 +268,7 @@
       </div>
     </main>
 
-    <!-- تبويب العملاء المطور -->
+    <!-- تبويب العملاء والدفاتر المجمعة -->
     <section id="tab-clients" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
@@ -310,7 +338,7 @@
       </div>
     </section>
 
-    <!-- تبويب الخزينة -->
+    <!-- تبويب الخزينة والمصروفات -->
     <section id="tab-expenses" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
