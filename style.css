@@ -1,6 +1,7 @@
 :root {
   --bg-main: #0f172a;
   --card-bg: #1e293b;
+  --input-bg: #0f172a;
   --border-color: #334155;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
@@ -20,44 +21,59 @@ body {
   background-color: var(--bg-main);
   color: var(--text-main);
   line-height: 1.5;
-  padding: 15px;
+  padding: 12px;
 }
 
 #main-app {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
+/* الهيدر الرئيسي */
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
+  margin-bottom: 15px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
+}
+
+.app-header h1 {
+  font-size: 1.4rem;
+  color: var(--text-main);
 }
 
 .subtitle {
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
+.status-badge {
+  font-size: 0.75rem;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: #334155;
+  font-weight: bold;
+}
+
+/* التقسيم الرئيسي */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 15px;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 850px) {
   .dashboard-grid {
-    grid-template-columns: 1.4fr 1fr;
+    grid-template-columns: 1.3fr 1fr;
   }
 }
 
 .card {
   background: var(--card-bg);
-  border-radius: 10px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 16px;
   border: 1px solid var(--border-color);
 }
 
@@ -65,31 +81,43 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
+.invoice-number-tag {
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+/* المدخلات والصفوف */
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 10px;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
+}
+
+@media (min-width: 500px) {
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .form-group label {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 input {
   width: 100%;
   padding: 10px;
-  background: #0f172a;
+  background: var(--input-bg);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   color: var(--text-main);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 input:focus {
@@ -97,52 +125,59 @@ input:focus {
   border-color: var(--accent);
 }
 
-/* جدول الأصناف */
+/* جدول الأصناف التفاعلي */
 .items-table-wrapper {
-  margin: 15px 0;
+  margin: 12px 0;
   overflow-x: auto;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 10px;
 }
 
 th, td {
-  padding: 8px;
+  padding: 6px 4px;
   text-align: right;
   border-bottom: 1px solid var(--border-color);
 }
 
 th {
   color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+td input {
+  padding: 6px;
   font-size: 0.85rem;
 }
 
 .btn-remove {
-  background: transparent;
+  background: #ef444422;
   color: var(--danger);
-  border: none;
+  border: 1px solid #ef444444;
+  border-radius: 4px;
+  padding: 6px 10px;
   cursor: pointer;
-  font-size: 1.2rem;
+  font-weight: bold;
 }
 
-/* أزرار التشغيل */
+/* الأزرار */
 button {
-  padding: 10px 15px;
-  border-radius: 6px;
+  padding: 12px;
+  border-radius: 8px;
   border: none;
   font-weight: bold;
   cursor: pointer;
+  font-size: 0.95rem;
   transition: opacity 0.2s;
 }
 
 button:hover { opacity: 0.9; }
 
-.btn-primary { background: var(--accent); color: #000; }
-.btn-secondary { background: #334155; color: var(--text-main); width: 100%; }
-.btn-success { background: var(--success); color: #fff; }
+.btn-primary { background: var(--accent); color: #0f172a; }
+.btn-secondary { background: #334155; color: var(--text-main); width: 100%; margin-top: 8px; }
+.btn-success { background: var(--success); color: #ffffff; }
 
 .form-actions {
   display: grid;
@@ -151,62 +186,64 @@ button:hover { opacity: 0.9; }
   margin-top: 15px;
 }
 
-/* الحسابات الإجمالية */
+/* قسم الحسابات والإجماليات */
 .calc-summary {
-  background: #0f172a;
-  padding: 15px;
+  background: var(--input-bg);
+  padding: 12px;
   border-radius: 8px;
-  margin-top: 15px;
+  margin-top: 12px;
 }
 
 .calc-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 8px;
+  font-size: 0.85rem;
 }
 
 .inputs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
 .inputs-row label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.inputs-row input {
-  width: 70px;
-  padding: 4px 8px;
-  display: inline-block;
-}
-
 .grand-total {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: var(--accent);
   border-top: 1px solid var(--border-color);
   padding-top: 8px;
   margin-bottom: 0;
 }
 
-/* قائمة الفواتير */
+/* سجل الفواتير */
 .list-container {
-  max-height: 500px;
+  max-height: 400px;
   overflow-y: auto;
 }
 
-#invoices-container li {
+#invoices-container {
   list-style: none;
-  background: #0f172a;
-  padding: 12px;
+}
+
+#invoices-container li {
+  background: var(--input-bg);
+  padding: 10px;
   border-radius: 6px;
   margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border: 1px solid var(--border-color);
+  font-size: 0.85rem;
 }
 
-/* شاشة الحظر */
+/* شاشة القفل عند الإيقاف */
 #lock-screen {
   position: fixed;
   top: 0; left: 0;
@@ -220,36 +257,42 @@ button:hover { opacity: 0.9; }
 
 .lock-card {
   background: var(--card-bg);
-  padding: 30px;
+  padding: 25px;
   border-radius: 12px;
   text-align: center;
   border: 1px solid var(--danger);
 }
 
-.status-badge {
-  font-size: 0.8rem;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: #334155;
-}
-
 .hidden { display: none !important; }
 
-/* إعدادات الطباعة */
-.print-only { display: none; }
+/* إخفاء قالب الطباعة من الشاشة العادية تماماً */
+.print-only {
+  display: none !important;
+}
 
+/* التنسيق الخاص بالطباعة فقط (عند فتح أمر window.print) */
 @media print {
-  body * { visibility: hidden; }
-  .print-only, .print-only * { visibility: visible; }
-  .print-only {
-    display: block;
+  body * {
+    visibility: hidden !important;
+  }
+  
+  #print-template, #print-template * {
+    visibility: visible !important;
+  }
+  
+  #print-template {
+    display: block !important;
     position: absolute;
-    left: 0; top: 0;
+    left: 0;
+    top: 0;
     width: 100%;
-    color: #000;
-    background: #fff;
+    color: #000000 !important;
+    background: #ffffff !important;
     padding: 20px;
   }
-  .print-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-  .print-table th, .print-table td { border: 1px solid #000; padding: 8px; text-align: right; }
+
+  .print-header { text-align: center; margin-bottom: 15px; }
+  .print-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+  .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: right; }
+  .print-totals { text-align: left; margin-top: 15px; }
 }
