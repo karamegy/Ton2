@@ -3,34 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
-  <title>GITI - Global ERP & E-Invoicing System</title>
+  <meta name="theme-color" content="#090d16">
+  <title>GITI - Enterprise ERP 2027</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
   
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <!-- مكتبة توليد رمز QR المعياري للطباعة والمعاينة -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <!-- Google AdSense SDK -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
 </head>
 <body>
 
-  <!-- شاشة الدخول والتسجيل السحابي -->
+  <!-- شاشة الدخول والتسجيل -->
   <div id="login-screen" class="login-overlay">
     <div class="login-card">
       <div class="lang-switch-auth">
-        <button id="auth-lang-btn" class="btn-sm">English / عربي</button>
+        <button id="auth-lang-btn" class="btn-ghost">English / عربي</button>
       </div>
 
-      <!-- الهوية البصرية وشعار GITI -->
       <div class="giti-brand-auth">
-        <img src="logo.png" alt="GITI Logo" class="giti-logo-auth" style="width: 80px; height: auto; display: block; margin: 0 auto 10px;">
-        <h1 class="giti-title-auth">GITI</h1>
-        <p class="giti-sub-auth">Global ERP & E-Invoicing System</p>
+        <img src="logo.png" alt="GITI Logo" class="giti-logo-auth">
+        <h1 class="giti-title-auth">GITI ERP</h1>
+        <p class="giti-sub-auth">منظومة الفواتير والحسابات الذكية</p>
       </div>
 
       <div class="auth-tabs">
@@ -75,7 +76,7 @@
           <label data-i18n="password">كلمة المرور</label>
           <input type="password" id="reg-password" minlength="6" required placeholder="••••••••">
         </div>
-        <button type="submit" class="btn-success auth-submit-btn" data-i18n="registerBtn">إنشاء حساب طلب تفعيل</button>
+        <button type="submit" class="btn-success auth-submit-btn" data-i18n="registerBtn">إنشاء حساب جديد</button>
       </form>
 
       <div id="auth-error" class="auth-msg error hidden"></div>
@@ -86,9 +87,8 @@
   <!-- شاشة القفل والتعطيل -->
   <div id="lock-screen" class="hidden">
     <div class="lock-card">
-      <img src="logo.png" alt="GITI Logo" class="giti-logo-auth" style="width: 50px; height: 50px; margin-bottom: 10px;">
       <h2 data-i18n="accountDisabled">⚠️ الحساب معطل أو بانتظار التفعيل</h2>
-      <p data-i18n="accountDisabledDesc">تم تسجيل حسابك بنجاح. يرجى التواصل مع الإدارة لتفعيل الرخصة السحابية.</p>
+      <p data-i18n="accountDisabledDesc">يرجى التواصل مع الإدارة لتفعيل الرخصة السحابية.</p>
       <p class="sub-text" id="user-uid-tag"></p>
       <button id="logout-lock-btn" class="btn-secondary" style="margin-top: 15px;" data-i18n="logout">تسجيل الخروج</button>
     </div>
@@ -96,7 +96,6 @@
 
   <!-- التطبيق الرئيسي -->
   <div id="main-app" class="hidden">
-    <!-- وحدة إعلانات علوية (تختفي تماماً إذا لم يوجد إعلان) -->
     <div class="giti-ad-wrapper">
       <ins class="adsbygoogle"
            style="display:block"
@@ -112,21 +111,20 @@
         <img id="header-logo" class="store-logo hidden" alt="Store Logo">
         <div>
           <h1 id="header-store-name">GITI ERP</h1>
-          <p class="subtitle" id="header-store-phone">الفاتورة الإلكترونية والمخزن</p>
+          <p class="subtitle" id="header-store-phone">نظام إدارة الفواتير والعملاء</p>
         </div>
       </div>
       <div class="header-actions">
         <button id="toggle-lang-btn" class="btn-icon">🌐 EN/عربي</button>
-        <span id="account-status" class="status-badge">مفعل سحابياً</span>
-        <button id="open-settings-btn" class="btn-icon">⚙️ الإعدادات</button>
-        <button id="logout-btn" class="btn-icon btn-logout" title="خروج">🚪 خروج</button>
+        <button id="open-settings-btn" class="btn-icon">⚙️</button>
+        <button id="logout-btn" class="btn-icon btn-logout" title="خروج">🚪</button>
       </div>
     </header>
 
     <nav class="app-nav">
       <button class="nav-tab active" data-tab="invoices" data-i18n="tabInvoices">🧾 الفواتير</button>
+      <button class="nav-tab" data-tab="clients" data-i18n="tabClients">👥 العملاء والدفاتر</button>
       <button class="nav-tab" data-tab="products" data-i18n="tabProducts">📦 المخزن</button>
-      <button class="nav-tab" data-tab="clients" data-i18n="tabClients">👥 العملاء</button>
       <button class="nav-tab" data-tab="expenses" data-i18n="tabExpenses">💸 الخزينة</button>
     </nav>
 
@@ -136,12 +134,12 @@
         <strong id="stat-total-sales" class="stat-value">0.00</strong>
       </div>
       <div class="stat-card">
-        <span class="stat-title" data-i18n="netProfit">صافي الأرباح</span>
-        <strong id="stat-net-profit" class="stat-value text-success">0.00</strong>
+        <span class="stat-title">إجمالي المديونيات</span>
+        <strong id="stat-total-debts" class="stat-value text-danger">0.00</strong>
       </div>
       <div class="stat-card">
-        <span class="stat-title" data-i18n="expenses">المصروفات</span>
-        <strong id="stat-expenses" class="stat-value text-danger">0.00</strong>
+        <span class="stat-title" data-i18n="netProfit">صافي الأرباح</span>
+        <strong id="stat-net-profit" class="stat-value text-success">0.00</strong>
       </div>
       <div class="stat-card">
         <span class="stat-title" data-i18n="invoiceCount">عدد الفواتير</span>
@@ -155,7 +153,7 @@
         <section class="card invoice-form-section">
           <div class="card-header">
             <h3 data-i18n="newInvoice">فاتورة مبيعات جديدة</h3>
-            <span class="invoice-number-tag"><span data-i18n="invNo">رقم الفاتورة:</span> <strong id="inv-number-display">#1001</strong></span>
+            <span class="invoice-number-tag"><span data-i18n="invNo">رقم:</span> <strong id="inv-number-display">#1001</strong></span>
           </div>
 
           <div class="form-row">
@@ -199,13 +197,16 @@
                 <input type="number" id="tax-input" value="14" min="0">
               </label>
             </div>
-            <div class="calc-row">
-              <label style="width:100%"><span data-i18n="payStatus">حالة الدفع:</span>
+            <div class="calc-row inputs-row">
+              <label><span data-i18n="payStatus">حالة الدفع:</span>
                 <select id="payment-status-select">
                   <option value="مدفوعة">✅ مدفوعة بالكامل</option>
-                  <option value="آجل / غير مدفوعة">❌ آجل / غير مدفوعة</option>
-                  <option value="مدفوعة جزئياً">⚠️ مدفوعة جزئياً</option>
+                  <option value="آجل / غير مدفوعة">❌ آجل / على الحساب</option>
+                  <option value="مدفوعة جزئياً">⚠️ مدفوع جزء (جزئي)</option>
                 </select>
+              </label>
+              <label id="paid-amount-wrapper" class="hidden"><span>المبلغ المدفوع:</span>
+                <input type="number" id="paid-amount-input" value="0" min="0" placeholder="0.00">
               </label>
             </div>
             <div class="calc-row grand-total">
@@ -215,7 +216,7 @@
           </div>
 
           <div class="form-actions">
-            <button id="save-btn" class="btn-primary" data-i18n="saveInv">حفظ الفاتورة</button>
+            <button id="save-btn" class="btn-primary" data-i18n="saveInv">حفظ وتسجيل الفاتورة</button>
             <button id="whatsapp-btn" class="btn-whatsapp" data-i18n="sendWhatsApp">واتساب 💬</button>
             <button id="print-btn" class="btn-success" data-i18n="print">طباعة 🖨️</button>
           </div>
@@ -225,7 +226,7 @@
           <div class="card-header">
             <h3 data-i18n="invHistory">سجل الفواتير السحابي</h3>
             <div class="backup-btns">
-              <button id="export-json-btn" class="btn-sm">💾 Backup</button>
+              <button id="export-json-btn" class="btn-sm">💾 النسخة الاحتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
             </div>
           </div>
@@ -239,7 +240,43 @@
       </div>
     </main>
 
-    <!-- باقي التبويبات -->
+    <!-- تبويب العملاء المطور -->
+    <section id="tab-clients" class="tab-content">
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card-header">
+            <h3>👥 إضافة عميل جديد</h3>
+          </div>
+          <form id="client-form" class="form-row">
+            <div class="form-group">
+              <label>اسم العميل / الشركة</label>
+              <input type="text" id="c-name" required placeholder="الاسم الكامل">
+            </div>
+            <div class="form-group">
+              <label>رقم الهاتف</label>
+              <input type="tel" id="c-phone" placeholder="01xxxxxxxxx">
+            </div>
+            <div class="form-group">
+              <label>الرصيد الافتتاحي (مديونية سابقة)</label>
+              <input type="number" id="c-balance" value="0" placeholder="0.00">
+            </div>
+            <button type="submit" class="btn-primary" style="grid-column: 1 / -1;">حفظ بيانات العميل</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>سجل العملاء الحسابي المجمع</h3>
+            <input type="text" id="search-clients-input" placeholder="بحث عن عميل..." style="max-width: 180px; padding: 6px 10px;">
+          </div>
+          <div class="list-container">
+            <ul id="clients-list-container"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- تبويب المخزن -->
     <section id="tab-products" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
@@ -273,15 +310,7 @@
       </div>
     </section>
 
-    <section id="tab-clients" class="tab-content">
-      <div class="card">
-        <h3 data-i18n="clientDb">سجل العملاء والمديونيات</h3>
-        <div class="list-container" style="margin-top:15px;">
-          <ul id="clients-list-container"></ul>
-        </div>
-      </div>
-    </section>
-
+    <!-- تبويب الخزينة -->
     <section id="tab-expenses" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
@@ -306,6 +335,45 @@
         </div>
       </div>
     </section>
+  </div>
+
+  <!-- Modal كشف حساب عميل مجمع والتسديد -->
+  <div id="client-ledger-modal" class="modal hidden">
+    <div class="modal-content ledger-modal-content">
+      <div class="modal-header">
+        <h3 id="ledger-client-title">👤 كشف حساب عميل</h3>
+        <button id="close-ledger-btn" class="btn-close">✕</button>
+      </div>
+      <div class="ledger-summary-card">
+        <div>
+          <span>إجمالي التعاملات:</span>
+          <strong id="ledger-total-sales">0.00</strong>
+        </div>
+        <div>
+          <span>المدفوع:</span>
+          <strong id="ledger-total-paid" class="text-success">0.00</strong>
+        </div>
+        <div>
+          <span>الصافي / المديونية:</span>
+          <strong id="ledger-balance" class="text-danger">0.00</strong>
+        </div>
+      </div>
+
+      <div class="pay-section">
+        <div class="form-group">
+          <label>تسجيل دفعة سداد نقدي من العميل</label>
+          <div style="display:flex; gap:8px;">
+            <input type="number" id="pay-amount-input" placeholder="المبلغ">
+            <button id="submit-payment-btn" class="btn-success">سداد 💵</button>
+          </div>
+        </div>
+      </div>
+
+      <h4>سجل الفواتير والدفعات المجمعة:</h4>
+      <div class="list-container" style="max-height: 250px;">
+        <ul id="client-ledger-history"></ul>
+      </div>
+    </div>
   </div>
 
   <!-- Modal معاينة الفاتورة الإلكترونية المعيارية ZATCA/ETA -->
@@ -349,7 +417,6 @@
             <p>الضريبة: <span id="v-tax"></span></p>
             <h3>الإجمالي الكلي: <span id="v-total"></span></h3>
           </div>
-          <!-- حاوية QR Code الفاتورة الإلكترونية المشفر ZATCA/ETA -->
           <div id="preview-qrcode" class="qrcode-wrapper"></div>
         </div>
       </div>
@@ -370,10 +437,10 @@
       <div class="form-group">
         <label data-i18n="theme">مظهر التطبيق</label>
         <select id="theme-select">
-          <option value="dark">🌙 داكن (Dark Default)</option>
+          <option value="dark">🌙 داكن حديث (Dark Glass)</option>
+          <option value="indigo">🟣 بنفسجي (Indigo Modern)</option>
+          <option value="emerald">🟢 زمردي (Emerald Enterprise)</option>
           <option value="light">☀️ فاتح (Light Classic)</option>
-          <option value="emerald">🟢 زمردي (Emerald Green)</option>
-          <option value="indigo">🟣 بنفسجي (Indigo Night)</option>
         </select>
       </div>
       <div class="form-group" style="margin-top:10px;">
