@@ -128,7 +128,7 @@
       <button class="nav-tab" data-tab="expenses" data-i18n="tabExpenses">💸 الخزينة</button>
     </nav>
 
-    <!-- شريط الإحصائيات ذو الزجاج العصري -->
+    <!-- شريط الإحصائيات -->
     <section class="stats-grid">
       <div class="stat-card">
         <span class="stat-title" data-i18n="totalSales">إجمالي المبيعات</span>
@@ -148,7 +148,7 @@
       </div>
     </section>
 
-    <!-- تبويب الفواتير الحية التفاعلية -->
+    <!-- تبويب الفواتير الحية -->
     <main id="tab-invoices" class="tab-content active">
       <div class="dashboard-grid">
         
@@ -177,7 +177,7 @@
             </div>
           </div>
 
-          <!-- جدول أصناف مدمج ومنسق بدقة -->
+          <!-- جدول الأصناف -->
           <div class="modern-table-container">
             <table class="modern-items-table">
               <thead>
@@ -194,7 +194,7 @@
             <button type="button" id="add-item-btn" class="btn-add-row">+ إضافة بند جديد للفاتورة</button>
           </div>
 
-          <!-- شريط الحسابات الفورية المباشرة -->
+          <!-- شريط الحسابات -->
           <div class="live-summary-box">
             <div class="summary-line">
               <span>المجموع قبل الخصم:</span>
@@ -365,41 +365,51 @@
     </section>
   </div>
 
-  <!-- Modal كشف حساب عميل مجمع والتسديد -->
+  <!-- Modal كشف حساب عميل مجمع والتسديد مع أزرار الطباعة والواتساب والتنزيل -->
   <div id="client-ledger-modal" class="modal hidden">
     <div class="modal-content ledger-modal-content">
       <div class="modal-header">
         <h3 id="ledger-client-title">👤 كشف حساب عميل</h3>
         <button id="close-ledger-btn" class="btn-close">✕</button>
       </div>
-      <div class="ledger-summary-card">
-        <div>
-          <span>إجمالي التعاملات:</span>
-          <strong id="ledger-total-sales">0.00</strong>
-        </div>
-        <div>
-          <span>المدفوع:</span>
-          <strong id="ledger-total-paid" class="text-success">0.00</strong>
-        </div>
-        <div>
-          <span>الصافي / المديونية:</span>
-          <strong id="ledger-balance" class="text-danger">0.00</strong>
-        </div>
-      </div>
-
-      <div class="pay-section">
-        <div class="form-group">
-          <label>تسجيل دفعة سداد نقدي من العميل</label>
-          <div style="display:flex; gap:8px;">
-            <input type="number" id="pay-amount-input" placeholder="المبلغ">
-            <button id="submit-payment-btn" class="btn-success">سداد 💵</button>
+      
+      <div id="ledger-printable-card" style="padding: 4px; border-radius: 12px;">
+        <div class="ledger-summary-card">
+          <div>
+            <span>إجمالي التعاملات:</span>
+            <strong id="ledger-total-sales">0.00</strong>
+          </div>
+          <div>
+            <span>المدفوع:</span>
+            <strong id="ledger-total-paid" class="text-success">0.00</strong>
+          </div>
+          <div>
+            <span>الصافي / المديونية:</span>
+            <strong id="ledger-balance" class="text-danger">0.00</strong>
           </div>
         </div>
+
+        <div class="pay-section">
+          <div class="form-group">
+            <label>تسجيل دفعة سداد نقدي من العميل</label>
+            <div style="display:flex; gap:8px;">
+              <input type="number" id="pay-amount-input" placeholder="المبلغ">
+              <button id="submit-payment-btn" class="btn-success">سداد 💵</button>
+            </div>
+          </div>
+        </div>
+
+        <h4>سجل الفواتير والدفعات المجمعة:</h4>
+        <div class="list-container" style="max-height: 250px;">
+          <ul id="client-ledger-history"></ul>
+        </div>
       </div>
 
-      <h4>سجل الفواتير والدفعات المجمعة:</h4>
-      <div class="list-container" style="max-height: 250px;">
-        <ul id="client-ledger-history"></ul>
+      <!-- أزرار الإجراءات المباشرة لكشف الحساب -->
+      <div class="modal-actions-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+        <button id="ledger-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
+        <button id="ledger-download-btn" class="btn-primary">صورة 🖼️</button>
+        <button id="ledger-print-btn" class="btn-success">طباعة 🖨️</button>
       </div>
     </div>
   </div>
