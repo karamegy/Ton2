@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام الفواتير المحلي</title>
+  <title>نظام الفواتير المتقدم</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- شاشة الحظر الكامل (تظهر عندما يوقف الأدمن الحساب) -->
+  <!-- شاشة الحظر الكامل -->
   <div id="lock-screen" class="hidden">
     <div class="lock-card">
       <h2>⚠️ الحساب غير مفعل</h2>
@@ -17,31 +17,126 @@
     </div>
   </div>
 
-  <!-- الواجهة الرئيسية للتطبيق -->
+  <!-- الواجهة الرئيسية -->
   <div id="main-app">
-    <header>
-      <h1>إدارة الفواتير المحلية</h1>
+    <header class="app-header">
+      <div>
+        <h1>نظام الفواتير الذكي</h1>
+        <p class="subtitle">إدارة الفواتير والطباعة محلياً</p>
+      </div>
       <span id="account-status" class="status-badge">جاري التحقق...</span>
     </header>
 
-    <main>
-      <!-- نموذج إنشاء فاتورة -->
-      <section class="invoice-form">
-        <h3>فاتورة جديدة</h3>
-        <input type="text" id="client-name" placeholder="اسم العميل">
-        <input type="number" id="invoice-amount" placeholder="المبلغ">
-        <button id="save-btn">حفظ الفاتورة محلياً</button>
+    <div class="dashboard-grid">
+      <!-- قسم إنشاء الفاتورة -->
+      <section class="card invoice-form-section">
+        <div class="card-header">
+          <h3>فاتورة جديدة</h3>
+          <span class="invoice-number-tag">رقم الفاتورة: <strong id="inv-number-display">#1001</strong></span>
+        </div>
+
+        <!-- بيانات العميل والأساسيات -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>اسم العميل / الشركة</label>
+            <input type="text" id="client-name" placeholder="أدخل اسم العميل">
+          </div>
+          <div class="form-group">
+            <label>رقم الهاتف (اختياري)</label>
+            <input type="tel" id="client-phone" placeholder="01xxxxxxxxx">
+          </div>
+        </div>
+
+        <!-- جدول الأصناف -->
+        <div class="items-table-wrapper">
+          <table id="items-table">
+            <thead>
+              <tr>
+                <th>الصنف / الخدمة</th>
+                <th width="80">الكمية</th>
+                <th width="100">السعر</th>
+                <th width="100">الإجمالي</th>
+                <th width="40"></th>
+              </tr>
+            </thead>
+            <tbody id="items-body">
+              <!-- يتم إضافة صفوف الأصناف ديناميكياً هنا -->
+            </tbody>
+          </table>
+          <button type="button" id="add-item-btn" class="btn-secondary">+ إضافة صنف جديد</button>
+        </div>
+
+        <!-- الحسابات الإجمالية -->
+        <div class="calc-summary">
+          <div class="calc-row">
+            <span>المجموع الفرعي:</span>
+            <span id="subtotal-val">0.00 ج.م</span>
+          </div>
+          <div class="calc-row inputs-row">
+            <label>الخصم (ج.م):
+              <input type="number" id="discount-input" value="0" min="0">
+            </label>
+            <label>الضريبة (%):
+              <input type="number" id="tax-input" value="0" min="0">
+            </label>
+          </div>
+          <div class="calc-row grand-total">
+            <span>الإجمالي النهائي:</span>
+            <strong id="grand-total-val">0.00 ج.م</strong>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button id="save-btn" class="btn-primary">حفظ الفاتورة</button>
+          <button id="print-btn" class="btn-success">حفظ وطباعة 🖨️</button>
+        </div>
       </section>
 
-      <!-- قائمة الفواتير المخزنة محلياً -->
-      <section class="invoice-list">
-        <h3>الفواتير المحفوظة</h3>
-        <ul id="invoices-container"></ul>
+      <!-- قسم قائمة الفواتير والبحث -->
+      <section class="card invoice-list-section">
+        <div class="card-header">
+          <h3>سجل الفواتير المحفوظة</h3>
+          <input type="text" id="search-input" placeholder="بحث باسم العميل أو رقم الفاتورة...">
+        </div>
+
+        <div class="list-container">
+          <ul id="invoices-container"></ul>
+        </div>
       </section>
-    </main>
+    </div>
+  </div>
+
+  <!-- قالب الطباعة المخصص -->
+  <div id="print-template" class="print-only">
+    <div class="print-header">
+      <h1 id="p-store-name">فاتورة مبيعات</h1>
+      <p id="p-inv-id"></p>
+      <p id="p-date"></p>
+    </div>
+    <hr>
+    <div class="print-client">
+      <p><strong>العميل:</strong> <span id="p-client-name"></span></p>
+      <p><strong>الهاتف:</strong> <span id="p-client-phone"></span></p>
+    </div>
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>الصنف</th>
+          <th>الكمية</th>
+          <th>السعر</th>
+          <th>الإجمالي</th>
+        </tr>
+      </thead>
+      <tbody id="p-items-body"></tbody>
+    </table>
+    <div class="print-totals">
+      <p>المجموع الفرعي: <span id="p-subtotal"></span></p>
+      <p>الخصم: <span id="p-discount"></span></p>
+      <p>الضريبة: <span id="p-tax"></span></p>
+      <h3>الإجمالي الكلي: <span id="p-total"></span></h3>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>
 </body>
 </html>
-
