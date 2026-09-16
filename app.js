@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
@@ -15,26 +15,48 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-const DEVICE_ID = localStorage.getItem('device_id') || 'USER_DEVICE_001';
-localStorage.setItem('device_id', DEVICE_ID);
-
 const loginScreen = document.getElementById('login-screen');
 const lockScreen = document.getElementById('lock-screen');
 const mainApp = document.getElementById('main-app');
-const loginForm = document.getElementById('login-form');
-const loginError = document.getElementById('login-error');
 
-// 1. مراقبة حالة تسجيل الدخول والترخيص الذكي (Real-time License Check)
+const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
+const authError = document.getElementById('auth-error');
+const authSuccess = document.getElementById('auth-success');
+
+// 1. إدارة تبويبات الدخول والتسجيل
+document.getElementById('tab-login-btn').addEventListener('click', (e) => {
+  document.getElementById('tab-login-btn').classList.add('active');
+  document.getElementById('tab-register-btn').classList.remove('active');
+  loginForm.classList.remove('hidden');
+  registerForm.classList.add('hidden');
+  clearAuthMsgs();
+});
+
+document.getElementById('tab-register-btn').addEventListener('click', (e) => {
+  document.getElementById('tab-register-btn').classList.add('active');
+  document.getElementById('tab-login-btn').classList.remove('active');
+  registerForm.classList.remove('hidden');
+  loginForm.classList.add('hidden');
+  clearAuthMsgs();
+});
+
+function clearAuthMsgs() {
+  authError.classList.add('hidden');
+  authSuccess.classList.add('hidden');
+}
+
+// 2. معالجة التسجيل الحقيقي للحساب وإلغاء ثغرة المعرف الموحد
 let licenseUnsubscribe = null;
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    // المستخدم قام بتسجيل الدخول -> التحقق من تفعيل الحساب في Firestore
     loginScreen.classList.add('hidden');
+    document.getElementById('user-uid-tag').textContent = `كود الحساب (UID): ${user.uid}`;
     
-    // الاستماع الفوري لحالة ترخيص المستخدم من الأدمن
+    // مراقبة ترخيص UID الخاص بالمستخدم مباشرة لمنع الاختراق
     if (licenseUnsubscribe) licenseUnsubscribe();
-    licenseUnsubscribe = onSnapshot(doc(db, "licenses", DEVICE_ID), (snapshot) => {
+    licenseUnsubscribe = onSnapshot(doc(db, "licenses", user.uid), (snapshot) => {
       if (snapshot.exists() && snapshot.data().isActive === true) {
         lockScreen.classList.add('hidden');
         mainApp.classList.remove('hidden');
@@ -45,7 +67,6 @@ onAuthStateChanged(auth, (user) => {
     });
 
   } else {
-    // لم يتم تسجيل الدخول
     if (licenseUnsubscribe) licenseUnsubscribe();
     mainApp.classList.add('hidden');
     lockScreen.classList.add('hidden');
@@ -53,18 +74,44 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// 2. معالج نموذج الدخول
+// نموذج الدخول
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  loginError.classList.add('hidden');
+  clearAuthMsgs();
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value.trim();
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
   } catch (err) {
-    loginError.textContent = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
-    loginError.classList.remove('hidden');
+    authError.textContent = "بيانات الدخول غير صحيحة";
+    authError.classList.remove('hidden');
+  }
+});
+
+// نموذج إنشاء حساب جديد (يتم إخضاع الحساب لانتظار التفعيل آلياً)
+registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearAuthMsgs();
+  const storeName = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    // تسجيل بيانات المستخدم في Firestore بـ (isActive: false) حتى يفعله الأدمن
+    await setDoc(doc(db, "licenses", cred.user.uid), {
+      email: email,
+      storeName: storeName,
+      isActive: false,
+      createdAt: new Date().toISOString()
+    });
+    
+    authSuccess.textContent = "تم إنشاء الحساب بنجاح! بانتظار تفعيل الأدمن.";
+    authSuccess.classList.remove('hidden');
+  } catch (err) {
+    authError.textContent = err.message.includes('email-already-in-use') ? "البريد مستخدم بالفعل" : "خطأ في إنشاء الحساب";
+    authError.classList.remove('hidden');
   }
 });
 
@@ -87,7 +134,7 @@ function applyTheme(themeName) {
   localStorage.setItem('app_theme', themeName);
 }
 
-// 4. البيانات المحلية
+// 4. قاعدة البيانات المحلية والنظام
 let storeProfile = JSON.parse(localStorage.getItem('store_profile') || JSON.stringify({
   name: "نظام إدارة الأعمال",
   phone: "01000000000",
@@ -112,7 +159,7 @@ function updateHeaderUI() {
   }
 }
 
-// 5. نظام الفواتير
+// 5. إدارة الفواتير
 let activeItems = [];
 const itemsBody = document.getElementById('items-body');
 const discountInput = document.getElementById('discount-input');
@@ -215,7 +262,7 @@ document.getElementById('save-btn').addEventListener('click', () => {
   if (inv) alert('تم حفظ الفاتورة بنجاح');
 });
 
-// 6. واتساب والمعاينة المباشرة
+// 6. الميزات (واتساب، معاينة، صور)
 function sendWhatsApp(inv) {
   let phone = inv.phone.replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
@@ -332,7 +379,7 @@ function resetForm() {
   document.getElementById('add-item-btn').click();
 }
 
-// 7. عرض القوائم والبحث
+// 7. عرض باقي البيانات والإعدادات
 function renderSavedInvoices(filter = '') {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const container = document.getElementById('invoices-container');
@@ -383,7 +430,6 @@ window.deleteInvoice = (id) => {
 
 document.getElementById('search-input').addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
-// 8. المخزن والعملاء والمصروفات والإحصائيات
 document.getElementById('product-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const name = document.getElementById('p-name').value;
@@ -497,7 +543,6 @@ function updateDashboardStats() {
   document.getElementById('stat-count').textContent = invoices.length;
 }
 
-// 9. النسخ الاحتياطي والإعدادات
 document.getElementById('export-json-btn').addEventListener('click', () => {
   const data = { invoices: JSON.parse(localStorage.getItem('invoices_db') || '[]'), products, expenses, storeProfile };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
