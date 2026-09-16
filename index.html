@@ -3,17 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام الفواتير المتقدم</title>
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="نظام إدارة الفواتير والمبيعات أوفلاين">
+  <title>نظام الفواتير المتكامل</title>
+  
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
-  <!-- شاشة الحظر الكامل -->
+  <!-- شاشة القفل عند تعطيل الحساب من الأدمن -->
   <div id="lock-screen" class="hidden">
     <div class="lock-card">
       <h2>⚠️ الحساب غير مفعل</h2>
       <p>تم إيقاف صلاحية استخدام التطبيق من قبل المدير (Admin Master).</p>
-      <p class="sub-text">يرجى التواصل مع الإدارة لإعادة تفعيل الحساب.</p>
+      <p class="sub-text">يرجى التواصل مع الإدارة لإعادة التفعيل.</p>
     </div>
   </div>
 
@@ -21,47 +25,63 @@
   <div id="main-app">
     <header class="app-header">
       <div>
-        <h1>نظام الفواتير الذكي</h1>
-        <p class="subtitle">إدارة الفواتير والطباعة محلياً</p>
+        <h1 id="header-store-name">نظام الفواتير الذكي</h1>
+        <p class="subtitle" id="header-store-phone">إدارة الفواتير والطباعة محلياً</p>
       </div>
-      <span id="account-status" class="status-badge">جاري التحقق...</span>
+      <div class="header-actions">
+        <span id="account-status" class="status-badge">جاري التحقق...</span>
+        <button id="open-settings-btn" class="btn-icon" title="إعدادات المتجر">⚙️ الإعدادات</button>
+      </div>
     </header>
 
+    <!-- شريط الإحصائيات السريعة -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-title">إجمالي المبيعات</span>
+        <strong id="stat-total-sales" class="stat-value">0.00 ج.م</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">عدد الفواتير</span>
+        <strong id="stat-count" class="stat-value">0</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">متوسط الفاتورة</span>
+        <strong id="stat-avg" class="stat-value">0.00 ج.م</strong>
+      </div>
+    </section>
+
     <div class="dashboard-grid">
-      <!-- قسم إنشاء الفاتورة -->
+      <!-- قسم تحرير الفاتورة -->
       <section class="card invoice-form-section">
         <div class="card-header">
           <h3>فاتورة جديدة</h3>
           <span class="invoice-number-tag">رقم الفاتورة: <strong id="inv-number-display">#1001</strong></span>
         </div>
 
-        <!-- بيانات العميل والأساسيات -->
         <div class="form-row">
           <div class="form-group">
-            <label>اسم العميل / الشركة</label>
+            <label for="client-name">اسم العميل / الشركة</label>
             <input type="text" id="client-name" placeholder="أدخل اسم العميل">
           </div>
           <div class="form-group">
-            <label>رقم الهاتف (اختياري)</label>
+            <label for="client-phone">رقم الهاتف</label>
             <input type="tel" id="client-phone" placeholder="01xxxxxxxxx">
           </div>
         </div>
 
-        <!-- جدول الأصناف -->
+        <!-- جدول إضافة الأصناف -->
         <div class="items-table-wrapper">
           <table id="items-table">
             <thead>
               <tr>
                 <th>الصنف / الخدمة</th>
-                <th width="80">الكمية</th>
-                <th width="100">السعر</th>
-                <th width="100">الإجمالي</th>
+                <th width="70">الكمية</th>
+                <th width="90">السعر</th>
+                <th width="90">الإجمالي</th>
                 <th width="40"></th>
               </tr>
             </thead>
-            <tbody id="items-body">
-              <!-- يتم إضافة صفوف الأصناف ديناميكياً هنا -->
-            </tbody>
+            <tbody id="items-body"></tbody>
           </table>
           <button type="button" id="add-item-btn" class="btn-secondary">+ إضافة صنف جديد</button>
         </div>
@@ -73,7 +93,7 @@
             <span id="subtotal-val">0.00 ج.م</span>
           </div>
           <div class="calc-row inputs-row">
-            <label>الخصم (ج.م):
+            <label>الخصم:
               <input type="number" id="discount-input" value="0" min="0">
             </label>
             <label>الضريبة (%):
@@ -92,10 +112,17 @@
         </div>
       </section>
 
-      <!-- قسم قائمة الفواتير والبحث -->
+      <!-- قسم قائمة الفواتير والبحث والنسخ الاحتياطي -->
       <section class="card invoice-list-section">
         <div class="card-header">
-          <h3>سجل الفواتير المحفوظة</h3>
+          <h3>سجل الفواتير</h3>
+          <div class="backup-btns">
+            <button id="export-json-btn" class="btn-sm" title="تحميل نسخة احتياطية">💾 نسخ</button>
+            <button id="export-csv-btn" class="btn-sm" title="تصدير إلى Excel">📊 CSV</button>
+          </div>
+        </div>
+
+        <div class="search-box">
           <input type="text" id="search-input" placeholder="بحث باسم العميل أو رقم الفاتورة...">
         </div>
 
@@ -106,14 +133,43 @@
     </div>
   </div>
 
-  <!-- قالب الطباعة المخصص -->
+  <!-- نافذة إعدادات المتجر (Modal) -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⚙️ إعدادات النشاط التجاري</h3>
+        <button id="close-settings-btn" class="btn-close">✕</button>
+      </div>
+      <div class="form-group">
+        <label>اسم المحل / الشركة</label>
+        <input type="text" id="store-name-input" placeholder="مثال: مؤسسة الأمل للتجارة">
+      </div>
+      <div class="form-group">
+        <label>رقم الهاتف / التباصل</label>
+        <input type="text" id="store-phone-input" placeholder="01xxxxxxxxx">
+      </div>
+      <div class="form-group">
+        <label>العنوان / الملاحظات</label>
+        <input type="text" id="store-address-input" placeholder="العنوان المعروض في الفاتورة">
+      </div>
+      <div class="form-group">
+        <label>رمز العملة</label>
+        <input type="text" id="currency-symbol-input" value="ج.م">
+      </div>
+      <button id="save-settings-btn" class="btn-primary" style="margin-top: 15px;">حفظ التغييرات</button>
+    </div>
+  </div>
+
+  <!-- قالب الطباعة -->
   <div id="print-template" class="print-only">
     <div class="print-header">
       <h1 id="p-store-name">فاتورة مبيعات</h1>
+      <p id="p-store-phone"></p>
+      <p id="p-store-address"></p>
+      <hr>
       <p id="p-inv-id"></p>
       <p id="p-date"></p>
     </div>
-    <hr>
     <div class="print-client">
       <p><strong>العميل:</strong> <span id="p-client-name"></span></p>
       <p><strong>الهاتف:</strong> <span id="p-client-phone"></span></p>
