@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-// 1. Firebase License Check (Kill-Switch)
 const firebaseConfig = {
   apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
   authDomain: "giti-68750.firebaseapp.com",
@@ -13,25 +13,66 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
 const DEVICE_ID = localStorage.getItem('device_id') || 'USER_DEVICE_001';
 localStorage.setItem('device_id', DEVICE_ID);
 
+const loginScreen = document.getElementById('login-screen');
 const lockScreen = document.getElementById('lock-screen');
-const statusBadge = document.getElementById('account-status');
+const mainApp = document.getElementById('main-app');
+const loginForm = document.getElementById('login-form');
+const loginError = document.getElementById('login-error');
 
-onSnapshot(doc(db, "licenses", DEVICE_ID), (snapshot) => {
-  if (snapshot.exists() && snapshot.data().isActive === true) {
-    lockScreen.classList.add('hidden');
-    statusBadge.textContent = "الحساب مفعل";
-    statusBadge.style.background = "#22c55e";
+// 1. مراقبة حالة تسجيل الدخول والترخيص الذكي (Real-time License Check)
+let licenseUnsubscribe = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // المستخدم قام بتسجيل الدخول -> التحقق من تفعيل الحساب في Firestore
+    loginScreen.classList.add('hidden');
+    
+    // الاستماع الفوري لحالة ترخيص المستخدم من الأدمن
+    if (licenseUnsubscribe) licenseUnsubscribe();
+    licenseUnsubscribe = onSnapshot(doc(db, "licenses", DEVICE_ID), (snapshot) => {
+      if (snapshot.exists() && snapshot.data().isActive === true) {
+        lockScreen.classList.add('hidden');
+        mainApp.classList.remove('hidden');
+      } else {
+        mainApp.classList.add('hidden');
+        lockScreen.classList.remove('hidden');
+      }
+    });
+
   } else {
-    lockScreen.classList.remove('hidden');
-    statusBadge.textContent = "الحساب معطل";
-    statusBadge.style.background = "#ef4444";
+    // لم يتم تسجيل الدخول
+    if (licenseUnsubscribe) licenseUnsubscribe();
+    mainApp.classList.add('hidden');
+    lockScreen.classList.add('hidden');
+    loginScreen.classList.remove('hidden');
   }
 });
 
-// 2. إدارة التبويبات والمظهر (Thremes)
+// 2. معالج نموذج الدخول
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  loginError.classList.add('hidden');
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    loginError.textContent = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+    loginError.classList.remove('hidden');
+  }
+});
+
+// تسجيل الخروج
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+document.getElementById('logout-lock-btn').addEventListener('click', () => signOut(auth));
+
+// 3. إدارة التبويبات والمظهر
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -46,7 +87,7 @@ function applyTheme(themeName) {
   localStorage.setItem('app_theme', themeName);
 }
 
-// 3. البيانات المحلية
+// 4. البيانات المحلية
 let storeProfile = JSON.parse(localStorage.getItem('store_profile') || JSON.stringify({
   name: "نظام إدارة الأعمال",
   phone: "01000000000",
@@ -71,7 +112,7 @@ function updateHeaderUI() {
   }
 }
 
-// 4. نظام الفواتير
+// 5. نظام الفواتير
 let activeItems = [];
 const itemsBody = document.getElementById('items-body');
 const discountInput = document.getElementById('discount-input');
@@ -174,7 +215,7 @@ document.getElementById('save-btn').addEventListener('click', () => {
   if (inv) alert('تم حفظ الفاتورة بنجاح');
 });
 
-// 5. الواتساب والمعاينة والتحميل كصورة
+// 6. واتساب والمعاينة المباشرة
 function sendWhatsApp(inv) {
   let phone = inv.phone.replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
@@ -201,7 +242,6 @@ document.getElementById('whatsapp-btn').addEventListener('click', () => {
   if (inv) sendWhatsApp(inv);
 });
 
-// فتح نافذة معاينة الفاتورة داخل التطبيق
 function openInvoicePreview(inv) {
   currentActiveInvoiceForPreview = inv;
   const vLogo = document.getElementById('v-logo');
@@ -236,7 +276,6 @@ document.getElementById('close-view-btn').addEventListener('click', () => {
   document.getElementById('view-modal').classList.add('hidden');
 });
 
-// تحميل الفاتورة كصورة PNG
 document.getElementById('download-img-btn').addEventListener('click', () => {
   const previewCard = document.getElementById('invoice-card-preview');
   html2canvas(previewCard, { scale: 2 }).then(canvas => {
@@ -293,7 +332,7 @@ function resetForm() {
   document.getElementById('add-item-btn').click();
 }
 
-// 6. عرض الفواتير المسجلة
+// 7. عرض القوائم والبحث
 function renderSavedInvoices(filter = '') {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const container = document.getElementById('invoices-container');
@@ -344,7 +383,7 @@ window.deleteInvoice = (id) => {
 
 document.getElementById('search-input').addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
-// 7. المخزن
+// 8. المخزن والعملاء والمصروفات والإحصائيات
 document.getElementById('product-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const name = document.getElementById('p-name').value;
@@ -382,7 +421,6 @@ window.deleteProduct = (idx) => {
   updateProductsDatalist();
 };
 
-// 8. سجل العملاء
 function renderClients() {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const clientsMap = {};
@@ -412,7 +450,6 @@ function renderClients() {
   `).join('');
 }
 
-// 9. المصروفات
 document.getElementById('expense-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const title = document.getElementById('exp-title').value;
@@ -448,7 +485,6 @@ window.deleteExpense = (idx) => {
   updateDashboardStats();
 };
 
-// 10. الإحصائيات الشاملة
 function updateDashboardStats() {
   const invoices = JSON.parse(localStorage.getItem('invoices_db') || '[]');
   const totalSales = invoices.reduce((acc, i) => acc + i.grandTotal, 0);
@@ -461,7 +497,7 @@ function updateDashboardStats() {
   document.getElementById('stat-count').textContent = invoices.length;
 }
 
-// 11. النسخ الاحتياطي وتصدير CSV
+// 9. النسخ الاحتياطي والإعدادات
 document.getElementById('export-json-btn').addEventListener('click', () => {
   const data = { invoices: JSON.parse(localStorage.getItem('invoices_db') || '[]'), products, expenses, storeProfile };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -484,7 +520,6 @@ document.getElementById('export-csv-btn').addEventListener('click', () => {
   a.click();
 });
 
-// 12. Modal الإعدادات والثيمات
 const settingsModal = document.getElementById('settings-modal');
 document.getElementById('open-settings-btn').addEventListener('click', () => {
   document.getElementById('theme-select').value = localStorage.getItem('app_theme') || 'dark';
@@ -537,7 +572,6 @@ function renderAllModules() {
   updateDashboardStats();
 }
 
-// التشغيل الأولي
 const savedTheme = localStorage.getItem('app_theme') || 'dark';
 applyTheme(savedTheme);
 
