@@ -188,6 +188,7 @@ function clearAuthMsgs() {
   authSuccess.classList.add('hidden');
 }
 
+// معالجة النتيجة القادمة من إعادة التوجيه (Redirect)
 getRedirectResult(auth).then(async (result) => {
   if (result && result.user) {
     const u = result.user;
@@ -404,17 +405,14 @@ invNumberDisplay.textContent = `#${nextInvNum}`;
 function updateProductsDatalist() {
   const datalist = document.getElementById('products-datalist');
   if (!datalist) return;
-  datalist.innerHTML = productsDB.map(p => `<option value="${p.name}">سعر البيع: ${p.price} | متوفر: ${p.stock}</option>`).join('');
+  datalist.innerHTML = productsDB.map(p => `<option value="${p.name}">${p.price} ${storeProfile.currency}</option>`).join('');
 }
 
-// جدول أصناف الفاتورة المتطور
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
       <td>
-        <input type="text" list="products-datalist" value="${item.name || ''}" placeholder="اختر أو اكتب اسم الصنف..." 
-          oninput="window.updateItem(${index}, 'name', this.value)" 
-          onchange="window.updateItem(${index}, 'name', this.value)" autocomplete="off">
+        <input type="text" list="products-datalist" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف" oninput="window.updateItem(${index}, 'name', this.value)">
       </td>
       <td>
         <input type="number" value="${item.qty || 1}" min="1" oninput="window.updateItem(${index}, 'qty', this.value)">
@@ -423,7 +421,7 @@ function renderItemsTable() {
         <input type="number" value="${item.price || 0}" min="0" step="0.5" oninput="window.updateItem(${index}, 'price', this.value)">
       </td>
       <td>
-        <span class="item-total-text" style="font-weight:700; color:var(--success);">${((item.qty || 1) * (item.price || 0)).toFixed(2)}</span>
+        <span class="item-total-text">${((item.qty || 0) * (item.price || 0)).toFixed(2)}</span>
       </td>
       <td>
         <button type="button" class="btn-remove" onclick="window.removeItem(${index})" title="حذف البند">✕</button>
@@ -434,40 +432,19 @@ function renderItemsTable() {
 }
 
 window.updateItem = (index, key, val) => {
-  if (!activeItems[index]) return;
-  
   if (key === 'name') {
     activeItems[index].name = val;
-    const matchedProd = productsDB.find(p => p.name.trim().toLowerCase() === val.trim().toLowerCase());
-    if (matchedProd) {
-      activeItems[index].price = matchedProd.price;
-      if (!activeItems[index].qty || activeItems[index].qty <= 0) {
-        activeItems[index].qty = 1;
-      }
-      // تحديث حقول المدخلات في السطر فورا
-      const rows = itemsBody.querySelectorAll('tr');
-      if (rows[index]) {
-        const inputs = rows[index].querySelectorAll('input');
-        if (inputs[1]) inputs[1].value = activeItems[index].qty;
-        if (inputs[2]) inputs[2].value = matchedProd.price;
-      }
-    }
+    const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+    if (matchedProd) activeItems[index].price = matchedProd.price;
   } else {
     activeItems[index][key] = parseFloat(val) || 0;
   }
-
-  // تحديث نص إجمالي الصنف في الجدول
+  calculateTotals();
   const rows = itemsBody.querySelectorAll('tr');
   if (rows[index]) {
     const totalSpan = rows[index].querySelector('.item-total-text');
-    if (totalSpan) {
-      const q = activeItems[index].qty || 1;
-      const p = activeItems[index].price || 0;
-      totalSpan.textContent = (q * p).toFixed(2);
-    }
+    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
   }
-
-  calculateTotals();
 };
 
 window.removeItem = (index) => {
@@ -498,13 +475,13 @@ function calculateTotals() {
       const inputs = tr.querySelectorAll('input');
       if (inputs.length >= 3) {
         activeItems[idx].name = inputs[0].value;
-        activeItems[idx].qty = parseFloat(inputs[1].value) || 1;
+        activeItems[idx].qty = parseFloat(inputs[1].value) || 0;
         activeItems[idx].price = parseFloat(inputs[2].value) || 0;
       }
     }
   });
 
-  const subtotal = activeItems.reduce((acc, item) => acc + ((item.qty || 1) * (item.price || 0)), 0);
+  const subtotal = activeItems.reduce((acc, item) => acc + ((item.qty || 0) * (item.price || 0)), 0);
   const discount = parseFloat(discountInput.value) || 0;
   const taxPercent = parseFloat(taxInput.value) || 0;
   
@@ -535,7 +512,7 @@ async function saveInvoiceData() {
   const clientPhone = document.getElementById('client-phone').value.trim();
   
   calculateTotals();
-  const validItems = activeItems.filter(i => (i.name || '').trim() !== '' && (i.qty || 0) > 0);
+  const validItems = activeItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
 
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
   if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل وتحديد الكمية والسعر'); return null; }
@@ -565,15 +542,6 @@ async function saveInvoiceData() {
     zatcaQr: zatcaBase64
   };
 
-  // خصم الكميات من المخزن تلقائياً عند حفظ الفاتورة
-  validItems.forEach(item => {
-    const prod = productsDB.find(p => p.name.trim().toLowerCase() === item.name.trim().toLowerCase());
-    if (prod) {
-      prod.stock = Math.max(0, (prod.stock || 0) - item.qty);
-    }
-  });
-  await syncDocToCloud('products', { list: productsDB });
-
   if (editingInvoiceId) {
     const idx = invoicesDB.findIndex(i => i.id === editingInvoiceId);
     if (idx !== -1) invoicesDB[idx] = invoice;
@@ -585,9 +553,9 @@ async function saveInvoiceData() {
   }
 
   invNumberDisplay.textContent = `#${nextInvNum}`;
+
   await syncDocToCloud('invoices', { list: invoicesDB });
 
-  // تحديث سجل العملاء والمديونيات
   let clientIndex = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
   if (clientIndex === -1) {
     clientsDB.push({ name: clientName, phone: clientPhone || '', openingBalance: 0, payments: [] });
@@ -603,7 +571,7 @@ async function saveInvoiceData() {
 
 document.getElementById('save-btn').addEventListener('click', async () => {
   const inv = await saveInvoiceData();
-  if (inv) alert('تم حفظ الفاتورة وخصم المخزن وتحديث الحسابات سحابياً بنجاح');
+  if (inv) alert('تم حفظ الفاتورة وتحديث الحسابات سحابياً بنجاح');
 });
 
 function sendWhatsApp(inv) {
@@ -1035,16 +1003,16 @@ document.getElementById('ledger-print-btn').addEventListener('click', () => {
       <tbody>
         ${stats.clientInvoices.map(inv => `
           <tr>
-            <td>فاتورة مبيعات #${inv.id} (${(inv.items \vert{}\vert{} []).length} أصناف - ${inv.status})</td>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items || []).length} أصناف - ${inv.status})</td>
             <td>${inv.date}</td>
-            <td>${(inv.grandTotal \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency}</td>
+            <td>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</td>
           </tr>
         `).join('')}
         ${stats.payments.map(p => `
           <tr>
             <td>دفعة سداد نقدي 💵</td>
             <td>${p.date}</td>
-            <td>-${p.amount.toFixed(2)}${storeProfile.currency}</td>
+            <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -1173,7 +1141,7 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
       name: document.getElementById('store-name-input').value || "GITI Enterprise ERP",
       phone: document.getElementById('store-phone-input').value,
       vatNo: document.getElementById('store-vat-input').value.trim(),
-      address: document.getElementById('store-address-input-input'] || document.getElementById('store-address-input').value,
+      address: document.getElementById('store-address-input').value,
       currency: document.getElementById('currency-select').value || "ج.م",
       logo: logoBase64 !== null ? logoBase64 : storeProfile.logo
     };
