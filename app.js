@@ -158,15 +158,6 @@ let activeItems = [];
 let activeLedgerClientName = null;
 let editingInvoiceId = null;
 
-const privacyModal = document.getElementById('privacy-modal');
-document.getElementById('open-privacy-auth-btn')?.addEventListener('click', () => privacyModal.classList.remove('hidden'));
-document.getElementById('open-privacy-settings-btn')?.addEventListener('click', () => {
-  document.getElementById('settings-modal').classList.add('hidden');
-  privacyModal.classList.remove('hidden');
-});
-document.getElementById('close-privacy-btn')?.addEventListener('click', () => privacyModal.classList.add('hidden'));
-document.getElementById('accept-privacy-btn')?.addEventListener('click', () => privacyModal.classList.add('hidden'));
-
 document.getElementById('tab-login-btn').addEventListener('click', () => {
   document.getElementById('tab-login-btn').classList.add('active');
   document.getElementById('tab-register-btn').classList.remove('active');
@@ -188,7 +179,6 @@ function clearAuthMsgs() {
   authSuccess.classList.add('hidden');
 }
 
-// معالجة النتيجة القادمة من إعادة التوجيه (Redirect)
 getRedirectResult(auth).then(async (result) => {
   if (result && result.user) {
     const u = result.user;
@@ -402,17 +392,61 @@ const invNumberDisplay = document.getElementById('inv-number-display');
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
 invNumberDisplay.textContent = `#${nextInvNum}`;
 
-function updateProductsDatalist() {
-  const datalist = document.getElementById('products-datalist');
-  if (!datalist) return;
-  datalist.innerHTML = productsDB.map(p => `<option value="${p.name}">${p.price} ${storeProfile.currency}</option>`).join('');
-}
+// --- نظام البحث التلقائي المخصص (Custom Autocomplete للعملاء والأصناف) ---
+const clientInput = document.getElementById('client-name');
+const clientSuggestions = document.getElementById('client-suggestions');
+
+clientInput.addEventListener('input', (e) => {
+  const val = e.target.value.trim().toLowerCase();
+  const matchedClient = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
+  if (matchedClient && matchedClient.phone) {
+    document.getElementById('client-phone').value = matchedClient.phone;
+  }
+
+  if (!val) {
+    clientSuggestions.classList.add('hidden');
+    clientSuggestions.innerHTML = '';
+    return;
+  }
+
+  const filtered = clientsDB.filter(c => c.name.toLowerCase().includes(val) || (c.phone && c.phone.includes(val)));
+  if (filtered.length === 0) {
+    clientSuggestions.classList.add('hidden');
+    clientSuggestions.innerHTML = '';
+    return;
+  }
+
+  clientSuggestions.innerHTML = filtered.map(c => `
+    <div class="suggestion-item" onclick="window.selectClient('${c.name.replace(/'/g, "\\'")}', '${c.phone || ''}')">
+      <strong>${c.name}</strong>
+      <small style="color:var(--text-muted);">${c.phone || ''}</small>
+    </div>
+  `).join('');
+  clientSuggestions.classList.remove('hidden');
+});
+
+window.selectClient = (name, phone) => {
+  clientInput.value = name;
+  if (phone) document.getElementById('client-phone').value = phone;
+  clientSuggestions.classList.add('hidden');
+  clientSuggestions.innerHTML = '';
+};
+
+// إخفاء القوائم المنسدلة عند النقر خارجها
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.autocomplete-wrapper')) {
+    document.querySelectorAll('.autocomplete-dropdown').forEach(el => el.classList.add('hidden'));
+  }
+});
 
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
       <td>
-        <input type="text" list="products-datalist" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف" oninput="window.updateItem(${index}, 'name', this.value)">
+        <div class="autocomplete-wrapper">
+          <input type="text" autocomplete="off" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف" oninput="window.handleItemInput(${index}, this.value)">
+          <div class="autocomplete-dropdown hidden" id="item-suggestions-${index}"></div>
+        </div>
       </td>
       <td>
         <input type="number" value="${item.qty || 1}" min="1" oninput="window.updateItem(${index}, 'qty', this.value)">
@@ -431,12 +465,58 @@ function renderItemsTable() {
   calculateTotals();
 }
 
+window.handleItemInput = (index, val) => {
+  activeItems[index].name = val;
+  const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+  if (matchedProd) {
+    activeItems[index].price = matchedProd.price;
+  }
+  calculateTotals();
+  
+  // تحديث إجمالي البند في الجدول فورياً
+  const rows = itemsBody.querySelectorAll('tr');
+  if (rows[index]) {
+    const totalSpan = rows[index].querySelector('.item-total-text');
+    const priceInput = rows[index].querySelectorAll('input')[2];
+    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    if (priceInput && matchedProd) priceInput.value = matchedProd.price;
+  }
+
+  // عرض القائمة المنسدلة المخصصة للأصناف
+  const sugBox = document.getElementById(`item-suggestions-${index}`);
+  if (!sugBox) return;
+
+  const query = val.trim().toLowerCase();
+  if (!query) {
+    sugBox.classList.add('hidden');
+    sugBox.innerHTML = '';
+    return;
+  }
+
+  const filteredProds = productsDB.filter(p => p.name.toLowerCase().includes(query));
+  if (filteredProds.length === 0) {
+    sugBox.classList.add('hidden');
+    sugBox.innerHTML = '';
+    return;
+  }
+
+  sugBox.innerHTML = filteredProds.map(p => `
+    <div class="suggestion-item" onclick="window.selectProductItem(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})">
+      <strong>${p.name}</strong>
+      <span style="color:var(--success); font-weight:700;">${p.price} ${storeProfile.currency}</span>
+    </div>
+  `).join('');
+  sugBox.classList.remove('hidden');
+};
+
+window.selectProductItem = (index, name, price) => {
+  activeItems[index].name = name;
+  activeItems[index].price = price;
+  renderItemsTable();
+};
+
 window.updateItem = (index, key, val) => {
-  if (key === 'name') {
-    activeItems[index].name = val;
-    const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
-    if (matchedProd) activeItems[index].price = matchedProd.price;
-  } else {
+  if (key !== 'name') {
     activeItems[index][key] = parseFloat(val) || 0;
   }
   calculateTotals();
@@ -868,11 +948,6 @@ function getClientCalculatedLedger(clientName) {
 }
 
 function renderClients() {
-  const datalist = document.getElementById('clients-datalist');
-  if (datalist) {
-    datalist.innerHTML = clientsDB.map(c => `<option value="${c.name}">${c.phone || ''}</option>`).join('');
-  }
-
   const container = document.getElementById('clients-list-container');
   if (!container) return;
   const searchFilter = (document.getElementById('search-clients-input')?.value || '').toLowerCase();
@@ -1003,16 +1078,16 @@ document.getElementById('ledger-print-btn').addEventListener('click', () => {
       <tbody>
         ${stats.clientInvoices.map(inv => `
           <tr>
-            <td>فاتورة مبيعات #${inv.id} (${(inv.items || []).length} أصناف - ${inv.status})</td>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items \vert{}\vert{} []).length} أصناف - ${inv.status})</td>
             <td>${inv.date}</td>
-            <td>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</td>
+            <td>${(inv.grandTotal \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency}</td>
           </tr>
         `).join('')}
         ${stats.payments.map(p => `
           <tr>
             <td>دفعة سداد نقدي 💵</td>
             <td>${p.date}</td>
-            <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
+            <td>-${p.amount.toFixed(2)}${storeProfile.currency}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -1034,13 +1109,6 @@ document.getElementById('submit-payment-btn').addEventListener('click', async ()
     document.getElementById('pay-amount-input').value = '';
     window.openClientLedger(activeLedgerClientName);
     renderAllModules();
-  }
-});
-
-document.getElementById('client-name').addEventListener('input', (e) => {
-  const match = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
-  if (match && match.phone) {
-    document.getElementById('client-phone').value = match.phone;
   }
 });
 
@@ -1165,7 +1233,6 @@ function renderAllModules() {
   renderProducts();
   renderClients();
   renderExpenses();
-  updateProductsDatalist();
   updateDashboardStats();
 }
 
