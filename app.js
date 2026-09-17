@@ -159,13 +159,13 @@ let activeLedgerClientName = null;
 let editingInvoiceId = null;
 
 const privacyModal = document.getElementById('privacy-modal');
-document.getElementById('open-privacy-auth-btn')?.addEventListener('click', () => privacyModal.classList.remove('hidden'));
+document.getElementById('open-privacy-auth-btn')?.addEventListener('click', () => privacyModal?.classList.remove('hidden'));
 document.getElementById('open-privacy-settings-btn')?.addEventListener('click', () => {
   document.getElementById('settings-modal').classList.add('hidden');
-  privacyModal.classList.remove('hidden');
+  privacyModal?.classList.remove('hidden');
 });
-document.getElementById('close-privacy-btn')?.addEventListener('click', () => privacyModal.classList.add('hidden'));
-document.getElementById('accept-privacy-btn')?.addEventListener('click', () => privacyModal.classList.add('hidden'));
+document.getElementById('close-privacy-btn')?.addEventListener('click', () => privacyModal?.classList.add('hidden'));
+document.getElementById('accept-privacy-btn')?.addEventListener('click', () => privacyModal?.classList.add('hidden'));
 
 document.getElementById('tab-login-btn').addEventListener('click', () => {
   document.getElementById('tab-login-btn').classList.add('active');
@@ -188,7 +188,6 @@ function clearAuthMsgs() {
   authSuccess.classList.add('hidden');
 }
 
-// معالجة النتيجة القادمة من إعادة التوجيه (Redirect)
 getRedirectResult(auth).then(async (result) => {
   if (result && result.user) {
     const u = result.user;
@@ -402,17 +401,72 @@ const invNumberDisplay = document.getElementById('inv-number-display');
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
 invNumberDisplay.textContent = `#${nextInvNum}`;
 
-function updateProductsDatalist() {
-  const datalist = document.getElementById('products-datalist');
-  if (!datalist) return;
-  datalist.innerHTML = productsDB.map(p => `<option value="${p.name}">${p.price} ${storeProfile.currency}</option>`).join('');
+// --- نظام القائمة المنسدلة الذكية للعملاء داخل الفاتورة ---
+const clientInput = document.getElementById('client-name');
+const clientPhoneInput = document.getElementById('client-phone');
+const clientSuggestions = document.getElementById('client-suggestions');
+
+function showClientDropdown(filter = '') {
+  if (!clientSuggestions) return;
+  const val = filter.trim().toLowerCase();
+  const filtered = val === '' ? clientsDB : clientsDB.filter(c => c.name.toLowerCase().includes(val) || (c.phone && c.phone.includes(val)));
+  
+  if (filtered.length === 0) {
+    clientSuggestions.classList.add('hidden');
+    clientSuggestions.innerHTML = '';
+    return;
+  }
+
+  clientSuggestions.innerHTML = filtered.map(c => `
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectClientItem('${c.name.replace(/'/g, "\\'")}', '${c.phone || ''}')" ontouchstart="window.selectClientItem('${c.name.replace(/'/g, "\\'")}', '${c.phone || ''}')">
+      <strong>👤 ${c.name}</strong>
+      <small style="color:var(--text-muted); display:block;">${c.phone || 'بدون رقم هاتف'}</small>
+    </div>
+  `).join('');
+  clientSuggestions.classList.remove('hidden');
 }
 
+clientInput?.addEventListener('input', (e) => {
+  const val = e.target.value;
+  const matchedClient = clientsDB.find(c => c.name.toLowerCase() === val.trim().toLowerCase());
+  if (matchedClient && matchedClient.phone) {
+    clientPhoneInput.value = matchedClient.phone;
+  }
+  showClientDropdown(val);
+});
+
+clientInput?.addEventListener('focus', () => showClientDropdown(clientInput.value));
+clientInput?.addEventListener('click', () => showClientDropdown(clientInput.value));
+
+window.selectClientItem = (name, phone) => {
+  clientInput.value = name;
+  if (phone) clientPhoneInput.value = phone;
+  setTimeout(() => {
+    if (clientSuggestions) {
+      clientSuggestions.classList.add('hidden');
+      clientSuggestions.innerHTML = '';
+    }
+  }, 100);
+};
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.autocomplete-wrapper')) {
+    document.querySelectorAll('.autocomplete-dropdown').forEach(el => el.classList.add('hidden'));
+  }
+});
+
+// --- نظام جدول أصناف الفاتورة بدون إعادة بناء مهلكة لتجنب التجميد تماماً ---
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
       <td>
-        <input type="text" list="products-datalist" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف" oninput="window.updateItem(${index}, 'name', this.value)">
+        <div class="autocomplete-wrapper">
+          <input type="text" autocomplete="off" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف" 
+                 oninput="window.handleItemInput(${index}, this.value)" 
+                 onfocus="window.handleItemFocus(${index}, this.value)" 
+                 onclick="window.handleItemFocus(${index}, this.value)">
+          <div class="autocomplete-dropdown hidden" id="item-suggestions-${index}"></div>
+        </div>
       </td>
       <td>
         <input type="number" value="${item.qty || 1}" min="1" oninput="window.updateItem(${index}, 'qty', this.value)">
@@ -431,19 +485,93 @@ function renderItemsTable() {
   calculateTotals();
 }
 
+function showItemDropdown(index, val) {
+  const sugBox = document.getElementById(`item-suggestions-${index}`);
+  if (!sugBox) return;
+
+  const query = val.trim().toLowerCase();
+  const filteredProds = query === '' ? productsDB : productsDB.filter(p => p.name.toLowerCase().includes(query));
+
+  if (filteredProds.length === 0) {
+    sugBox.classList.add('hidden');
+    sugBox.innerHTML = '';
+    return;
+  }
+
+  sugBox.innerHTML = filteredProds.map(p => `
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectProductItem(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})" ontouchstart="window.selectProductItem(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})">
+      <strong>📦 ${p.name}</strong>
+      <span style="color:var(--success); font-weight:700; float:left;">${p.price} ${storeProfile.currency}</span>
+    </div>
+  `).join('');
+  sugBox.classList.remove('hidden');
+}
+
+window.handleItemInput = (index, val) => {
+  if (activeItems[index]) activeItems[index].name = val;
+  const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+  if (matchedProd && activeItems[index]) {
+    activeItems[index].price = matchedProd.price;
+    const rows = itemsBody.querySelectorAll('tr');
+    if (rows[index]) {
+      const priceInput = rows[index].querySelectorAll('input')[2];
+      if (priceInput) priceInput.value = matchedProd.price;
+    }
+  }
+  calculateTotals();
+  
+  const rows = itemsBody.querySelectorAll('tr');
+  if (rows[index]) {
+    const totalSpan = rows[index].querySelector('.item-total-text');
+    if (totalSpan && activeItems[index]) {
+      totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    }
+  }
+
+  showItemDropdown(index, val);
+};
+
+window.handleItemFocus = (index, val) => {
+  showItemDropdown(index, val);
+};
+
+window.selectProductItem = (index, name, price) => {
+  if (activeItems[index]) {
+    activeItems[index].name = name;
+    activeItems[index].price = price;
+  }
+  
+  const rows = itemsBody.querySelectorAll('tr');
+  if (rows[index]) {
+    const inputs = rows[index].querySelectorAll('input');
+    if (inputs.length >= 3) {
+      inputs[0].value = name;
+      inputs[2].value = price;
+    }
+    const totalSpan = rows[index].querySelector('.item-total-text');
+    if (totalSpan) {
+      totalSpan.textContent = ((activeItems[index].qty || 1) * price).toFixed(2);
+    }
+  }
+
+  setTimeout(() => {
+    document.querySelectorAll('.autocomplete-dropdown').forEach(el => el.classList.add('hidden'));
+  }, 100);
+
+  calculateTotals();
+};
+
 window.updateItem = (index, key, val) => {
-  if (key === 'name') {
-    activeItems[index].name = val;
-    const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
-    if (matchedProd) activeItems[index].price = matchedProd.price;
-  } else {
+  if (activeItems[index] && key !== 'name') {
     activeItems[index][key] = parseFloat(val) || 0;
   }
   calculateTotals();
   const rows = itemsBody.querySelectorAll('tr');
-  if (rows[index]) {
+  if (rows[index] && activeItems[index]) {
     const totalSpan = rows[index].querySelector('.item-total-text');
-    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    if (totalSpan) {
+      totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    }
   }
 };
 
@@ -507,9 +635,10 @@ function calculateTotals() {
 discountInput.addEventListener('input', calculateTotals);
 taxInput.addEventListener('input', calculateTotals);
 
+// --- دالة حفظ الفاتورة مع مزامنة المخزن والعملاء بطريقة Non-blocking آمنة تماماً ---
 async function saveInvoiceData() {
-  const clientName = document.getElementById('client-name').value.trim();
-  const clientPhone = document.getElementById('client-phone').value.trim();
+  const clientName = clientInput.value.trim();
+  const clientPhone = clientPhoneInput.value.trim();
   
   calculateTotals();
   const validItems = activeItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
@@ -542,6 +671,14 @@ async function saveInvoiceData() {
     zatcaQr: zatcaBase64
   };
 
+  // خصم الكميات المباعة من المخزون تلقائياً
+  validItems.forEach(soldItem => {
+    const prod = productsDB.find(p => p.name.toLowerCase() === soldItem.name.toLowerCase());
+    if (prod) {
+      prod.stock = Math.max(0, (prod.stock || 0) - soldItem.qty);
+    }
+  });
+
   if (editingInvoiceId) {
     const idx = invoicesDB.findIndex(i => i.id === editingInvoiceId);
     if (idx !== -1) invoicesDB[idx] = invoice;
@@ -554,15 +691,20 @@ async function saveInvoiceData() {
 
   invNumberDisplay.textContent = `#${nextInvNum}`;
 
-  await syncDocToCloud('invoices', { list: invoicesDB });
-
+  // تحديث أو إضافة العميل في السجل
   let clientIndex = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
   if (clientIndex === -1) {
     clientsDB.push({ name: clientName, phone: clientPhone || '', openingBalance: 0, payments: [] });
   } else if (clientPhone) {
     clientsDB[clientIndex].phone = clientPhone;
   }
-  await syncDocToCloud('clients', { list: clientsDB });
+
+  // مزامنة البيانات سحابياً في الخلفية باستخدام Promise.all لمنع تجميد واجهة التطبيق
+  Promise.all([
+    syncDocToCloud('invoices', { list: invoicesDB }),
+    syncDocToCloud('clients', { list: clientsDB }),
+    syncDocToCloud('products', { list: productsDB })
+  ]).catch(err => console.error("Cloud Sync Error:", err));
 
   resetForm();
   renderAllModules();
@@ -571,7 +713,7 @@ async function saveInvoiceData() {
 
 document.getElementById('save-btn').addEventListener('click', async () => {
   const inv = await saveInvoiceData();
-  if (inv) alert('تم حفظ الفاتورة وتحديث الحسابات سحابياً بنجاح');
+  if (inv) alert('تم حفظ الفاتورة وتحديث المخزن والحسابات بنجاح');
 });
 
 function sendWhatsApp(inv) {
@@ -714,8 +856,8 @@ window.editInvoiceById = (id) => {
 
   editingInvoiceId = inv.id;
   invNumberDisplay.textContent = `#${inv.id} (تعديل)`;
-  document.getElementById('client-name').value = inv.client || '';
-  document.getElementById('client-phone').value = inv.phone || '';
+  clientInput.value = inv.client || '';
+  clientPhoneInput.value = inv.phone || '';
   discountInput.value = inv.discount || 0;
   taxInput.value = inv.taxPercent || 0;
   payStatusSelect.value = inv.status || 'مدفوعة';
@@ -728,8 +870,8 @@ window.editInvoiceById = (id) => {
 function resetForm() {
   editingInvoiceId = null;
   invNumberDisplay.textContent = `#${nextInvNum}`;
-  document.getElementById('client-name').value = '';
-  document.getElementById('client-phone').value = '';
+  clientInput.value = '';
+  clientPhoneInput.value = '';
   activeItems = [];
   discountInput.value = 0;
   taxInput.value = 14;
@@ -795,7 +937,7 @@ window.deleteInvoice = async (id) => {
   await syncDocToCloud('invoices', { list: invoicesDB });
 };
 
-document.getElementById('search-input').addEventListener('input', (e) => renderSavedInvoices(e.target.value));
+document.getElementById('search-input')?.addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
 document.getElementById('product-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -868,11 +1010,6 @@ function getClientCalculatedLedger(clientName) {
 }
 
 function renderClients() {
-  const datalist = document.getElementById('clients-datalist');
-  if (datalist) {
-    datalist.innerHTML = clientsDB.map(c => `<option value="${c.name}">${c.phone || ''}</option>`).join('');
-  }
-
   const container = document.getElementById('clients-list-container');
   if (!container) return;
   const searchFilter = (document.getElementById('search-clients-input')?.value || '').toLowerCase();
@@ -1003,16 +1140,16 @@ document.getElementById('ledger-print-btn').addEventListener('click', () => {
       <tbody>
         ${stats.clientInvoices.map(inv => `
           <tr>
-            <td>فاتورة مبيعات #${inv.id} (${(inv.items || []).length} أصناف - ${inv.status})</td>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items \vert{}\vert{} []).length} أصناف - ${inv.status})</td>
             <td>${inv.date}</td>
-            <td>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</td>
+            <td>${(inv.grandTotal \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency}</td>
           </tr>
         `).join('')}
         ${stats.payments.map(p => `
           <tr>
             <td>دفعة سداد نقدي 💵</td>
             <td>${p.date}</td>
-            <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
+            <td>-${p.amount.toFixed(2)}${storeProfile.currency}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -1034,13 +1171,6 @@ document.getElementById('submit-payment-btn').addEventListener('click', async ()
     document.getElementById('pay-amount-input').value = '';
     window.openClientLedger(activeLedgerClientName);
     renderAllModules();
-  }
-});
-
-document.getElementById('client-name').addEventListener('input', (e) => {
-  const match = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
-  if (match && match.phone) {
-    document.getElementById('client-phone').value = match.phone;
   }
 });
 
@@ -1165,7 +1295,6 @@ function renderAllModules() {
   renderProducts();
   renderClients();
   renderExpenses();
-  updateProductsDatalist();
   updateDashboardStats();
 }
 
