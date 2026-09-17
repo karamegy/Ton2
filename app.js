@@ -987,7 +987,7 @@ window.openClientLedger = (clientName) => {
     `;
   });
 
-  if (historyUl) historyUl.innerHTML = historyHtml || '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
+  if (historyUl) historyHtml = historyHtml || '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
   document.getElementById('client-ledger-modal')?.classList.remove('hidden');
 };
 
