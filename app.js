@@ -411,9 +411,8 @@ function updateProductsDatalist() {
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
-      <td style="position: relative;">
-        <input type="text" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف (اكتب أول حرف...)" oninput="window.updateItem(${index}, 'name', this.value)" onfocus="window.showProductSuggestions(${index}, this.value)" autocomplete="off">
-        <div id="suggestions-${index}" class="autocomplete-dropdown hidden"></div>
+      <td>
+        <input type="text" list="products-datalist" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف" oninput="window.updateItem(${index}, 'name', this.value)">
       </td>
       <td>
         <input type="number" value="${item.qty || 1}" min="1" oninput="window.updateItem(${index}, 'qty', this.value)">
@@ -432,59 +431,11 @@ function renderItemsTable() {
   calculateTotals();
 }
 
-window.showProductSuggestions = (index, query) => {
-  const dropdown = document.getElementById(`suggestions-${index}`);
-  if (!dropdown) return;
-
-  const q = (query || '').toLowerCase().trim();
-  const filtered = productsDB.filter(p => p.name.toLowerCase().includes(q));
-
-  if (filtered.length === 0) {
-    dropdown.classList.add('hidden');
-    dropdown.innerHTML = '';
-    return;
-  }
-
-  dropdown.innerHTML = filtered.map(p => `
-    <div class="suggestion-item" onclick="window.selectProductSuggestion(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})">
-      <span>${p.name}</span>
-      <span style="color: var(--success); font-weight: 700;">${p.price} ${storeProfile.currency}</span>
-    </div>
-  `).join('');
-  dropdown.classList.remove('hidden');
-};
-
-window.selectProductSuggestion = (index, name, price) => {
-  activeItems[index].name = name;
-  activeItems[index].price = price;
-  
-  const rows = itemsBody.querySelectorAll('tr');
-  if (rows[index]) {
-    const inputs = rows[index].querySelectorAll('input');
-    if (inputs[0]) inputs[0].value = name;
-    if (inputs[2]) inputs[2].value = price;
-    const totalSpan = rows[index].querySelector('.item-total-text');
-    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * price).toFixed(2);
-  }
-  
-  const dropdown = document.getElementById(`suggestions-${index}`);
-  if (dropdown) dropdown.classList.add('hidden');
-  
-  calculateTotals();
-};
-
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('td') && !e.target.closest('.autocomplete-dropdown')) {
-    document.querySelectorAll('.autocomplete-dropdown').forEach(d => d.classList.add('hidden'));
-  }
-});
-
 window.updateItem = (index, key, val) => {
   if (key === 'name') {
     activeItems[index].name = val;
     const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
     if (matchedProd) activeItems[index].price = matchedProd.price;
-    window.showProductSuggestions(index, val);
   } else {
     activeItems[index][key] = parseFloat(val) || 0;
   }
@@ -1052,16 +1003,16 @@ document.getElementById('ledger-print-btn').addEventListener('click', () => {
       <tbody>
         ${stats.clientInvoices.map(inv => `
           <tr>
-            <td>فاتورة مبيعات #${inv.id} (${(inv.items \vert{}\vert{} []).length} أصناف - ${inv.status})</td>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items || []).length} أصناف - ${inv.status})</td>
             <td>${inv.date}</td>
-            <td>${(inv.grandTotal \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency}</td>
+            <td>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</td>
           </tr>
         `).join('')}
         ${stats.payments.map(p => `
           <tr>
             <td>دفعة سداد نقدي 💵</td>
             <td>${p.date}</td>
-            <td>-${p.amount.toFixed(2)}${storeProfile.currency}</td>
+            <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
           </tr>
         `).join('')}
       </tbody>
