@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
-  getFirestore, doc, setDoc, getDoc, onSnapshot, 
-  enableIndexedDbPersistence 
+  getFirestore, doc, setDoc, getDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
@@ -22,8 +21,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
-
-enableIndexedDbPersistence(db).catch(() => {});
 
 function triggerAds() {
   try {
@@ -84,7 +81,7 @@ function applyLanguage(lang) {
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (translations[lang][key]) {
+    if (translations[lang] && translations[lang][key]) {
       el.textContent = translations[lang][key];
     }
   });
@@ -96,7 +93,7 @@ document.getElementById('auth-lang-btn')?.addEventListener('click', () => applyL
 function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAmount) {
   function getTlvTag(tag, value) {
     const encoder = new TextEncoder();
-    const valBytes = encoder.encode(value);
+    const valBytes = encoder.encode(value || '');
     const buf = new Uint8Array(2 + valBytes.length);
     buf[0] = tag;
     buf[1] = valBytes.length;
@@ -158,7 +155,6 @@ let activeItems = [];
 let activeLedgerClientName = null;
 let editingInvoiceId = null;
 
-// إدارة نافذة سياسة الخصوصية
 const privacyModal = document.getElementById('privacy-modal');
 
 window.openPrivacyModal = () => {
@@ -190,18 +186,18 @@ window.addEventListener('click', (e) => {
 });
 
 document.getElementById('tab-login-btn')?.addEventListener('click', () => {
-  document.getElementById('tab-login-btn').classList.add('active');
-  document.getElementById('tab-register-btn').classList.remove('active');
-  loginForm.classList.remove('hidden');
-  registerForm.classList.add('hidden');
+  document.getElementById('tab-login-btn')?.classList.add('active');
+  document.getElementById('tab-register-btn')?.classList.remove('active');
+  loginForm?.classList.remove('hidden');
+  registerForm?.classList.add('hidden');
   clearAuthMsgs();
 });
 
 document.getElementById('tab-register-btn')?.addEventListener('click', () => {
-  document.getElementById('tab-register-btn').classList.add('active');
-  document.getElementById('tab-login-btn').classList.remove('active');
-  registerForm.classList.remove('hidden');
-  loginForm.classList.add('hidden');
+  document.getElementById('tab-register-btn')?.classList.add('active');
+  document.getElementById('tab-login-btn')?.classList.remove('active');
+  registerForm?.classList.remove('hidden');
+  loginForm?.classList.add('hidden');
   clearAuthMsgs();
 });
 
@@ -418,8 +414,8 @@ function updateHeaderUI() {
   const currencyDisplayEl = document.getElementById('currency-tag-display');
   const headerLogo = document.getElementById('header-logo');
 
-  if (storeNameEl) storeNameEl.textContent = storeProfile.name;
-  if (storePhoneEl) storePhoneEl.textContent = storeProfile.phone;
+  if (storeNameEl) storeNameEl.textContent = storeProfile.name || 'GITI ERP';
+  if (storePhoneEl) storePhoneEl.textContent = storeProfile.phone || '';
   if (currencyDisplayEl) currencyDisplayEl.textContent = storeProfile.currency || 'ج.م';
   
   if (headerLogo) {
@@ -445,7 +441,7 @@ if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
 function updateProductsDatalist() {
   const datalist = document.getElementById('products-datalist');
   if (!datalist) return;
-  datalist.innerHTML = productsDB.map(p => `<option value="${p.name}">${p.price} ${storeProfile.currency}</option>`).join('');
+  datalist.innerHTML = productsDB.map(p => `<option value="${p.name || ''}">${p.price || 0} ${storeProfile.currency || 'ج.م'}</option>`).join('');
 }
 
 function renderItemsTable() {
@@ -473,9 +469,10 @@ function renderItemsTable() {
 }
 
 window.updateItem = (index, key, val) => {
+  if (!activeItems[index]) return;
   if (key === 'name') {
     activeItems[index].name = val;
-    const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+    const matchedProd = productsDB.find(p => (p.name || '').toLowerCase() === val.trim().toLowerCase());
     if (matchedProd) activeItems[index].price = matchedProd.price;
   } else {
     activeItems[index][key] = parseFloat(val) || 0;
@@ -535,7 +532,7 @@ function calculateTotals() {
 
   if (discount > 0 && discountRow && discountDisplay) {
     discountRow.classList.remove('hidden');
-    discountDisplay.textContent = `-${discount.toFixed(2)} ${storeProfile.currency}`;
+    discountDisplay.textContent = `-${discount.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
   } else if (discountRow) {
     discountRow.classList.add('hidden');
   }
@@ -544,8 +541,8 @@ function calculateTotals() {
   const taxAmount = afterDiscount * (taxPercent / 100);
   const grandTotal = afterDiscount + taxAmount;
 
-  if (subtotalDisplay) subtotalDisplay.textContent = `${subtotal.toFixed(2)} ${storeProfile.currency}`;
-  if (grandTotalDisplay) grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ${storeProfile.currency}`;
+  if (subtotalDisplay) subtotalDisplay.textContent = `${subtotal.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  if (grandTotalDisplay) grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
   return { subtotal, discount, taxPercent, taxAmount, grandTotal };
 }
 
@@ -553,8 +550,10 @@ discountInput?.addEventListener('input', calculateTotals);
 taxInput?.addEventListener('input', calculateTotals);
 
 async function saveInvoiceData() {
-  const clientName = document.getElementById('client-name')?.value.trim();
-  const clientPhone = document.getElementById('client-phone')?.value.trim();
+  const clientNameInp = document.getElementById('client-name');
+  const clientPhoneInp = document.getElementById('client-phone');
+  const clientName = clientNameInp ? clientNameInp.value.trim() : '';
+  const clientPhone = clientPhoneInp ? clientPhoneInp.value.trim() : '';
   
   calculateTotals();
   const validItems = activeItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
@@ -601,7 +600,7 @@ async function saveInvoiceData() {
 
   await syncDocToCloud('invoices', { list: invoicesDB });
 
-  let clientIndex = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
+  let clientIndex = clientsDB.findIndex(c => (c.name || '').toLowerCase() === clientName.toLowerCase());
   if (clientIndex === -1) {
     clientsDB.push({ name: clientName, phone: clientPhone || '', openingBalance: 0, payments: [] });
   } else if (clientPhone) {
@@ -624,17 +623,17 @@ function sendWhatsApp(inv) {
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
   if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
-  let msg = `*${storeProfile.name}*\n`;
+  let msg = `*${storeProfile.name || 'GITI ERP'}*\n`;
   msg += `🧾 *فاتورة مبيعات إلكترونية رقم:* #${inv.id}\n`;
   msg += `👤 *العميل:* ${inv.client}\n`;
   msg += `📅 *التاريخ:* ${inv.date}\n`;
   msg += `-----------------------------------\n`;
-  inv.items.forEach(i => {
-    msg += `• ${i.name} (×${i.qty}) = ${(i.qty * i.price).toFixed(2)} ${storeProfile.currency}\n`;
+  (inv.items || []).forEach(i => {
+    msg += `• ${i.name} (×${i.qty}) = ${(i.qty * i.price).toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
   });
   msg += `-----------------------------------\n`;
-  if (inv.discount > 0) msg += `🏷️ *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency}\n`;
-  msg += `💰 *الإجمالي النهائي:* ${inv.grandTotal.toFixed(2)} ${storeProfile.currency}\n`;
+  if (inv.discount > 0) msg += `🏷️ *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
+  msg += `💰 *الإجمالي النهائي:* ${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
   msg += `📌 *حالة الدفع:* ${inv.status}\n\n`;
   msg += `شكراً لتعاملكم معنا!`;
 
@@ -660,22 +659,22 @@ function openInvoicePreview(inv) {
     }
   }
 
-  document.getElementById('v-store-name').textContent = storeProfile.name;
-  document.getElementById('v-store-phone').textContent = storeProfile.phone;
+  document.getElementById('v-store-name').textContent = storeProfile.name || 'GITI ERP';
+  document.getElementById('v-store-phone').textContent = storeProfile.phone || '';
   document.getElementById('v-store-vat').textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
-  document.getElementById('v-store-address').textContent = storeProfile.address;
+  document.getElementById('v-store-address').textContent = storeProfile.address || '';
   document.getElementById('v-inv-id').textContent = `رقم الفاتورة: #${inv.id}`;
   document.getElementById('v-date').textContent = `التاريخ: ${inv.date}`;
-  document.getElementById('v-client-name').textContent = inv.client;
+  document.getElementById('v-client-name').textContent = inv.client || '';
   document.getElementById('v-client-phone').textContent = inv.phone || '-';
-  document.getElementById('v-payment-status').textContent = inv.status;
-  document.getElementById('v-subtotal').textContent = `${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('v-discount').textContent = `${(inv.discount || 0).toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('v-payment-status').textContent = inv.status || '';
+  document.getElementById('v-subtotal').textContent = `${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  document.getElementById('v-discount').textContent = `${(inv.discount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
   document.getElementById('v-tax').textContent = `${inv.taxPercent || 0}%`;
-  document.getElementById('v-total').textContent = `${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('v-total').textContent = `${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
 
   document.getElementById('v-items-body').innerHTML = (inv.items || []).map(item => `
-    <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
+    <tr><td>${item.name || ''}</td><td>${item.qty || 1}</td><td>${(item.price || 0).toFixed(2)}</td><td>${((item.qty || 1) * (item.price || 0)).toFixed(2)}</td></tr>
   `).join('');
 
   renderQrCode('preview-qrcode', inv.zatcaQr || generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime || new Date().toISOString(), inv.grandTotal, inv.taxAmount || 0));
@@ -714,7 +713,7 @@ function printInvoice(inv) {
   printTemplate.innerHTML = `
     <div class="print-header">
       ${storeProfile.logo ? `<img id="p-logo" class="print-logo" src="${storeProfile.logo}">` : ''}
-      <h1 id="p-store-name">${storeProfile.name}</h1>
+      <h1 id="p-store-name">${storeProfile.name || 'GITI ERP'}</h1>
       <p id="p-store-phone">${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
       <p id="p-store-vat">${storeProfile.vatNo ? 'الرقم الضريبي: ' + storeProfile.vatNo : ''}</p>
       <p id="p-store-address">${storeProfile.address || ''}</p>
@@ -738,16 +737,16 @@ function printInvoice(inv) {
       </thead>
       <tbody id="p-items-body">
         ${(inv.items || []).map(item => `
-          <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
+          <tr><td>${item.name \vert{}\vert{} ''}</td><td>${item.qty || 1}</td><td>${(item.price \vert{}\vert{} 0).toFixed(2)}</td><td>${((item.qty || 1) * (item.price || 0)).toFixed(2)}</td></tr>
         `).join('')}
       </tbody>
     </table>
     <div class="print-footer-container">
       <div class="print-totals">
-        <p>المجموع الفرعي: <span id="p-subtotal">${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency}</span></p>
-        <p>الخصم: <span id="p-discount">${(inv.discount || 0).toFixed(2)} ${storeProfile.currency}</span></p>
+        <p>المجموع الفرعي: <span id="p-subtotal">${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</span></p>
+        <p>الخصم: <span id="p-discount">${(inv.discount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</span></p>
         <p>الضريبة: <span id="p-tax">${inv.taxPercent || 0}%</span></p>
-        <h3>الإجمالي الكلي: <span id="p-total">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</span></h3>
+        <h3>الإجمالي الكلي: <span id="p-total">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</span></h3>
       </div>
       <div id="print-qrcode" class="qrcode-wrapper"></div>
     </div>
@@ -813,8 +812,8 @@ function renderSavedInvoices(filter = '') {
     <li onclick="window.viewInvoiceById(${inv.id})" style="cursor: pointer;">
       <div style="flex: 1;">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <strong>#${inv.id} - ${inv.client}</strong>
-          <span class="badge ${inv.status === 'مدفوعة' ? 'badge-paid' : (inv.status === 'مدفوعة جزئياً' ? 'badge-partial' : 'badge-unpaid')}">${inv.status}</span>
+          <strong>#${inv.id} - ${inv.client || ''}</strong>
+          <span class="badge ${inv.status === 'مدفوعة' ? 'badge-paid' : (inv.status === 'مدفوعة جزئياً' ? 'badge-partial' : 'badge-unpaid')}">${inv.status || ''}</span>
         </div>
         <small style="color:var(--text-muted); display: block; margin-top: 2px;">
           📅 ${inv.date || ''} • 📦 ${(inv.items || []).length} أصناف ${inv.phone ? '• 📞 ' + inv.phone : ''}
@@ -827,7 +826,7 @@ function renderSavedInvoices(filter = '') {
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </div>
-      <strong style="color:var(--accent); font-size: 1.05rem; white-space: nowrap;">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong>
+      <strong style="color:var(--accent); font-size: 1.05rem; white-space: nowrap;">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
     </li>
   `).join('');
 }
@@ -857,10 +856,10 @@ document.getElementById('search-input')?.addEventListener('input', (e) => render
 
 document.getElementById('product-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = document.getElementById('p-name').value;
-  const price = parseFloat(document.getElementById('p-price').value) || 0;
-  const cost = parseFloat(document.getElementById('p-cost').value) || 0;
-  const stock = parseInt(document.getElementById('p-stock').value) || 0;
+  const name = document.getElementById('p-name')?.value || '';
+  const price = parseFloat(document.getElementById('p-price')?.value) || 0;
+  const cost = parseFloat(document.getElementById('p-cost')?.value) || 0;
+  const stock = parseInt(document.getElementById('p-stock')?.value) || 0;
 
   productsDB.push({ id: Date.now(), name, price, cost, stock });
   await syncDocToCloud('products', { list: productsDB });
@@ -873,11 +872,11 @@ function renderProducts() {
   container.innerHTML = productsDB.map((p, idx) => `
     <li>
       <div>
-        <strong>${p.name}</strong>
-        <br><small style="color:var(--text-muted)">التكلفة: ${p.cost} ${storeProfile.currency} | المخزون: ${p.stock}</small>
+        <strong>${p.name || ''}</strong>
+        <br><small style="color:var(--text-muted)">التكلفة: ${p.cost || 0} ${storeProfile.currency || 'ج.م'} | المخزون: ${p.stock || 0}</small>
       </div>
       <div>
-        <strong style="color:var(--success)">${p.price} ${storeProfile.currency}</strong>
+        <strong style="color:var(--success)">${p.price || 0} ${storeProfile.currency || 'ج.م'}</strong>
         <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="window.deleteProduct(${idx})">🗑️</button>
       </div>
     </li>
@@ -891,11 +890,11 @@ window.deleteProduct = async (idx) => {
 
 document.getElementById('client-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = document.getElementById('c-name').value.trim();
-  const phone = document.getElementById('c-phone').value.trim();
-  const openingBalance = parseFloat(document.getElementById('c-balance').value) || 0;
+  const name = (document.getElementById('c-name')?.value || '').trim();
+  const phone = (document.getElementById('c-phone')?.value || '').trim();
+  const openingBalance = parseFloat(document.getElementById('c-balance')?.value) || 0;
 
-  if (clientsDB.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+  if (clientsDB.some(c => (c.name || '').toLowerCase() === name.toLowerCase())) {
     alert('العميل موجود بالفعل!');
     return;
   }
@@ -906,8 +905,9 @@ document.getElementById('client-form')?.addEventListener('submit', async (e) => 
 });
 
 function getClientCalculatedLedger(clientName) {
-  const clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || { openingBalance: 0, payments: [] };
-  const clientInvoices = invoicesDB.filter(i => i.client.toLowerCase() === clientName.toLowerCase());
+  const safeName = (clientName || '').toLowerCase();
+  const clientObj = clientsDB.find(c => (c.name || '').toLowerCase() === safeName) || { openingBalance: 0, payments: [] };
+  const clientInvoices = invoicesDB.filter(i => (i.client || '').toLowerCase() === safeName);
 
   let totalPurchases = clientObj.openingBalance || 0;
   let totalPaid = 0;
@@ -928,27 +928,27 @@ function getClientCalculatedLedger(clientName) {
 function renderClients() {
   const datalist = document.getElementById('clients-datalist');
   if (datalist) {
-    datalist.innerHTML = clientsDB.map(c => `<option value="${c.name}">${c.phone || ''}</option>`).join('');
+    datalist.innerHTML = clientsDB.map(c => `<option value="${c.name || ''}">${c.phone || ''}</option>`).join('');
   }
 
   const container = document.getElementById('clients-list-container');
   if (!container) return;
   const searchFilter = (document.getElementById('search-clients-input')?.value || '').toLowerCase();
-  const filtered = clientsDB.filter(c => c.name.toLowerCase().includes(searchFilter));
+  const filtered = clientsDB.filter(c => (c.name || '').toLowerCase().includes(searchFilter));
 
   container.innerHTML = filtered.map(c => {
     const stats = getClientCalculatedLedger(c.name);
     return `
       <li>
         <div>
-          <strong>👤 ${c.name}</strong> <small style="color:var(--text-muted)">(${c.phone || 'بدون رقم'})</small>
+          <strong>👤 ${c.name || ''}</strong> <small style="color:var(--text-muted)">(${c.phone || 'بدون رقم'})</small>
           <br><small style="color:var(--text-muted)">إجمالي التعاملات: ${stats.totalPurchases.toFixed(2)} | المدفوع: ${stats.totalPaid.toFixed(2)}</small>
         </div>
         <div style="text-align:left;">
           <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
             ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
           </span>
-          <button class="btn-sm" style="margin-right:6px; background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name}')">كشف حساب 📄</button>
+          <button class="btn-sm" style="margin-right:6px; background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name || ''}')">كشف حساب 📄</button>
         </div>
       </li>
     `;
@@ -961,10 +961,15 @@ window.openClientLedger = (clientName) => {
   activeLedgerClientName = clientName;
   const stats = getClientCalculatedLedger(clientName);
 
-  document.getElementById('ledger-client-title').textContent = `👤 كشف حساب: ${clientName}`;
-  document.getElementById('ledger-total-sales').textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('ledger-total-paid').textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('ledger-balance').textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency}`;
+  const titleEl = document.getElementById('ledger-client-title');
+  const salesEl = document.getElementById('ledger-total-sales');
+  const paidEl = document.getElementById('ledger-total-paid');
+  const balEl = document.getElementById('ledger-balance');
+
+  if (titleEl) titleEl.textContent = `👤 كشف حساب: ${clientName}`;
+  if (salesEl) salesEl.textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  if (paidEl) paidEl.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  if (balEl) balEl.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
 
   const historyUl = document.getElementById('client-ledger-history');
   let historyHtml = '';
@@ -972,8 +977,8 @@ window.openClientLedger = (clientName) => {
   stats.clientInvoices.forEach(inv => {
     historyHtml += `
       <li style="border-right: 4px solid var(--accent)">
-        <div>فاتورة #${inv.id} (${inv.date})<br><small>${(inv.items || []).length} أصناف - ${inv.status}</small></div>
-        <strong>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong>
+        <div>فاتورة #${inv.id} (${inv.date || ''})<br><small>${(inv.items || []).length} أصناف - ${inv.status || ''}</small></div>
+        <strong>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
       </li>
     `;
   });
@@ -981,13 +986,15 @@ window.openClientLedger = (clientName) => {
   stats.payments.forEach(p => {
     historyHtml += `
       <li style="border-right: 4px solid var(--success)">
-        <div>دفعة سداد نقدي 💵 (${p.date})</div>
-        <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
+        <div>دفعة سداد نقدي 💵 (${p.date || ''})</div>
+        <strong class="text-success">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
       </li>
     `;
   });
 
-  if (historyUl) historyHtml = historyHtml || '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
+  if (historyUl) {
+    historyUl.innerHTML = historyHtml || '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
+  }
   document.getElementById('client-ledger-modal')?.classList.remove('hidden');
 };
 
@@ -998,18 +1005,18 @@ document.getElementById('close-ledger-btn')?.addEventListener('click', () => {
 document.getElementById('ledger-whatsapp-btn')?.addEventListener('click', () => {
   if (!activeLedgerClientName) return;
   const stats = getClientCalculatedLedger(activeLedgerClientName);
-  const clientObj = clientsDB.find(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
+  const clientObj = clientsDB.find(c => (c.name || '').toLowerCase() === activeLedgerClientName.toLowerCase());
   let phone = (clientObj?.phone || '').replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى تسجيل رقم الهاتف للعميل أولاً في سجل العملاء'); return; }
   if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
-  let msg = `*${storeProfile.name}*\n`;
+  let msg = `*${storeProfile.name || 'GITI ERP'}*\n`;
   msg += `📄 *كشف حساب العميل:* ${activeLedgerClientName}\n`;
   msg += `📅 *التاريخ:* ${new Date().toLocaleDateString('ar-EG')}\n`;
   msg += `-----------------------------------\n`;
-  msg += `🛍️ *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
-  msg += `✅ *إجمالي المدفوعات:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
-  msg += `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
+  msg += `🛍️ *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
+  msg += `✅ *إجمالي المدفوعات:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
+  msg += `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
   msg += `-----------------------------------\n`;
   msg += `شكراً لتعاملكم معنا!`;
 
@@ -1038,7 +1045,7 @@ document.getElementById('ledger-print-btn')?.addEventListener('click', () => {
     <div class="print-header">
       ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
       <h1>كشف حساب عميل</h1>
-      <h2>${storeProfile.name}</h2>
+      <h2>${storeProfile.name || 'GITI ERP'}</h2>
       <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
       <p>${storeProfile.address || ''}</p>
       <hr>
@@ -1047,9 +1054,9 @@ document.getElementById('ledger-print-btn')?.addEventListener('click', () => {
     </div>
 
     <div style="margin: 15px 0; padding: 10px; border: 1px solid #000; border-radius: 6px;">
-      <p><strong>إجمالي التعاملات:</strong> ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}</p>
-      <p><strong>إجمالي المدفوعات:</strong> ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}</p>
-      <p style="font-size: 1.1rem; font-weight: bold; margin-top: 5px;"><strong>الرصيد المتبقي / المديونية:</strong> ${stats.balance.toFixed(2)} ${storeProfile.currency}</p>
+      <p><strong>إجمالي التعاملات:</strong> ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}</p>
+      <p><strong>إجمالي المدفوعات:</strong> ${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}</p>
+      <p style="font-size: 1.1rem; font-weight: bold; margin-top: 5px;"><strong>الرصيد المتبقي / المديونية:</strong> ${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}</p>
     </div>
 
     <h3>سجل الحركة الحسابية التفصيلي:</h3>
@@ -1064,16 +1071,16 @@ document.getElementById('ledger-print-btn')?.addEventListener('click', () => {
       <tbody>
         ${stats.clientInvoices.map(inv => `
           <tr>
-            <td>فاتورة مبيعات #${inv.id} (${(inv.items \vert{}\vert{} []).length} أصناف - ${inv.status})</td>
-            <td>${inv.date}</td>
-            <td>${(inv.grandTotal \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency}</td>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items \vert{}\vert{} []).length} أصناف - ${inv.status || ''})</td>
+            <td>${inv.date || ''}</td>
+            <td>${(inv.grandTotal \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency || 'ج.م'}</td>
           </tr>
         `).join('')}
         ${stats.payments.map(p => `
           <tr>
             <td>دفعة سداد نقدي 💵</td>
-            <td>${p.date}</td>
-            <td>-${p.amount.toFixed(2)}${storeProfile.currency}</td>
+            <td>${p.date || ''}</td>
+            <td>-${(p.amount \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency || 'ج.م'}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -1084,31 +1091,33 @@ document.getElementById('ledger-print-btn')?.addEventListener('click', () => {
 });
 
 document.getElementById('submit-payment-btn')?.addEventListener('click', async () => {
-  const amount = parseFloat(document.getElementById('pay-amount-input').value) || 0;
+  const payInp = document.getElementById('pay-amount-input');
+  const amount = parseFloat(payInp?.value) || 0;
   if (amount <= 0 || !activeLedgerClientName) return;
 
-  const idx = clientsDB.findIndex(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
+  const idx = clientsDB.findIndex(c => (c.name || '').toLowerCase() === activeLedgerClientName.toLowerCase());
   if (idx !== -1) {
     if (!clientsDB[idx].payments) clientsDB[idx].payments = [];
     clientsDB[idx].payments.push({ amount, date: new Date().toLocaleDateString('ar-EG') });
     await syncDocToCloud('clients', { list: clientsDB });
-    document.getElementById('pay-amount-input').value = '';
+    if (payInp) payInp.value = '';
     window.openClientLedger(activeLedgerClientName);
     renderAllModules();
   }
 });
 
 document.getElementById('client-name')?.addEventListener('input', (e) => {
-  const match = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
+  const match = clientsDB.find(c => (c.name || '').toLowerCase() === e.target.value.trim().toLowerCase());
   if (match && match.phone) {
-    document.getElementById('client-phone').value = match.phone;
+    const phoneInp = document.getElementById('client-phone');
+    if (phoneInp) phoneInp.value = match.phone;
   }
 });
 
 document.getElementById('expense-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const title = document.getElementById('exp-title').value;
-  const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
+  const title = document.getElementById('exp-title')?.value || '';
+  const amount = parseFloat(document.getElementById('exp-amount')?.value) || 0;
 
   expensesDB.push({ id: Date.now(), title, amount, date: new Date().toLocaleDateString('ar-EG') });
   await syncDocToCloud('expenses', { list: expensesDB });
@@ -1121,11 +1130,11 @@ function renderExpenses() {
   container.innerHTML = expensesDB.map((exp, idx) => `
     <li>
       <div>
-        <strong>${exp.title}</strong>
-        <br><small style="color:var(--text-muted)">${exp.date}</small>
+        <strong>${exp.title || ''}</strong>
+        <br><small style="color:var(--text-muted)">${exp.date || ''}</small>
       </div>
       <div>
-        <strong style="color:var(--danger)">-${exp.amount.toFixed(2)} ${storeProfile.currency}</strong>
+        <strong style="color:var(--danger)">-${(exp.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
         <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="window.deleteExpense(${idx})">🗑️</button>
       </div>
     </li>
@@ -1152,9 +1161,9 @@ function updateDashboardStats() {
   const profitEl = document.getElementById('stat-net-profit');
   const countEl = document.getElementById('stat-count');
 
-  if (salesEl) salesEl.textContent = `${totalSales.toFixed(2)} ${storeProfile.currency}`;
-  if (debtsEl) debtsEl.textContent = `${totalDebts.toFixed(2)} ${storeProfile.currency}`;
-  if (profitEl) profitEl.textContent = `${netProfit.toFixed(2)} ${storeProfile.currency}`;
+  if (salesEl) salesEl.textContent = `${totalSales.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  if (debtsEl) debtsEl.textContent = `${totalDebts.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  if (profitEl) profitEl.textContent = `${netProfit.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
   if (countEl) countEl.textContent = invoicesDB.length;
 }
 
@@ -1170,7 +1179,7 @@ document.getElementById('export-json-btn')?.addEventListener('click', () => {
 document.getElementById('export-csv-btn')?.addEventListener('click', () => {
   let csv = 'رقم الفاتورة,العميل,الهاتف,الحالة,التاريخ,الإجمالي\n';
   invoicesDB.forEach(inv => {
-    csv += `${inv.id},"${inv.client}","${inv.phone || ''}",${inv.status},${inv.date},${inv.grandTotal}\n`;
+    csv += `${inv.id},"${inv.client || ''}","${inv.phone || ''}",${inv.status || ''},${inv.date || ''},${inv.grandTotal || 0}\n`;
   });
   const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
@@ -1181,29 +1190,37 @@ document.getElementById('export-csv-btn')?.addEventListener('click', () => {
 
 const settingsModal = document.getElementById('settings-modal');
 document.getElementById('open-settings-btn')?.addEventListener('click', () => {
-  document.getElementById('theme-select').value = localStorage.getItem('app_theme') || 'dark';
-  document.getElementById('currency-select').value = storeProfile.currency || 'ج.م';
-  document.getElementById('store-name-input').value = storeProfile.name;
-  document.getElementById('store-phone-input').value = storeProfile.phone;
-  document.getElementById('store-vat-input').value = storeProfile.vatNo || '';
-  document.getElementById('store-address-input').value = storeProfile.address;
+  const themeSel = document.getElementById('theme-select');
+  const currSel = document.getElementById('currency-select');
+  const nameInp = document.getElementById('store-name-input');
+  const phoneInp = document.getElementById('store-phone-input');
+  const vatInp = document.getElementById('store-vat-input');
+  const addrInp = document.getElementById('store-address-input');
+
+  if (themeSel) themeSel.value = localStorage.getItem('app_theme') || 'dark';
+  if (currSel) currSel.value = storeProfile.currency || 'ج.م';
+  if (nameInp) nameInp.value = storeProfile.name || '';
+  if (phoneInp) phoneInp.value = storeProfile.phone || '';
+  if (vatInp) vatInp.value = storeProfile.vatNo || '';
+  if (addrInp) addrInp.value = storeProfile.address || '';
   settingsModal?.classList.remove('hidden');
 });
 
 document.getElementById('close-settings-btn')?.addEventListener('click', () => settingsModal?.classList.add('hidden'));
 
 document.getElementById('save-settings-btn')?.addEventListener('click', () => {
-  applyTheme(document.getElementById('theme-select').value);
+  const themeVal = document.getElementById('theme-select')?.value || 'dark';
+  applyTheme(themeVal);
 
   const logoInput = document.getElementById('store-logo-input');
   
   const saveProfileData = async (logoBase64) => {
     storeProfile = {
-      name: document.getElementById('store-name-input').value || "GITI Enterprise ERP",
-      phone: document.getElementById('store-phone-input').value,
-      vatNo: document.getElementById('store-vat-input').value.trim(),
-      address: document.getElementById('store-address-input').value,
-      currency: document.getElementById('currency-select').value || "ج.م",
+      name: document.getElementById('store-name-input')?.value || "GITI Enterprise ERP",
+      phone: document.getElementById('store-phone-input')?.value || "",
+      vatNo: (document.getElementById('store-vat-input')?.value || "").trim(),
+      address: document.getElementById('store-address-input')?.value || "",
+      currency: document.getElementById('currency-select')?.value || "ج.م",
       logo: logoBase64 !== null ? logoBase64 : storeProfile.logo
     };
     await syncDocToCloud('profile', storeProfile);
@@ -1212,7 +1229,7 @@ document.getElementById('save-settings-btn')?.addEventListener('click', () => {
     settingsModal?.classList.add('hidden');
   };
 
-  if (logoInput.files && logoInput.files[0]) {
+  if (logoInput && logoInput.files && logoInput.files[0]) {
     const reader = new FileReader();
     reader.onload = function (e) { saveProfileData(e.target.result); };
     reader.readAsDataURL(logoInput.files[0]);
