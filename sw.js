@@ -1,23 +1,16 @@
-const CACHE_NAME = 'giti-invoices-v29'; // تم تحديث الإصدار لتحديث الكاش لدى جميع المستخدمين
+const CACHE_NAME = 'giti-invoices-v30'; // تم رفع الإصدار لإجبار التحديث وحذف الكاش التالف
 
-// الملفات والمكتبات المطلوبة للتشغيل أوفلاين بالكامل
+// تخزين الملفات المحلية الأساسية فقط (تجنبنا الـ CDNs لمنع فشل التثبيت)
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
-  './logo.png', // تخزين الشعار الجديد
-  // مكتبات Firebase
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js',
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js',
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js',
-  // مكتبات الـ QR Code وطباعة الصور
-  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+  './logo.png'
 ];
 
-// 1. تثبيت الـ Service Worker وتخزين كافة الموارد
+// 1. تثبيت الـ Service Worker بأمان تام دون انهيار
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -41,13 +34,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. اعتراض الطلبات وتوفير الموارد أوفلاين مع تجاوز اتصالات السحابة المباشرة
+// 3. اعتراض الطلبات وتوفير الأداء أوفلاين
 self.addEventListener('fetch', (event) => {
-  // استثناء اتصالات Firestore و Auth المباشرة لضمان التزامن الفوري وعدم تعليق الجلسات
+  // استثناء اتصالات السحابة والإعلانات لضمان عدم التعليق
   if (
     event.request.url.includes('firestore.googleapis.com') ||
     event.request.url.includes('identitytoolkit.googleapis.com') ||
-    event.request.url.includes('securetoken.googleapis.com')
+    event.request.url.includes('securetoken.googleapis.com') ||
+    event.request.url.includes('pagead2.googlesyndication.com')
   ) {
     return;
   }
@@ -57,11 +51,11 @@ self.addEventListener('fetch', (event) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request);
-    }).catch(() => {
-      if (event.request.mode === 'navigate') {
-        return caches.match('./index.html');
-      }
+      return fetch(event.request).catch(() => {
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+      });
     })
   );
 });
