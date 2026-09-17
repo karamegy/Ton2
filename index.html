@@ -170,10 +170,10 @@
           </div>
 
           <div class="form-row invoice-client-section">
-            <div class="form-group">
+            <div class="form-group autocomplete-wrapper">
               <label data-i18n="clientName">اسم العميل / الشركة</label>
-              <input type="text" id="client-name" list="clients-datalist" placeholder="اختر أو اكتب اسم العميل تلقائياً...">
-              <datalist id="clients-datalist"></datalist>
+              <input type="text" id="client-name" autocomplete="off" placeholder="اختر أو اكتب اسم العميل تلقائياً...">
+              <div id="client-suggestions" class="autocomplete-dropdown hidden"></div>
             </div>
             <div class="form-group">
               <label data-i18n="clientPhone">رقم الهاتف (للواتساب)</label>
@@ -525,8 +525,6 @@
   <!-- قالب الطباعة الحراري المعياري -->
   <div id="print-template" class="print-only"></div>
 
-  <datalist id="products-datalist"></datalist>
-
   <script type="module" src="app.js"></script>
 </body>
-                                                                         </html>
+</html>
