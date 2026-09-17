@@ -83,7 +83,7 @@
       <div id="auth-success" class="auth-msg success hidden"></div>
 
       <div style="margin-top: 15px; text-align: center;">
-        <button type="button" id="open-privacy-auth-btn" onclick="window.openPrivacyModal && window.openPrivacyModal()" class="btn-ghost" style="font-size: 0.75rem; text-decoration: underline;">🔒 سياسة الخصوصية (Privacy Policy)</button>
+        <a href="privacy.html" target="_blank" rel="noopener" class="btn-ghost" style="font-size: 0.75rem; text-decoration: underline; color: var(--text-muted); display: inline-block;">🔒 سياسة الخصوصية (Privacy Policy)</a>
       </div>
     </div>
   </div>
@@ -517,39 +517,8 @@
       <button id="save-settings-btn" class="btn-primary" style="margin-top: 15px;" data-i18n="saveSettings">حفظ التغييرات السحابية</button>
       
       <div style="margin-top: 15px; border-top: 1px dashed var(--border-color); padding-top: 12px; text-align: center;">
-        <button type="button" id="open-privacy-settings-btn" onclick="document.getElementById('settings-modal')?.classList.add('hidden'); window.openPrivacyModal && window.openPrivacyModal();" class="btn-secondary">🔒 عرض سياسة الخصوصية</button>
+        <a href="privacy.html" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration: none; display: block; text-align: center;">🔒 عرض سياسة الخصوصية</a>
       </div>
-    </div>
-  </div>
-
-  <!-- Modal نافذة سياسة الخصوصية الرسمية -->
-  <div id="privacy-modal" class="modal hidden">
-    <div class="modal-content" style="max-width: 600px;">
-      <div class="modal-header">
-        <h3>🔒 سياسة الخصوصية (Privacy Policy)</h3>
-        <button id="close-privacy-btn" class="btn-close">✕</button>
-      </div>
-      <div class="privacy-text-content" style="max-height: 65vh; overflow-y: auto; text-align: right; font-size: 0.85rem; line-height: 1.8; color: var(--text-main); padding-left: 6px;">
-        <h4 style="color: var(--accent); margin-bottom: 8px;">1. المقدمة والشروط العامة</h4>
-        <p>مرحباً بك في تطبيق <strong>GITI Enterprise ERP</strong>. نحن نلتزم بحماية خصوصية بياناتك التجارية والشخصية والتأكد من أمانها التام وفقاً لأعلى معايير الحماية والأمان الرقمي.</p>
-
-        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">2. البيانات التي نجمعها وكيفية استخدامها</h4>
-        <p>• <strong>الحساب الشخصي:</strong> نجمع البريد الإلكتروني واسم النشاط التجاري عند التسجيل لإنشاء وتفعيل الرخصة السحابية وتأمين الدخول عبر Firebase Authentication و Google Sign-In.</p>
-        <p>• <strong>بيانات النشاط الحسابي:</strong> الفواتير، بيانات العملاء، سجلات المصروفات، والمنتجات المخزنة يتم رفعها وتخزينها سحابياً على خوادم مشفرة (Google Firebase Cloud Firestore) لتسهيل المزامنة الفورية بين أجهزتك ولا يتم الاطلاع عليها بواسطة أي طرف ثالث.</p>
-
-        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">3. مشاركة وحماية البيانات</h4>
-        <p>نحن لا نبيع، ولا نؤجر، ولا نشارك أي بيانات شخصية أو حسابية خاصة بنشاطك التجاري مع أي جهة خارجية. تُستخدم أدوات التحليل والإعلانات المعيارية (Google AdSense) وفق إرشادات حماية الخصوصية الرقمية.</p>
-
-        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">4. الأذونات المطلوبة والتخزين المحلي</h4>
-        <p>يستخدم التطبيق التخزين المحلي (IndexedDB & LocalStorage) للعمل بكفاءة في حالة عدم توفر الاتصال بالإنترنت (Offline Persistence)، بالإضافة إلى إذن حفظ الصور لتمكينك من تحميل وتنزيل الفواتير وكشوف الحسابات كصور.</p>
-
-        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">5. حذف البيانات والحساب</h4>
-        <p>يمكنك طلب حذف كامل حسابك وبياناتك المخزنة سحابياً في أي وقت عبر التواصل المباشر مع مدير النظام عبر البريد الإلكتروني: <a href="mailto:haretg@gmail.com" style="color: var(--accent);">haretg@gmail.com</a>.</p>
-
-        <h4 style="color: var(--accent); margin-top: 12px; margin-bottom: 8px;">6. التواصل والدعم الفني</h4>
-        <p>لأي استفسارات بخصوص سياسة الخصوصية أو حماية البيانات الخاصة بك، يمكن التواصل المباشر مع الدعم الفني: <strong>haretg@gmail.com</strong></p>
-      </div>
-      <button id="accept-privacy-btn" class="btn-primary" style="width: 100%; margin-top: 15px;">موافق وإغلاق</button>
     </div>
   </div>
 
