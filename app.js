@@ -158,33 +158,14 @@ let activeItems = [];
 let activeLedgerClientName = null;
 let editingInvoiceId = null;
 
-// إدارة نافذة سياسة الخصوصية
 const privacyModal = document.getElementById('privacy-modal');
-
-document.getElementById('open-privacy-auth-btn')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  if (privacyModal) privacyModal.classList.remove('hidden');
+document.getElementById('open-privacy-auth-btn')?.addEventListener('click', () => privacyModal.classList.remove('hidden'));
+document.getElementById('open-privacy-settings-btn')?.addEventListener('click', () => {
+  document.getElementById('settings-modal').classList.add('hidden');
+  privacyModal.classList.remove('hidden');
 });
-
-document.getElementById('open-privacy-settings-btn')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('settings-modal')?.classList.add('hidden');
-  if (privacyModal) privacyModal.classList.remove('hidden');
-});
-
-document.getElementById('close-privacy-btn')?.addEventListener('click', () => {
-  privacyModal?.classList.add('hidden');
-});
-
-document.getElementById('accept-privacy-btn')?.addEventListener('click', () => {
-  privacyModal?.classList.add('hidden');
-});
-
-window.addEventListener('click', (e) => {
-  if (e.target === privacyModal) {
-    privacyModal.classList.add('hidden');
-  }
-});
+document.getElementById('close-privacy-btn')?.addEventListener('click', () => privacyModal.classList.add('hidden'));
+document.getElementById('accept-privacy-btn')?.addEventListener('click', () => privacyModal.classList.add('hidden'));
 
 document.getElementById('tab-login-btn').addEventListener('click', () => {
   document.getElementById('tab-login-btn').classList.add('active');
@@ -1022,16 +1003,16 @@ document.getElementById('ledger-print-btn').addEventListener('click', () => {
       <tbody>
         ${stats.clientInvoices.map(inv => `
           <tr>
-            <td>فاتورة مبيعات #${inv.id} (${(inv.items \vert{}\vert{} []).length} أصناف - ${inv.status})</td>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items || []).length} أصناف - ${inv.status})</td>
             <td>${inv.date}</td>
-            <td>${(inv.grandTotal \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency}</td>
+            <td>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</td>
           </tr>
         `).join('')}
         ${stats.payments.map(p => `
           <tr>
             <td>دفعة سداد نقدي 💵</td>
             <td>${p.date}</td>
-            <td>-${p.amount.toFixed(2)}${storeProfile.currency}</td>
+            <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
           </tr>
         `).join('')}
       </tbody>
