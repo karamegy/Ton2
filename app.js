@@ -106,8 +106,8 @@ function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAm
   const tag1 = getTlvTag(1, sellerName || "Store");
   const tag2 = getTlvTag(2, vatNo || "000000000000000");
   const tag3 = getTlvTag(3, timeStamp || new Date().toISOString());
-  const tag4 = getTlvTag(4, totalAmount.toFixed(2));
-  const tag5 = getTlvTag(5, vatAmount.toFixed(2));
+  const tag4 = getTlvTag(4, (totalAmount || 0).toFixed(2));
+  const tag5 = getTlvTag(5, (vatAmount || 0).toFixed(2));
 
   const combined = new Uint8Array(tag1.length + tag2.length + tag3.length + tag4.length + tag5.length);
   let offset = 0;
@@ -123,6 +123,7 @@ function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAm
 
 function renderQrCode(containerId, dataText) {
   const container = document.getElementById(containerId);
+  if (!container) return;
   container.innerHTML = '';
   if (typeof QRCode !== 'undefined' && dataText) {
     new QRCode(container, {
@@ -154,8 +155,8 @@ let storeProfile = { name: "GITI Enterprise ERP", phone: "01000000000", address:
 let activeUnsubscribers = [];
 let activeItems = [];
 let activeLedgerClientName = null;
+let editingInvoiceId = null;
 
-/* التحكم بنافذة سياسة الخصوصية */
 const privacyModal = document.getElementById('privacy-modal');
 document.getElementById('open-privacy-auth-btn')?.addEventListener('click', () => privacyModal.classList.remove('hidden'));
 document.getElementById('open-privacy-settings-btn')?.addEventListener('click', () => {
@@ -370,6 +371,7 @@ invNumberDisplay.textContent = `#${nextInvNum}`;
 
 function updateProductsDatalist() {
   const datalist = document.getElementById('products-datalist');
+  if (!datalist) return;
   datalist.innerHTML = productsDB.map(p => `<option value="${p.name}">${p.price} ${storeProfile.currency}</option>`).join('');
 }
 
@@ -377,16 +379,16 @@ function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
       <td>
-        <input type="text" list="products-datalist" value="${item.name}" placeholder="أدخل أو اختر الصنف" onchange="window.onItemNameChange(${index}, this.value)">
+        <input type="text" list="products-datalist" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف" oninput="window.updateItem(${index}, 'name', this.value)">
       </td>
       <td>
-        <input type="number" value="${item.qty}" min="1" onchange="window.updateItem(${index}, 'qty', this.value)">
+        <input type="number" value="${item.qty || 1}" min="1" oninput="window.updateItem(${index}, 'qty', this.value)">
       </td>
       <td>
-        <input type="number" value="${item.price}" min="0" step="0.5" onchange="window.updateItem(${index}, 'price', this.value)">
+        <input type="number" value="${item.price || 0}" min="0" step="0.5" oninput="window.updateItem(${index}, 'price', this.value)">
       </td>
       <td>
-        <span class="item-total-text">${(item.qty * item.price).toFixed(2)}</span>
+        <span class="item-total-text">${((item.qty || 0) * (item.price || 0)).toFixed(2)}</span>
       </td>
       <td>
         <button type="button" class="btn-remove" onclick="window.removeItem(${index})" title="حذف البند">✕</button>
@@ -396,16 +398,20 @@ function renderItemsTable() {
   calculateTotals();
 }
 
-window.onItemNameChange = (index, val) => {
-  activeItems[index].name = val;
-  const matchedProd = productsDB.find(p => p.name === val);
-  if (matchedProd) activeItems[index].price = matchedProd.price;
-  renderItemsTable();
-};
-
 window.updateItem = (index, key, val) => {
-  activeItems[index][key] = key === 'name' ? val : parseFloat(val) || 0;
-  renderItemsTable();
+  if (key === 'name') {
+    activeItems[index].name = val;
+    const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+    if (matchedProd) activeItems[index].price = matchedProd.price;
+  } else {
+    activeItems[index][key] = parseFloat(val) || 0;
+  }
+  calculateTotals();
+  const rows = itemsBody.querySelectorAll('tr');
+  if (rows[index]) {
+    const totalSpan = rows[index].querySelector('.item-total-text');
+    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+  }
 };
 
 window.removeItem = (index) => {
@@ -430,7 +436,19 @@ payStatusSelect.addEventListener('change', () => {
 });
 
 function calculateTotals() {
-  const subtotal = activeItems.reduce((acc, item) => acc + (item.qty * item.price), 0);
+  const rows = itemsBody.querySelectorAll('tr');
+  rows.forEach((tr, idx) => {
+    if (activeItems[idx]) {
+      const inputs = tr.querySelectorAll('input');
+      if (inputs.length >= 3) {
+        activeItems[idx].name = inputs[0].value;
+        activeItems[idx].qty = parseFloat(inputs[1].value) || 0;
+        activeItems[idx].price = parseFloat(inputs[2].value) || 0;
+      }
+    }
+  });
+
+  const subtotal = activeItems.reduce((acc, item) => acc + ((item.qty || 0) * (item.price || 0)), 0);
   const discount = parseFloat(discountInput.value) || 0;
   const taxPercent = parseFloat(taxInput.value) || 0;
   
@@ -459,8 +477,12 @@ taxInput.addEventListener('input', calculateTotals);
 async function saveInvoiceData() {
   const clientName = document.getElementById('client-name').value.trim();
   const clientPhone = document.getElementById('client-phone').value.trim();
+  
+  calculateTotals();
+  const validItems = activeItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
+
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
-  if (activeItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل'); return null; }
+  if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل وتحديد الكمية والسعر'); return null; }
 
   const totals = calculateTotals();
   const isoTime = new Date().toISOString();
@@ -470,36 +492,44 @@ async function saveInvoiceData() {
   if (status === 'آجل / غير مدفوعة') paidVal = 0;
   else if (status === 'مدفوعة جزئياً') paidVal = parseFloat(document.getElementById('paid-amount-input').value) || 0;
 
+  const currentInvId = editingInvoiceId ? editingInvoiceId : nextInvNum;
   const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
 
   const invoice = {
-    id: nextInvNum,
+    id: currentInvId,
     client: clientName,
-    phone: clientPhone,
+    phone: clientPhone || '',
     status: status,
     paidAmount: paidVal,
     dueAmount: totals.grandTotal - paidVal,
-    items: [...activeItems],
+    items: validItems,
     ...totals,
     date: new Date().toLocaleDateString('ar-EG'),
     isoTime: isoTime,
     zatcaQr: zatcaBase64
   };
 
-  invoicesDB.unshift(invoice);
+  if (editingInvoiceId) {
+    const idx = invoicesDB.findIndex(i => i.id === editingInvoiceId);
+    if (idx !== -1) invoicesDB[idx] = invoice;
+    editingInvoiceId = null;
+  } else {
+    invoicesDB.unshift(invoice);
+    nextInvNum++;
+    localStorage.setItem('last_inv_num', nextInvNum.toString());
+  }
+
+  invNumberDisplay.textContent = `#${nextInvNum}`;
+
   await syncDocToCloud('invoices', { list: invoicesDB });
 
   let clientIndex = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
   if (clientIndex === -1) {
-    clientsDB.push({ name: clientName, phone: clientPhone, openingBalance: 0, payments: [] });
-  } else {
-    if (clientPhone) clientsDB[clientIndex].phone = clientPhone;
+    clientsDB.push({ name: clientName, phone: clientPhone || '', openingBalance: 0, payments: [] });
+  } else if (clientPhone) {
+    clientsDB[clientIndex].phone = clientPhone;
   }
   await syncDocToCloud('clients', { list: clientsDB });
-
-  nextInvNum++;
-  localStorage.setItem('last_inv_num', nextInvNum.toString());
-  invNumberDisplay.textContent = `#${nextInvNum}`;
 
   resetForm();
   renderAllModules();
@@ -508,11 +538,11 @@ async function saveInvoiceData() {
 
 document.getElementById('save-btn').addEventListener('click', async () => {
   const inv = await saveInvoiceData();
-  if (inv) alert('تم حفظ الفاتورة وتحديث حساب العميل سحابياً بنجاح');
+  if (inv) alert('تم حفظ الفاتورة وتحديث الحسابات سحابياً بنجاح');
 });
 
 function sendWhatsApp(inv) {
-  let phone = inv.phone.replace(/[^0-9]/g, '');
+  let phone = (inv.phone || '').replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
   if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
@@ -559,12 +589,12 @@ function openInvoicePreview(inv) {
   document.getElementById('v-client-name').textContent = inv.client;
   document.getElementById('v-client-phone').textContent = inv.phone || '-';
   document.getElementById('v-payment-status').textContent = inv.status;
-  document.getElementById('v-subtotal').textContent = `${inv.subtotal.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('v-discount').textContent = `${inv.discount.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('v-tax').textContent = `${inv.taxPercent}%`;
-  document.getElementById('v-total').textContent = `${inv.grandTotal.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('v-subtotal').textContent = `${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('v-discount').textContent = `${(inv.discount || 0).toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('v-tax').textContent = `${inv.taxPercent || 0}%`;
+  document.getElementById('v-total').textContent = `${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}`;
 
-  document.getElementById('v-items-body').innerHTML = inv.items.map(item => `
+  document.getElementById('v-items-body').innerHTML = (inv.items || []).map(item => `
     <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
   `).join('');
 
@@ -624,17 +654,17 @@ function printInvoice(inv) {
         </tr>
       </thead>
       <tbody id="p-items-body">
-        ${inv.items.map(item => `
+        ${(inv.items || []).map(item => `
           <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
         `).join('')}
       </tbody>
     </table>
     <div class="print-footer-container">
       <div class="print-totals">
-        <p>المجموع الفرعي: <span id="p-subtotal">${inv.subtotal.toFixed(2)} ${storeProfile.currency}</span></p>
-        <p>الخصم: <span id="p-discount">${inv.discount.toFixed(2)} ${storeProfile.currency}</span></p>
-        <p>الضريبة: <span id="p-tax">${inv.taxPercent}%</span></p>
-        <h3>الإجمالي الكلي: <span id="p-total">${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</span></h3>
+        <p>المجموع الفرعي: <span id="p-subtotal">${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency}</span></p>
+        <p>الخصم: <span id="p-discount">${(inv.discount || 0).toFixed(2)} ${storeProfile.currency}</span></p>
+        <p>الضريبة: <span id="p-tax">${inv.taxPercent || 0}%</span></p>
+        <h3>الإجمالي الكلي: <span id="p-total">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</span></h3>
       </div>
       <div id="print-qrcode" class="qrcode-wrapper"></div>
     </div>
@@ -645,7 +675,26 @@ function printInvoice(inv) {
   window.print();
 }
 
+window.editInvoiceById = (id) => {
+  const inv = invoicesDB.find(i => i.id === id);
+  if (!inv) return;
+
+  editingInvoiceId = inv.id;
+  invNumberDisplay.textContent = `#${inv.id} (تعديل)`;
+  document.getElementById('client-name').value = inv.client || '';
+  document.getElementById('client-phone').value = inv.phone || '';
+  discountInput.value = inv.discount || 0;
+  taxInput.value = inv.taxPercent || 0;
+  payStatusSelect.value = inv.status || 'مدفوعة';
+
+  activeItems = (inv.items || []).map(i => ({ ...i }));
+  renderItemsTable();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 function resetForm() {
+  editingInvoiceId = null;
+  invNumberDisplay.textContent = `#${nextInvNum}`;
   document.getElementById('client-name').value = '';
   document.getElementById('client-phone').value = '';
   activeItems = [];
@@ -659,22 +708,35 @@ function resetForm() {
 
 function renderSavedInvoices(filter = '') {
   const container = document.getElementById('invoices-container');
-  const filtered = invoicesDB.filter(inv => inv.client.toLowerCase().includes(filter.toLowerCase()) || inv.id.toString().includes(filter) || inv.phone.includes(filter));
+  if (!container) return;
+
+  const f = (filter || '').toLowerCase();
+  const filtered = invoicesDB.filter(inv => {
+    const clientMatch = (inv.client || '').toLowerCase().includes(f);
+    const idMatch = (inv.id || '').toString().includes(f);
+    const phoneMatch = (inv.phone || '').includes(f);
+    return clientMatch || idMatch || phoneMatch;
+  });
 
   container.innerHTML = filtered.map(inv => `
-    <li>
-      <div>
-        <strong>#${inv.id} - ${inv.client}</strong> 
-        <span class="badge ${inv.status === 'مدفوعة' ? 'badge-paid' : (inv.status === 'مدفوعة جزئياً' ? 'badge-partial' : 'badge-unpaid')}">${inv.status}</span>
-        <br><small style="color:var(--text-muted)">${inv.date} • ${inv.items.length} أصناف</small>
-        <div class="inv-actions" style="margin-top:6px;">
-          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick='window.viewInvoiceById(${inv.id})'>👁️ معاينة</button>
-          <button class="btn-sm" style="background:#25d366; color:#fff" onclick='window.sendWhatsAppById(${inv.id})'>💬 واتساب</button>
+    <li onclick="window.viewInvoiceById(${inv.id})" style="cursor: pointer;">
+      <div style="flex: 1;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <strong>#${inv.id} - ${inv.client}</strong>
+          <span class="badge ${inv.status === 'مدفوعة' ? 'badge-paid' : (inv.status === 'مدفوعة جزئياً' ? 'badge-partial' : 'badge-unpaid')}">${inv.status}</span>
+        </div>
+        <small style="color:var(--text-muted); display: block; margin-top: 2px;">
+          📅 ${inv.date || ''} • 📦 ${(inv.items || []).length} أصناف ${inv.phone ? '• 📞 ' + inv.phone : ''}
+        </small>
+        <div class="inv-actions" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;" onclick="event.stopPropagation();">
+          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.viewInvoiceById(${inv.id})">👁️ معاينة</button>
+          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editInvoiceById(${inv.id})">✏️ تعديل</button>
+          <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendWhatsAppById(${inv.id})">💬 واتساب</button>
           <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨️ طباعة</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </div>
-      <strong style="color:var(--accent); font-size: 1rem;">${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</strong>
+      <strong style="color:var(--accent); font-size: 1.05rem; white-space: nowrap;">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong>
     </li>
   `).join('');
 }
@@ -716,6 +778,7 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
 
 function renderProducts() {
   const container = document.getElementById('products-list-container');
+  if (!container) return;
   container.innerHTML = productsDB.map((p, idx) => `
     <li>
       <div>
@@ -759,12 +822,12 @@ function getClientCalculatedLedger(clientName) {
   let totalPaid = 0;
 
   clientInvoices.forEach(inv => {
-    totalPurchases += inv.grandTotal;
+    totalPurchases += (inv.grandTotal || 0);
     totalPaid += (inv.paidAmount || 0);
   });
 
   (clientObj.payments || []).forEach(p => {
-    totalPaid += p.amount;
+    totalPaid += (p.amount || 0);
   });
 
   const balance = Math.max(0, totalPurchases - totalPaid);
@@ -773,9 +836,12 @@ function getClientCalculatedLedger(clientName) {
 
 function renderClients() {
   const datalist = document.getElementById('clients-datalist');
-  datalist.innerHTML = clientsDB.map(c => `<option value="${c.name}">${c.phone || ''}</option>`).join('');
+  if (datalist) {
+    datalist.innerHTML = clientsDB.map(c => `<option value="${c.name}">${c.phone || ''}</option>`).join('');
+  }
 
   const container = document.getElementById('clients-list-container');
+  if (!container) return;
   const searchFilter = (document.getElementById('search-clients-input')?.value || '').toLowerCase();
   const filtered = clientsDB.filter(c => c.name.toLowerCase().includes(searchFilter));
 
@@ -815,8 +881,8 @@ window.openClientLedger = (clientName) => {
   stats.clientInvoices.forEach(inv => {
     historyHtml += `
       <li style="border-right: 4px solid var(--accent)">
-        <div>فاتورة #${inv.id} (${inv.date})<br><small>${inv.items.length} أصناف - ${inv.status}</small></div>
-        <strong>${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</strong>
+        <div>فاتورة #${inv.id} (${inv.date})<br><small>${(inv.items || []).length} أصناف - ${inv.status}</small></div>
+        <strong>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong>
       </li>
     `;
   });
@@ -838,7 +904,6 @@ document.getElementById('close-ledger-btn').addEventListener('click', () => {
   document.getElementById('client-ledger-modal').classList.add('hidden');
 });
 
-/* أزرار إجراءات كشف الحساب */
 document.getElementById('ledger-whatsapp-btn').addEventListener('click', () => {
   if (!activeLedgerClientName) return;
   const stats = getClientCalculatedLedger(activeLedgerClientName);
@@ -905,9 +970,9 @@ document.getElementById('ledger-print-btn').addEventListener('click', () => {
       <tbody>
         ${stats.clientInvoices.map(inv => `
           <tr>
-            <td>فاتورة مبيعات #${inv.id} (${inv.items.length} أصناف - ${inv.status})</td>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items || []).length} أصناف - ${inv.status})</td>
             <td>${inv.date}</td>
-            <td>${inv.grandTotal.toFixed(2)} ${storeProfile.currency}</td>
+            <td>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</td>
           </tr>
         `).join('')}
         ${stats.payments.map(p => `
@@ -958,6 +1023,7 @@ document.getElementById('expense-form').addEventListener('submit', async (e) => 
 
 function renderExpenses() {
   const container = document.getElementById('expenses-list-container');
+  if (!container) return;
   container.innerHTML = expensesDB.map((exp, idx) => `
     <li>
       <div>
@@ -978,8 +1044,8 @@ window.deleteExpense = async (idx) => {
 };
 
 function updateDashboardStats() {
-  const totalSales = invoicesDB.reduce((acc, i) => acc + i.grandTotal, 0);
-  const totalExpensesAmount = expensesDB.reduce((acc, e) => acc + e.amount, 0);
+  const totalSales = invoicesDB.reduce((acc, i) => acc + (i.grandTotal || 0), 0);
+  const totalExpensesAmount = expensesDB.reduce((acc, e) => acc + (e.amount || 0), 0);
   const netProfit = totalSales - totalExpensesAmount;
 
   let totalDebts = 0;
@@ -987,11 +1053,15 @@ function updateDashboardStats() {
     totalDebts += getClientCalculatedLedger(c.name).balance;
   });
 
-  document.getElementById('stat-total-sales').textContent = `${totalSales.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('stat-total-debts').textContent = `${totalDebts.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('stat-expenses').textContent = `${totalExpensesAmount.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('stat-net-profit').textContent = `${netProfit.toFixed(2)} ${storeProfile.currency}`;
-  document.getElementById('stat-count').textContent = invoicesDB.length;
+  const salesEl = document.getElementById('stat-total-sales');
+  const debtsEl = document.getElementById('stat-total-debts');
+  const profitEl = document.getElementById('stat-net-profit');
+  const countEl = document.getElementById('stat-count');
+
+  if (salesEl) salesEl.textContent = `${totalSales.toFixed(2)} ${storeProfile.currency}`;
+  if (debtsEl) debtsEl.textContent = `${totalDebts.toFixed(2)} ${storeProfile.currency}`;
+  if (profitEl) profitEl.textContent = `${netProfit.toFixed(2)} ${storeProfile.currency}`;
+  if (countEl) countEl.textContent = invoicesDB.length;
 }
 
 document.getElementById('export-json-btn').addEventListener('click', () => {
@@ -1006,7 +1076,7 @@ document.getElementById('export-json-btn').addEventListener('click', () => {
 document.getElementById('export-csv-btn').addEventListener('click', () => {
   let csv = 'رقم الفاتورة,العميل,الهاتف,الحالة,التاريخ,الإجمالي\n';
   invoicesDB.forEach(inv => {
-    csv += `${inv.id},"${inv.client}","${inv.phone}",${inv.status},${inv.date},${inv.grandTotal}\n`;
+    csv += `${inv.id},"${inv.client}","${inv.phone || ''}",${inv.status},${inv.date},${inv.grandTotal}\n`;
   });
   const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
