@@ -304,7 +304,9 @@ button {
 li {
   background: var(--input-bg); padding: 12px 14px; border-radius: 12px; margin-bottom: 8px;
   display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); font-size: 0.85rem;
+  transition: all 0.2s ease;
 }
+li:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
 
 .badge { padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; }
 .badge-paid { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
