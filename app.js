@@ -392,7 +392,7 @@ const invNumberDisplay = document.getElementById('inv-number-display');
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
 invNumberDisplay.textContent = `#${nextInvNum}`;
 
-// --- نظام البحث التلقائي المخصص (Custom Autocomplete للعملاء والأصناف مع إظهار فورى عند النقر) ---
+// --- نظام البحث التلقائي للعملاء (مع فتح فوري عند النقر) ---
 const clientInput = document.getElementById('client-name');
 const clientSuggestions = document.getElementById('client-suggestions');
 
@@ -424,13 +424,8 @@ clientInput.addEventListener('input', (e) => {
   showClientSuggestions(val);
 });
 
-clientInput.addEventListener('focus', () => {
-  showClientSuggestions(clientInput.value);
-});
-
-clientInput.addEventListener('click', () => {
-  showClientSuggestions(clientInput.value);
-});
+clientInput.addEventListener('focus', () => showClientSuggestions(clientInput.value));
+clientInput.addEventListener('click', () => showClientSuggestions(clientInput.value));
 
 window.selectClient = (name, phone) => {
   clientInput.value = name;
@@ -439,7 +434,7 @@ window.selectClient = (name, phone) => {
   clientSuggestions.innerHTML = '';
 };
 
-// إخفاء القوائم المنسدلة عند النقر خارجها
+// إغلاق القوائم عند النقر خارجها
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.autocomplete-wrapper')) {
     document.querySelectorAll('.autocomplete-dropdown').forEach(el => el.classList.add('hidden'));
@@ -498,9 +493,9 @@ function showItemSuggestions(index, val) {
 }
 
 window.handleItemInput = (index, val) => {
-  activeItems[index].name = val;
+  if (activeItems[index]) activeItems[index].name = val;
   const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
-  if (matchedProd) {
+  if (matchedProd && activeItems[index]) {
     activeItems[index].price = matchedProd.price;
   }
   calculateTotals();
@@ -509,7 +504,9 @@ window.handleItemInput = (index, val) => {
   if (rows[index]) {
     const totalSpan = rows[index].querySelector('.item-total-text');
     const priceInput = rows[index].querySelectorAll('input')[2];
-    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    if (totalSpan && activeItems[index]) {
+      totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    }
     if (priceInput && matchedProd) priceInput.value = matchedProd.price;
   }
 
@@ -521,20 +518,24 @@ window.handleItemFocus = (index, val) => {
 };
 
 window.selectProductItem = (index, name, price) => {
-  activeItems[index].name = name;
-  activeItems[index].price = price;
+  if (activeItems[index]) {
+    activeItems[index].name = name;
+    activeItems[index].price = price;
+  }
   renderItemsTable();
 };
 
 window.updateItem = (index, key, val) => {
-  if (key !== 'name') {
+  if (activeItems[index] && key !== 'name') {
     activeItems[index][key] = parseFloat(val) || 0;
   }
   calculateTotals();
   const rows = itemsBody.querySelectorAll('tr');
-  if (rows[index]) {
+  if (rows[index] && activeItems[index]) {
     const totalSpan = rows[index].querySelector('.item-total-text');
-    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    if (totalSpan) {
+      totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    }
   }
 };
 
