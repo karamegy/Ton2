@@ -158,6 +158,15 @@ let activeItems = [];
 let activeLedgerClientName = null;
 let editingInvoiceId = null;
 
+const privacyModal = document.getElementById('privacy-modal');
+document.getElementById('open-privacy-auth-btn')?.addEventListener('click', () => privacyModal?.classList.remove('hidden'));
+document.getElementById('open-privacy-settings-btn')?.addEventListener('click', () => {
+  document.getElementById('settings-modal').classList.add('hidden');
+  privacyModal?.classList.remove('hidden');
+});
+document.getElementById('close-privacy-btn')?.addEventListener('click', () => privacyModal?.classList.add('hidden'));
+document.getElementById('accept-privacy-btn')?.addEventListener('click', () => privacyModal?.classList.add('hidden'));
+
 document.getElementById('tab-login-btn').addEventListener('click', () => {
   document.getElementById('tab-login-btn').classList.add('active');
   document.getElementById('tab-register-btn').classList.remove('active');
@@ -392,11 +401,13 @@ const invNumberDisplay = document.getElementById('inv-number-display');
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
 invNumberDisplay.textContent = `#${nextInvNum}`;
 
-// --- نظام البحث التلقائي للعملاء (مع فتح فوري عند النقر) ---
+// --- نظام القائمة المنسدلة الذكية للعملاء داخل الفاتورة ---
 const clientInput = document.getElementById('client-name');
+const clientPhoneInput = document.getElementById('client-phone');
 const clientSuggestions = document.getElementById('client-suggestions');
 
-function showClientSuggestions(filter = '') {
+function showClientDropdown(filter = '') {
+  if (!clientSuggestions) return;
   const val = filter.trim().toLowerCase();
   const filtered = val === '' ? clientsDB : clientsDB.filter(c => c.name.toLowerCase().includes(val) || (c.phone && c.phone.includes(val)));
   
@@ -407,9 +418,9 @@ function showClientSuggestions(filter = '') {
   }
 
   clientSuggestions.innerHTML = filtered.map(c => `
-    <div class="suggestion-item" onclick="window.selectClient('${c.name.replace(/'/g, "\\'")}', '${c.phone || ''}')">
-      <strong>${c.name}</strong>
-      <small style="color:var(--text-muted);">${c.phone || ''}</small>
+    <div class="suggestion-item" onclick="window.selectClientItem('${c.name.replace(/'/g, "\\'")}', '${c.phone || ''}')">
+      <strong>👤 ${c.name}</strong>
+      <small style="color:var(--text-muted); display:block;">${c.phone || 'بدون رقم هاتف'}</small>
     </div>
   `).join('');
   clientSuggestions.classList.remove('hidden');
@@ -419,28 +430,29 @@ clientInput.addEventListener('input', (e) => {
   const val = e.target.value;
   const matchedClient = clientsDB.find(c => c.name.toLowerCase() === val.trim().toLowerCase());
   if (matchedClient && matchedClient.phone) {
-    document.getElementById('client-phone').value = matchedClient.phone;
+    clientPhoneInput.value = matchedClient.phone;
   }
-  showClientSuggestions(val);
+  showClientDropdown(val);
 });
 
-clientInput.addEventListener('focus', () => showClientSuggestions(clientInput.value));
-clientInput.addEventListener('click', () => showClientSuggestions(clientInput.value));
+clientInput.addEventListener('focus', () => showClientDropdown(clientInput.value));
+clientInput.addEventListener('click', () => showClientDropdown(clientInput.value));
 
-window.selectClient = (name, phone) => {
+window.selectClientItem = (name, phone) => {
   clientInput.value = name;
-  if (phone) document.getElementById('client-phone').value = phone;
+  if (phone) clientPhoneInput.value = phone;
   clientSuggestions.classList.add('hidden');
   clientSuggestions.innerHTML = '';
 };
 
-// إغلاق القوائم عند النقر خارجها
+// إغلاق القوائم المنسدلة عند النقر خارجها
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.autocomplete-wrapper')) {
     document.querySelectorAll('.autocomplete-dropdown').forEach(el => el.classList.add('hidden'));
   }
 });
 
+// --- نظام جدول أصناف الفاتورة مع قائمة منسدلة لكل صنف ---
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
@@ -470,7 +482,7 @@ function renderItemsTable() {
   calculateTotals();
 }
 
-function showItemSuggestions(index, val) {
+function showItemDropdown(index, val) {
   const sugBox = document.getElementById(`item-suggestions-${index}`);
   if (!sugBox) return;
 
@@ -485,8 +497,8 @@ function showItemSuggestions(index, val) {
 
   sugBox.innerHTML = filteredProds.map(p => `
     <div class="suggestion-item" onclick="window.selectProductItem(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})">
-      <strong>${p.name}</strong>
-      <span style="color:var(--success); font-weight:700;">${p.price} ${storeProfile.currency}</span>
+      <strong>📦 ${p.name}</strong>
+      <span style="color:var(--success); font-weight:700; float:left;">${p.price} ${storeProfile.currency}</span>
     </div>
   `).join('');
   sugBox.classList.remove('hidden');
@@ -510,11 +522,11 @@ window.handleItemInput = (index, val) => {
     if (priceInput && matchedProd) priceInput.value = matchedProd.price;
   }
 
-  showItemSuggestions(index, val);
+  showItemDropdown(index, val);
 };
 
 window.handleItemFocus = (index, val) => {
-  showItemSuggestions(index, val);
+  showItemDropdown(index, val);
 };
 
 window.selectProductItem = (index, name, price) => {
@@ -600,8 +612,8 @@ discountInput.addEventListener('input', calculateTotals);
 taxInput.addEventListener('input', calculateTotals);
 
 async function saveInvoiceData() {
-  const clientName = document.getElementById('client-name').value.trim();
-  const clientPhone = document.getElementById('client-phone').value.trim();
+  const clientName = clientInput.value.trim();
+  const clientPhone = clientPhoneInput.value.trim();
   
   calculateTotals();
   const validItems = activeItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
@@ -806,8 +818,8 @@ window.editInvoiceById = (id) => {
 
   editingInvoiceId = inv.id;
   invNumberDisplay.textContent = `#${inv.id} (تعديل)`;
-  document.getElementById('client-name').value = inv.client || '';
-  document.getElementById('client-phone').value = inv.phone || '';
+  clientInput.value = inv.client || '';
+  clientPhoneInput.value = inv.phone || '';
   discountInput.value = inv.discount || 0;
   taxInput.value = inv.taxPercent || 0;
   payStatusSelect.value = inv.status || 'مدفوعة';
@@ -820,8 +832,8 @@ window.editInvoiceById = (id) => {
 function resetForm() {
   editingInvoiceId = null;
   invNumberDisplay.textContent = `#${nextInvNum}`;
-  document.getElementById('client-name').value = '';
-  document.getElementById('client-phone').value = '';
+  clientInput.value = '';
+  clientPhoneInput.value = '';
   activeItems = [];
   discountInput.value = 0;
   taxInput.value = 14;
