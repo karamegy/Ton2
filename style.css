@@ -378,3 +378,60 @@ li:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
   .print-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
   .print-table th, .print-table td { border: 1px solid #000000; padding: 6px; text-align: right; }
 }
+
+/* =========================================
+   Custom Autocomplete Dropdown Styles
+========================================= */
+.autocomplete-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: var(--card-bg);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  display: none;
+  margin-top: 6px;
+}
+
+.autocomplete-list.active {
+  display: block;
+}
+
+.autocomplete-item {
+  padding: 12px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.autocomplete-item-title {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.autocomplete-item-sub {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
