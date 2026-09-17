@@ -418,7 +418,7 @@ function showClientDropdown(filter = '') {
   }
 
   clientSuggestions.innerHTML = filtered.map(c => `
-    <div class="suggestion-item" onclick="window.selectClientItem('${c.name.replace(/'/g, "\\'")}', '${c.phone || ''}')">
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectClientItem('${c.name.replace(/'/g, "\\'")}', '${c.phone || ''}')" ontouchstart="window.selectClientItem('${c.name.replace(/'/g, "\\'")}', '${c.phone || ''}')">
       <strong>👤 ${c.name}</strong>
       <small style="color:var(--text-muted); display:block;">${c.phone || 'بدون رقم هاتف'}</small>
     </div>
@@ -496,7 +496,7 @@ function showItemDropdown(index, val) {
   }
 
   sugBox.innerHTML = filteredProds.map(p => `
-    <div class="suggestion-item" onclick="window.selectProductItem(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})">
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectProductItem(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})" ontouchstart="window.selectProductItem(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})">
       <strong>📦 ${p.name}</strong>
       <span style="color:var(--success); font-weight:700; float:left;">${p.price} ${storeProfile.currency}</span>
     </div>
@@ -509,17 +509,20 @@ window.handleItemInput = (index, val) => {
   const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
   if (matchedProd && activeItems[index]) {
     activeItems[index].price = matchedProd.price;
+    const rows = itemsBody.querySelectorAll('tr');
+    if (rows[index]) {
+      const priceInput = rows[index].querySelectorAll('input')[2];
+      if (priceInput) priceInput.value = matchedProd.price;
+    }
   }
   calculateTotals();
   
   const rows = itemsBody.querySelectorAll('tr');
   if (rows[index]) {
     const totalSpan = rows[index].querySelector('.item-total-text');
-    const priceInput = rows[index].querySelectorAll('input')[2];
     if (totalSpan && activeItems[index]) {
       totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
     }
-    if (priceInput && matchedProd) priceInput.value = matchedProd.price;
   }
 
   showItemDropdown(index, val);
@@ -534,7 +537,23 @@ window.selectProductItem = (index, name, price) => {
     activeItems[index].name = name;
     activeItems[index].price = price;
   }
-  renderItemsTable();
+  
+  // تحديث حقول DOM مباشرة بدون إعادة بناء الجدول بالكامل لمنع التجميد على الجوال
+  const rows = itemsBody.querySelectorAll('tr');
+  if (rows[index]) {
+    const inputs = rows[index].querySelectorAll('input');
+    if (inputs.length >= 3) {
+      inputs[0].value = name;
+      inputs[2].value = price;
+    }
+    const totalSpan = rows[index].querySelector('.item-total-text');
+    if (totalSpan) {
+      totalSpan.textContent = ((activeItems[index].qty || 1) * price).toFixed(2);
+    }
+  }
+
+  document.querySelectorAll('.autocomplete-dropdown').forEach(el => el.classList.add('hidden'));
+  calculateTotals();
 };
 
 window.updateItem = (index, key, val) => {
