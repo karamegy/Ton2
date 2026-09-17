@@ -90,8 +90,8 @@ function applyLanguage(lang) {
   });
 }
 
-document.getElementById('toggle-lang-btn').addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
-document.getElementById('auth-lang-btn').addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
+document.getElementById('toggle-lang-btn')?.addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
+document.getElementById('auth-lang-btn')?.addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
 
 function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAmount) {
   function getTlvTag(tag, value) {
@@ -161,32 +161,35 @@ let editingInvoiceId = null;
 // إدارة نافذة سياسة الخصوصية
 const privacyModal = document.getElementById('privacy-modal');
 
+window.openPrivacyModal = () => {
+  if (privacyModal) privacyModal.classList.remove('hidden');
+};
+
+window.closePrivacyModal = () => {
+  if (privacyModal) privacyModal.classList.add('hidden');
+};
+
 document.getElementById('open-privacy-auth-btn')?.addEventListener('click', (e) => {
   e.preventDefault();
-  if (privacyModal) privacyModal.classList.remove('hidden');
+  window.openPrivacyModal();
 });
 
 document.getElementById('open-privacy-settings-btn')?.addEventListener('click', (e) => {
   e.preventDefault();
   document.getElementById('settings-modal')?.classList.add('hidden');
-  if (privacyModal) privacyModal.classList.remove('hidden');
+  window.openPrivacyModal();
 });
 
-document.getElementById('close-privacy-btn')?.addEventListener('click', () => {
-  privacyModal?.classList.add('hidden');
-});
-
-document.getElementById('accept-privacy-btn')?.addEventListener('click', () => {
-  privacyModal?.classList.add('hidden');
-});
+document.getElementById('close-privacy-btn')?.addEventListener('click', window.closePrivacyModal);
+document.getElementById('accept-privacy-btn')?.addEventListener('click', window.closePrivacyModal);
 
 window.addEventListener('click', (e) => {
   if (e.target === privacyModal) {
-    privacyModal.classList.add('hidden');
+    window.closePrivacyModal();
   }
 });
 
-document.getElementById('tab-login-btn').addEventListener('click', () => {
+document.getElementById('tab-login-btn')?.addEventListener('click', () => {
   document.getElementById('tab-login-btn').classList.add('active');
   document.getElementById('tab-register-btn').classList.remove('active');
   loginForm.classList.remove('hidden');
@@ -194,7 +197,7 @@ document.getElementById('tab-login-btn').addEventListener('click', () => {
   clearAuthMsgs();
 });
 
-document.getElementById('tab-register-btn').addEventListener('click', () => {
+document.getElementById('tab-register-btn')?.addEventListener('click', () => {
   document.getElementById('tab-register-btn').classList.add('active');
   document.getElementById('tab-login-btn').classList.remove('active');
   registerForm.classList.remove('hidden');
@@ -203,11 +206,10 @@ document.getElementById('tab-register-btn').addEventListener('click', () => {
 });
 
 function clearAuthMsgs() {
-  authError.classList.add('hidden');
-  authSuccess.classList.add('hidden');
+  if (authError) authError.classList.add('hidden');
+  if (authSuccess) authSuccess.classList.add('hidden');
 }
 
-// معالجة النتيجة القادمة من إعادة التوجيه (Redirect)
 getRedirectResult(auth).then(async (result) => {
   if (result && result.user) {
     const u = result.user;
@@ -225,16 +227,19 @@ getRedirectResult(auth).then(async (result) => {
   }
 }).catch((err) => {
   console.error("Redirect Error:", err);
-  authError.textContent = `تعذر تسجيل الدخول: (${err.code || err.message})`;
-  authError.classList.remove('hidden');
+  if (authError) {
+    authError.textContent = `تعذر تسجيل الدخول: (${err.code || err.message})`;
+    authError.classList.remove('hidden');
+  }
 });
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
-    loginScreen.classList.add('hidden');
+    if (loginScreen) loginScreen.classList.add('hidden');
     const isAdmin = user.email === 'haretg@gmail.com';
-    document.getElementById('user-uid-tag').textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
+    const uidTag = document.getElementById('user-uid-tag');
+    if (uidTag) uidTag.textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
     
     const userRef = doc(db, "licenses", user.uid);
     const docSnap = await getDoc(userRef);
@@ -251,22 +256,22 @@ onAuthStateChanged(auth, async (user) => {
 
     onSnapshot(userRef, (snapshot) => {
       if (snapshot.exists() && snapshot.data().isActive === true) {
-        lockScreen.classList.add('hidden');
-        mainApp.classList.remove('hidden');
+        if (lockScreen) lockScreen.classList.add('hidden');
+        if (mainApp) mainApp.classList.remove('hidden');
         attachCloudRealtimeSync(user.uid);
         triggerAds();
       } else {
-        mainApp.classList.add('hidden');
-        lockScreen.classList.remove('hidden');
+        if (mainApp) mainApp.classList.add('hidden');
+        if (lockScreen) lockScreen.classList.remove('hidden');
         detachCloudSync();
       }
     });
   } else {
     currentUser = null;
     detachCloudSync();
-    mainApp.classList.add('hidden');
-    lockScreen.classList.add('hidden');
-    loginScreen.classList.remove('hidden');
+    if (mainApp) mainApp.classList.add('hidden');
+    if (lockScreen) lockScreen.classList.add('hidden');
+    if (loginScreen) loginScreen.classList.remove('hidden');
   }
 });
 
@@ -313,18 +318,20 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
-loginForm.addEventListener('submit', async (e) => {
+loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
   try {
     await signInWithEmailAndPassword(auth, document.getElementById('login-email').value.trim(), document.getElementById('login-password').value.trim());
   } catch (err) {
-    authError.textContent = "بيانات الدخول غير صحيحة";
-    authError.classList.remove('hidden');
+    if (authError) {
+      authError.textContent = "بيانات الدخول غير صحيحة";
+      authError.classList.remove('hidden');
+    }
   }
 });
 
-document.getElementById('google-login-btn').addEventListener('click', async () => {
+document.getElementById('google-login-btn')?.addEventListener('click', async () => {
   clearAuthMsgs();
   try {
     const result = await signInWithPopup(auth, googleProvider);
@@ -346,17 +353,21 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
       try {
         await signInWithRedirect(auth, googleProvider);
       } catch (redirectErr) {
-        authError.textContent = `خطأ: ${redirectErr.code}`;
-        authError.classList.remove('hidden');
+        if (authError) {
+          authError.textContent = `خطأ: ${redirectErr.code}`;
+          authError.classList.remove('hidden');
+        }
       }
     } else {
-      authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code || 'خطأ غير معروف'})`;
-      authError.classList.remove('hidden');
+      if (authError) {
+        authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code || 'خطأ غير معروف'})`;
+        authError.classList.remove('hidden');
+      }
     }
   }
 });
 
-registerForm.addEventListener('submit', async (e) => {
+registerForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
   const storeName = document.getElementById('reg-name').value.trim();
@@ -372,23 +383,27 @@ registerForm.addEventListener('submit', async (e) => {
       role: email === 'haretg@gmail.com' ? "admin_master" : "user",
       createdAt: new Date().toISOString()
     });
-    authSuccess.textContent = "تم إنشاء وتفعيل حسابك المجاني بنجاح!";
-    authSuccess.classList.remove('hidden');
+    if (authSuccess) {
+      authSuccess.textContent = "تم إنشاء وتفعيل حسابك المجاني بنجاح!";
+      authSuccess.classList.remove('hidden');
+    }
   } catch (err) {
-    authError.textContent = err.message.includes('email-already-in-use') ? "البريد مستخدم بالفعل" : "خطأ في التسجيل";
-    authError.classList.remove('hidden');
+    if (authError) {
+      authError.textContent = err.message.includes('email-already-in-use') ? "البريد مستخدم بالفعل" : "خطأ في التسجيل";
+      authError.classList.remove('hidden');
+    }
   }
 });
 
-document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-document.getElementById('logout-lock-btn').addEventListener('click', () => signOut(auth));
+document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
+document.getElementById('logout-lock-btn')?.addEventListener('click', () => signOut(auth));
 
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+    document.getElementById(`tab-${tab.dataset.tab}`)?.classList.add('active');
   });
 });
 
@@ -398,16 +413,22 @@ function applyTheme(themeName) {
 }
 
 function updateHeaderUI() {
-  document.getElementById('header-store-name').textContent = storeProfile.name;
-  document.getElementById('header-store-phone').textContent = storeProfile.phone;
-  document.getElementById('currency-tag-display').textContent = storeProfile.currency || 'ج.م';
-  
+  const storeNameEl = document.getElementById('header-store-name');
+  const storePhoneEl = document.getElementById('header-store-phone');
+  const currencyDisplayEl = document.getElementById('currency-tag-display');
   const headerLogo = document.getElementById('header-logo');
-  if (storeProfile.logo) {
-    headerLogo.src = storeProfile.logo;
-    headerLogo.classList.remove('hidden');
-  } else {
-    headerLogo.classList.add('hidden');
+
+  if (storeNameEl) storeNameEl.textContent = storeProfile.name;
+  if (storePhoneEl) storePhoneEl.textContent = storeProfile.phone;
+  if (currencyDisplayEl) currencyDisplayEl.textContent = storeProfile.currency || 'ج.م';
+  
+  if (headerLogo) {
+    if (storeProfile.logo) {
+      headerLogo.src = storeProfile.logo;
+      headerLogo.classList.remove('hidden');
+    } else {
+      headerLogo.classList.add('hidden');
+    }
   }
 }
 
@@ -419,7 +440,7 @@ const grandTotalDisplay = document.getElementById('grand-total-val');
 const invNumberDisplay = document.getElementById('inv-number-display');
 
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
-invNumberDisplay.textContent = `#${nextInvNum}`;
+if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
 
 function updateProductsDatalist() {
   const datalist = document.getElementById('products-datalist');
@@ -428,6 +449,7 @@ function updateProductsDatalist() {
 }
 
 function renderItemsTable() {
+  if (!itemsBody) return;
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
       <td>
@@ -459,10 +481,12 @@ window.updateItem = (index, key, val) => {
     activeItems[index][key] = parseFloat(val) || 0;
   }
   calculateTotals();
-  const rows = itemsBody.querySelectorAll('tr');
-  if (rows[index]) {
-    const totalSpan = rows[index].querySelector('.item-total-text');
-    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+  if (itemsBody) {
+    const rows = itemsBody.querySelectorAll('tr');
+    if (rows[index]) {
+      const totalSpan = rows[index].querySelector('.item-total-text');
+      if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    }
   }
 };
 
@@ -471,7 +495,7 @@ window.removeItem = (index) => {
   renderItemsTable();
 };
 
-document.getElementById('add-item-btn').addEventListener('click', () => {
+document.getElementById('add-item-btn')?.addEventListener('click', () => {
   activeItems.push({ name: '', qty: 1, price: 0 });
   renderItemsTable();
 });
@@ -479,38 +503,40 @@ document.getElementById('add-item-btn').addEventListener('click', () => {
 const payStatusSelect = document.getElementById('payment-status-select');
 const paidAmountWrapper = document.getElementById('paid-amount-wrapper');
 
-payStatusSelect.addEventListener('change', () => {
+payStatusSelect?.addEventListener('change', () => {
   if (payStatusSelect.value === 'مدفوعة جزئياً') {
-    paidAmountWrapper.classList.remove('hidden');
+    paidAmountWrapper?.classList.remove('hidden');
   } else {
-    paidAmountWrapper.classList.add('hidden');
+    paidAmountWrapper?.classList.add('hidden');
   }
 });
 
 function calculateTotals() {
-  const rows = itemsBody.querySelectorAll('tr');
-  rows.forEach((tr, idx) => {
-    if (activeItems[idx]) {
-      const inputs = tr.querySelectorAll('input');
-      if (inputs.length >= 3) {
-        activeItems[idx].name = inputs[0].value;
-        activeItems[idx].qty = parseFloat(inputs[1].value) || 0;
-        activeItems[idx].price = parseFloat(inputs[2].value) || 0;
+  if (itemsBody) {
+    const rows = itemsBody.querySelectorAll('tr');
+    rows.forEach((tr, idx) => {
+      if (activeItems[idx]) {
+        const inputs = tr.querySelectorAll('input');
+        if (inputs.length >= 3) {
+          activeItems[idx].name = inputs[0].value;
+          activeItems[idx].qty = parseFloat(inputs[1].value) || 0;
+          activeItems[idx].price = parseFloat(inputs[2].value) || 0;
+        }
       }
-    }
-  });
+    });
+  }
 
   const subtotal = activeItems.reduce((acc, item) => acc + ((item.qty || 0) * (item.price || 0)), 0);
-  const discount = parseFloat(discountInput.value) || 0;
-  const taxPercent = parseFloat(taxInput.value) || 0;
+  const discount = parseFloat(discountInput?.value) || 0;
+  const taxPercent = parseFloat(taxInput?.value) || 0;
   
   const discountRow = document.getElementById('discount-applied-row');
   const discountDisplay = document.getElementById('discount-amount-display');
 
-  if (discount > 0) {
+  if (discount > 0 && discountRow && discountDisplay) {
     discountRow.classList.remove('hidden');
     discountDisplay.textContent = `-${discount.toFixed(2)} ${storeProfile.currency}`;
-  } else {
+  } else if (discountRow) {
     discountRow.classList.add('hidden');
   }
 
@@ -518,17 +544,17 @@ function calculateTotals() {
   const taxAmount = afterDiscount * (taxPercent / 100);
   const grandTotal = afterDiscount + taxAmount;
 
-  subtotalDisplay.textContent = `${subtotal.toFixed(2)} ${storeProfile.currency}`;
-  grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ${storeProfile.currency}`;
+  if (subtotalDisplay) subtotalDisplay.textContent = `${subtotal.toFixed(2)} ${storeProfile.currency}`;
+  if (grandTotalDisplay) grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ${storeProfile.currency}`;
   return { subtotal, discount, taxPercent, taxAmount, grandTotal };
 }
 
-discountInput.addEventListener('input', calculateTotals);
-taxInput.addEventListener('input', calculateTotals);
+discountInput?.addEventListener('input', calculateTotals);
+taxInput?.addEventListener('input', calculateTotals);
 
 async function saveInvoiceData() {
-  const clientName = document.getElementById('client-name').value.trim();
-  const clientPhone = document.getElementById('client-phone').value.trim();
+  const clientName = document.getElementById('client-name')?.value.trim();
+  const clientPhone = document.getElementById('client-phone')?.value.trim();
   
   calculateTotals();
   const validItems = activeItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
@@ -538,11 +564,11 @@ async function saveInvoiceData() {
 
   const totals = calculateTotals();
   const isoTime = new Date().toISOString();
-  const status = payStatusSelect.value;
+  const status = payStatusSelect ? payStatusSelect.value : 'مدفوعة';
   let paidVal = totals.grandTotal;
 
   if (status === 'آجل / غير مدفوعة') paidVal = 0;
-  else if (status === 'مدفوعة جزئياً') paidVal = parseFloat(document.getElementById('paid-amount-input').value) || 0;
+  else if (status === 'مدفوعة جزئياً') paidVal = parseFloat(document.getElementById('paid-amount-input')?.value) || 0;
 
   const currentInvId = editingInvoiceId ? editingInvoiceId : nextInvNum;
   const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
@@ -571,7 +597,7 @@ async function saveInvoiceData() {
     localStorage.setItem('last_inv_num', nextInvNum.toString());
   }
 
-  invNumberDisplay.textContent = `#${nextInvNum}`;
+  if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
 
   await syncDocToCloud('invoices', { list: invoicesDB });
 
@@ -588,7 +614,7 @@ async function saveInvoiceData() {
   return invoice;
 }
 
-document.getElementById('save-btn').addEventListener('click', async () => {
+document.getElementById('save-btn')?.addEventListener('click', async () => {
   const inv = await saveInvoiceData();
   if (inv) alert('تم حفظ الفاتورة وتحديث الحسابات سحابياً بنجاح');
 });
@@ -615,7 +641,7 @@ function sendWhatsApp(inv) {
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-document.getElementById('whatsapp-btn').addEventListener('click', async () => {
+document.getElementById('whatsapp-btn')?.addEventListener('click', async () => {
   const inv = await saveInvoiceData();
   if (inv) sendWhatsApp(inv);
 });
@@ -625,11 +651,13 @@ let currentActiveInvoiceForPreview = null;
 function openInvoicePreview(inv) {
   currentActiveInvoiceForPreview = inv;
   const vLogo = document.getElementById('v-logo');
-  if (storeProfile.logo) {
-    vLogo.src = storeProfile.logo;
-    vLogo.classList.remove('hidden');
-  } else {
-    vLogo.classList.add('hidden');
+  if (vLogo) {
+    if (storeProfile.logo) {
+      vLogo.src = storeProfile.logo;
+      vLogo.classList.remove('hidden');
+    } else {
+      vLogo.classList.add('hidden');
+    }
   }
 
   document.getElementById('v-store-name').textContent = storeProfile.name;
@@ -652,34 +680,37 @@ function openInvoicePreview(inv) {
 
   renderQrCode('preview-qrcode', inv.zatcaQr || generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime || new Date().toISOString(), inv.grandTotal, inv.taxAmount || 0));
 
-  document.getElementById('view-modal').classList.remove('hidden');
+  document.getElementById('view-modal')?.classList.remove('hidden');
 }
 
-document.getElementById('close-view-btn').addEventListener('click', () => {
-  document.getElementById('view-modal').classList.add('hidden');
+document.getElementById('close-view-btn')?.addEventListener('click', () => {
+  document.getElementById('view-modal')?.classList.add('hidden');
 });
 
-document.getElementById('download-img-btn').addEventListener('click', () => {
+document.getElementById('download-img-btn')?.addEventListener('click', () => {
   const previewCard = document.getElementById('invoice-card-preview');
-  html2canvas(previewCard, { scale: 2 }).then(canvas => {
-    const link = document.createElement('a');
-    link.download = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  });
+  if (typeof html2canvas !== 'undefined' && previewCard) {
+    html2canvas(previewCard, { scale: 2 }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  }
 });
 
-document.getElementById('print-view-btn').addEventListener('click', () => {
+document.getElementById('print-view-btn')?.addEventListener('click', () => {
   if (currentActiveInvoiceForPreview) printInvoice(currentActiveInvoiceForPreview);
 });
 
-document.getElementById('print-btn').addEventListener('click', async () => {
+document.getElementById('print-btn')?.addEventListener('click', async () => {
   const inv = await saveInvoiceData();
   if (inv) printInvoice(inv);
 });
 
 function printInvoice(inv) {
   const printTemplate = document.getElementById('print-template');
+  if (!printTemplate) return;
   printTemplate.innerHTML = `
     <div class="print-header">
       ${storeProfile.logo ? `<img id="p-logo" class="print-logo" src="${storeProfile.logo}">` : ''}
@@ -732,12 +763,15 @@ window.editInvoiceById = (id) => {
   if (!inv) return;
 
   editingInvoiceId = inv.id;
-  invNumberDisplay.textContent = `#${inv.id} (تعديل)`;
-  document.getElementById('client-name').value = inv.client || '';
-  document.getElementById('client-phone').value = inv.phone || '';
-  discountInput.value = inv.discount || 0;
-  taxInput.value = inv.taxPercent || 0;
-  payStatusSelect.value = inv.status || 'مدفوعة';
+  if (invNumberDisplay) invNumberDisplay.textContent = `#${inv.id} (تعديل)`;
+  
+  const clientNameInp = document.getElementById('client-name');
+  const clientPhoneInp = document.getElementById('client-phone');
+  if (clientNameInp) clientNameInp.value = inv.client || '';
+  if (clientPhoneInp) clientPhoneInp.value = inv.phone || '';
+  if (discountInput) discountInput.value = inv.discount || 0;
+  if (taxInput) taxInput.value = inv.taxPercent || 0;
+  if (payStatusSelect) payStatusSelect.value = inv.status || 'مدفوعة';
 
   activeItems = (inv.items || []).map(i => ({ ...i }));
   renderItemsTable();
@@ -746,16 +780,21 @@ window.editInvoiceById = (id) => {
 
 function resetForm() {
   editingInvoiceId = null;
-  invNumberDisplay.textContent = `#${nextInvNum}`;
-  document.getElementById('client-name').value = '';
-  document.getElementById('client-phone').value = '';
+  if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
+  
+  const clientNameInp = document.getElementById('client-name');
+  const clientPhoneInp = document.getElementById('client-phone');
+  const paidInp = document.getElementById('paid-amount-input');
+
+  if (clientNameInp) clientNameInp.value = '';
+  if (clientPhoneInp) clientPhoneInp.value = '';
   activeItems = [];
-  discountInput.value = 0;
-  taxInput.value = 14;
-  document.getElementById('paid-amount-input').value = 0;
-  paidAmountWrapper.classList.add('hidden');
-  payStatusSelect.value = 'مدفوعة';
-  document.getElementById('add-item-btn').click();
+  if (discountInput) discountInput.value = 0;
+  if (taxInput) taxInput.value = 14;
+  if (paidInp) paidInp.value = 0;
+  if (paidAmountWrapper) paidAmountWrapper.classList.add('hidden');
+  if (payStatusSelect) payStatusSelect.value = 'مدفوعة';
+  document.getElementById('add-item-btn')?.click();
 }
 
 function renderSavedInvoices(filter = '') {
@@ -814,9 +853,9 @@ window.deleteInvoice = async (id) => {
   await syncDocToCloud('invoices', { list: invoicesDB });
 };
 
-document.getElementById('search-input').addEventListener('input', (e) => renderSavedInvoices(e.target.value));
+document.getElementById('search-input')?.addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
-document.getElementById('product-form').addEventListener('submit', async (e) => {
+document.getElementById('product-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('p-name').value;
   const price = parseFloat(document.getElementById('p-price').value) || 0;
@@ -850,7 +889,7 @@ window.deleteProduct = async (idx) => {
   await syncDocToCloud('products', { list: productsDB });
 };
 
-document.getElementById('client-form').addEventListener('submit', async (e) => {
+document.getElementById('client-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('c-name').value.trim();
   const phone = document.getElementById('c-phone').value.trim();
@@ -948,15 +987,15 @@ window.openClientLedger = (clientName) => {
     `;
   });
 
-  historyUl.innerHTML = historyHtml || '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
-  document.getElementById('client-ledger-modal').classList.remove('hidden');
+  if (historyUl) historyUl.innerHTML = historyHtml || '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
+  document.getElementById('client-ledger-modal')?.classList.remove('hidden');
 };
 
-document.getElementById('close-ledger-btn').addEventListener('click', () => {
-  document.getElementById('client-ledger-modal').classList.add('hidden');
+document.getElementById('close-ledger-btn')?.addEventListener('click', () => {
+  document.getElementById('client-ledger-modal')?.classList.add('hidden');
 });
 
-document.getElementById('ledger-whatsapp-btn').addEventListener('click', () => {
+document.getElementById('ledger-whatsapp-btn')?.addEventListener('click', () => {
   if (!activeLedgerClientName) return;
   const stats = getClientCalculatedLedger(activeLedgerClientName);
   const clientObj = clientsDB.find(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
@@ -977,20 +1016,23 @@ document.getElementById('ledger-whatsapp-btn').addEventListener('click', () => {
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 });
 
-document.getElementById('ledger-download-btn').addEventListener('click', () => {
+document.getElementById('ledger-download-btn')?.addEventListener('click', () => {
   const ledgerCard = document.getElementById('ledger-printable-card');
-  html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
-    const link = document.createElement('a');
-    link.download = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  });
+  if (typeof html2canvas !== 'undefined' && ledgerCard) {
+    html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  }
 });
 
-document.getElementById('ledger-print-btn').addEventListener('click', () => {
+document.getElementById('ledger-print-btn')?.addEventListener('click', () => {
   if (!activeLedgerClientName) return;
   const stats = getClientCalculatedLedger(activeLedgerClientName);
   const printTemplate = document.getElementById('print-template');
+  if (!printTemplate) return;
 
   printTemplate.innerHTML = `
     <div class="print-header">
@@ -1041,7 +1083,7 @@ document.getElementById('ledger-print-btn').addEventListener('click', () => {
   window.print();
 });
 
-document.getElementById('submit-payment-btn').addEventListener('click', async () => {
+document.getElementById('submit-payment-btn')?.addEventListener('click', async () => {
   const amount = parseFloat(document.getElementById('pay-amount-input').value) || 0;
   if (amount <= 0 || !activeLedgerClientName) return;
 
@@ -1056,14 +1098,14 @@ document.getElementById('submit-payment-btn').addEventListener('click', async ()
   }
 });
 
-document.getElementById('client-name').addEventListener('input', (e) => {
+document.getElementById('client-name')?.addEventListener('input', (e) => {
   const match = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
   if (match && match.phone) {
     document.getElementById('client-phone').value = match.phone;
   }
 });
 
-document.getElementById('expense-form').addEventListener('submit', async (e) => {
+document.getElementById('expense-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const title = document.getElementById('exp-title').value;
   const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
@@ -1116,7 +1158,7 @@ function updateDashboardStats() {
   if (countEl) countEl.textContent = invoicesDB.length;
 }
 
-document.getElementById('export-json-btn').addEventListener('click', () => {
+document.getElementById('export-json-btn')?.addEventListener('click', () => {
   const data = { invoices: invoicesDB, clients: clientsDB, products: productsDB, expenses: expensesDB, storeProfile };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -1125,7 +1167,7 @@ document.getElementById('export-json-btn').addEventListener('click', () => {
   a.click();
 });
 
-document.getElementById('export-csv-btn').addEventListener('click', () => {
+document.getElementById('export-csv-btn')?.addEventListener('click', () => {
   let csv = 'رقم الفاتورة,العميل,الهاتف,الحالة,التاريخ,الإجمالي\n';
   invoicesDB.forEach(inv => {
     csv += `${inv.id},"${inv.client}","${inv.phone || ''}",${inv.status},${inv.date},${inv.grandTotal}\n`;
@@ -1138,19 +1180,19 @@ document.getElementById('export-csv-btn').addEventListener('click', () => {
 });
 
 const settingsModal = document.getElementById('settings-modal');
-document.getElementById('open-settings-btn').addEventListener('click', () => {
+document.getElementById('open-settings-btn')?.addEventListener('click', () => {
   document.getElementById('theme-select').value = localStorage.getItem('app_theme') || 'dark';
   document.getElementById('currency-select').value = storeProfile.currency || 'ج.م';
   document.getElementById('store-name-input').value = storeProfile.name;
   document.getElementById('store-phone-input').value = storeProfile.phone;
   document.getElementById('store-vat-input').value = storeProfile.vatNo || '';
   document.getElementById('store-address-input').value = storeProfile.address;
-  settingsModal.classList.remove('hidden');
+  settingsModal?.classList.remove('hidden');
 });
 
-document.getElementById('close-settings-btn').addEventListener('click', () => settingsModal.classList.add('hidden'));
+document.getElementById('close-settings-btn')?.addEventListener('click', () => settingsModal?.classList.add('hidden'));
 
-document.getElementById('save-settings-btn').addEventListener('click', () => {
+document.getElementById('save-settings-btn')?.addEventListener('click', () => {
   applyTheme(document.getElementById('theme-select').value);
 
   const logoInput = document.getElementById('store-logo-input');
@@ -1167,7 +1209,7 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
     await syncDocToCloud('profile', storeProfile);
     updateHeaderUI();
     renderAllModules();
-    settingsModal.classList.add('hidden');
+    settingsModal?.classList.add('hidden');
   };
 
   if (logoInput.files && logoInput.files[0]) {
@@ -1196,4 +1238,4 @@ if ('serviceWorker' in navigator) {
 }
 
 updateHeaderUI();
-document.getElementById('add-item-btn').click();
+document.getElementById('add-item-btn')?.click();
