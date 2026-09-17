@@ -426,7 +426,7 @@ function showClientDropdown(filter = '') {
   clientSuggestions.classList.remove('hidden');
 }
 
-clientInput?.addEventListener('input', (e) => {
+clientInput.addEventListener('input', (e) => {
   const val = e.target.value;
   const matchedClient = clientsDB.find(c => c.name.toLowerCase() === val.trim().toLowerCase());
   if (matchedClient && matchedClient.phone) {
@@ -435,27 +435,24 @@ clientInput?.addEventListener('input', (e) => {
   showClientDropdown(val);
 });
 
-clientInput?.addEventListener('focus', () => showClientDropdown(clientInput.value));
-clientInput?.addEventListener('click', () => showClientDropdown(clientInput.value));
+clientInput.addEventListener('focus', () => showClientDropdown(clientInput.value));
+clientInput.addEventListener('click', () => showClientDropdown(clientInput.value));
 
 window.selectClientItem = (name, phone) => {
   clientInput.value = name;
   if (phone) clientPhoneInput.value = phone;
-  setTimeout(() => {
-    if (clientSuggestions) {
-      clientSuggestions.classList.add('hidden');
-      clientSuggestions.innerHTML = '';
-    }
-  }, 100);
+  clientSuggestions.classList.add('hidden');
+  clientSuggestions.innerHTML = '';
 };
 
+// إغلاق القوائم المنسدلة عند النقر خارجها
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.autocomplete-wrapper')) {
     document.querySelectorAll('.autocomplete-dropdown').forEach(el => el.classList.add('hidden'));
   }
 });
 
-// --- نظام جدول أصناف الفاتورة بدون إعادة بناء مهلكة لتجنب التجميد تماماً ---
+// --- نظام جدول أصناف الفاتورة مع قائمة منسدلة لكل صنف ---
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
@@ -554,10 +551,7 @@ window.selectProductItem = (index, name, price) => {
     }
   }
 
-  setTimeout(() => {
-    document.querySelectorAll('.autocomplete-dropdown').forEach(el => el.classList.add('hidden'));
-  }, 100);
-
+  document.querySelectorAll('.autocomplete-dropdown').forEach(el => el.classList.add('hidden'));
   calculateTotals();
 };
 
@@ -635,7 +629,6 @@ function calculateTotals() {
 discountInput.addEventListener('input', calculateTotals);
 taxInput.addEventListener('input', calculateTotals);
 
-// --- دالة حفظ الفاتورة مع مزامنة المخزن والعملاء بطريقة Non-blocking آمنة تماماً ---
 async function saveInvoiceData() {
   const clientName = clientInput.value.trim();
   const clientPhone = clientPhoneInput.value.trim();
@@ -671,14 +664,6 @@ async function saveInvoiceData() {
     zatcaQr: zatcaBase64
   };
 
-  // خصم الكميات المباعة من المخزون تلقائياً
-  validItems.forEach(soldItem => {
-    const prod = productsDB.find(p => p.name.toLowerCase() === soldItem.name.toLowerCase());
-    if (prod) {
-      prod.stock = Math.max(0, (prod.stock || 0) - soldItem.qty);
-    }
-  });
-
   if (editingInvoiceId) {
     const idx = invoicesDB.findIndex(i => i.id === editingInvoiceId);
     if (idx !== -1) invoicesDB[idx] = invoice;
@@ -691,20 +676,15 @@ async function saveInvoiceData() {
 
   invNumberDisplay.textContent = `#${nextInvNum}`;
 
-  // تحديث أو إضافة العميل في السجل
+  await syncDocToCloud('invoices', { list: invoicesDB });
+
   let clientIndex = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
   if (clientIndex === -1) {
     clientsDB.push({ name: clientName, phone: clientPhone || '', openingBalance: 0, payments: [] });
   } else if (clientPhone) {
     clientsDB[clientIndex].phone = clientPhone;
   }
-
-  // مزامنة البيانات سحابياً في الخلفية باستخدام Promise.all لمنع تجميد واجهة التطبيق
-  Promise.all([
-    syncDocToCloud('invoices', { list: invoicesDB }),
-    syncDocToCloud('clients', { list: clientsDB }),
-    syncDocToCloud('products', { list: productsDB })
-  ]).catch(err => console.error("Cloud Sync Error:", err));
+  await syncDocToCloud('clients', { list: clientsDB });
 
   resetForm();
   renderAllModules();
@@ -713,7 +693,7 @@ async function saveInvoiceData() {
 
 document.getElementById('save-btn').addEventListener('click', async () => {
   const inv = await saveInvoiceData();
-  if (inv) alert('تم حفظ الفاتورة وتحديث المخزن والحسابات بنجاح');
+  if (inv) alert('تم حفظ الفاتورة وتحديث الحسابات سحابياً بنجاح');
 });
 
 function sendWhatsApp(inv) {
@@ -937,7 +917,7 @@ window.deleteInvoice = async (id) => {
   await syncDocToCloud('invoices', { list: invoicesDB });
 };
 
-document.getElementById('search-input')?.addEventListener('input', (e) => renderSavedInvoices(e.target.value));
+document.getElementById('search-input').addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
 document.getElementById('product-form').addEventListener('submit', async (e) => {
   e.preventDefault();
