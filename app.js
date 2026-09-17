@@ -392,24 +392,14 @@ const invNumberDisplay = document.getElementById('inv-number-display');
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
 invNumberDisplay.textContent = `#${nextInvNum}`;
 
-// --- نظام البحث التلقائي المخصص (Custom Autocomplete للعملاء والأصناف) ---
+// --- نظام البحث التلقائي المخصص (Custom Autocomplete للعملاء والأصناف مع إظهار فورى عند النقر) ---
 const clientInput = document.getElementById('client-name');
 const clientSuggestions = document.getElementById('client-suggestions');
 
-clientInput.addEventListener('input', (e) => {
-  const val = e.target.value.trim().toLowerCase();
-  const matchedClient = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
-  if (matchedClient && matchedClient.phone) {
-    document.getElementById('client-phone').value = matchedClient.phone;
-  }
-
-  if (!val) {
-    clientSuggestions.classList.add('hidden');
-    clientSuggestions.innerHTML = '';
-    return;
-  }
-
-  const filtered = clientsDB.filter(c => c.name.toLowerCase().includes(val) || (c.phone && c.phone.includes(val)));
+function showClientSuggestions(filter = '') {
+  const val = filter.trim().toLowerCase();
+  const filtered = val === '' ? clientsDB : clientsDB.filter(c => c.name.toLowerCase().includes(val) || (c.phone && c.phone.includes(val)));
+  
   if (filtered.length === 0) {
     clientSuggestions.classList.add('hidden');
     clientSuggestions.innerHTML = '';
@@ -423,6 +413,23 @@ clientInput.addEventListener('input', (e) => {
     </div>
   `).join('');
   clientSuggestions.classList.remove('hidden');
+}
+
+clientInput.addEventListener('input', (e) => {
+  const val = e.target.value;
+  const matchedClient = clientsDB.find(c => c.name.toLowerCase() === val.trim().toLowerCase());
+  if (matchedClient && matchedClient.phone) {
+    document.getElementById('client-phone').value = matchedClient.phone;
+  }
+  showClientSuggestions(val);
+});
+
+clientInput.addEventListener('focus', () => {
+  showClientSuggestions(clientInput.value);
+});
+
+clientInput.addEventListener('click', () => {
+  showClientSuggestions(clientInput.value);
 });
 
 window.selectClient = (name, phone) => {
@@ -444,7 +451,10 @@ function renderItemsTable() {
     <tr>
       <td>
         <div class="autocomplete-wrapper">
-          <input type="text" autocomplete="off" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف" oninput="window.handleItemInput(${index}, this.value)">
+          <input type="text" autocomplete="off" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف" 
+                 oninput="window.handleItemInput(${index}, this.value)" 
+                 onfocus="window.handleItemFocus(${index}, this.value)" 
+                 onclick="window.handleItemFocus(${index}, this.value)">
           <div class="autocomplete-dropdown hidden" id="item-suggestions-${index}"></div>
         </div>
       </td>
@@ -465,35 +475,13 @@ function renderItemsTable() {
   calculateTotals();
 }
 
-window.handleItemInput = (index, val) => {
-  activeItems[index].name = val;
-  const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
-  if (matchedProd) {
-    activeItems[index].price = matchedProd.price;
-  }
-  calculateTotals();
-  
-  // تحديث إجمالي البند في الجدول فورياً
-  const rows = itemsBody.querySelectorAll('tr');
-  if (rows[index]) {
-    const totalSpan = rows[index].querySelector('.item-total-text');
-    const priceInput = rows[index].querySelectorAll('input')[2];
-    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
-    if (priceInput && matchedProd) priceInput.value = matchedProd.price;
-  }
-
-  // عرض القائمة المنسدلة المخصصة للأصناف
+function showItemSuggestions(index, val) {
   const sugBox = document.getElementById(`item-suggestions-${index}`);
   if (!sugBox) return;
 
   const query = val.trim().toLowerCase();
-  if (!query) {
-    sugBox.classList.add('hidden');
-    sugBox.innerHTML = '';
-    return;
-  }
+  const filteredProds = query === '' ? productsDB : productsDB.filter(p => p.name.toLowerCase().includes(query));
 
-  const filteredProds = productsDB.filter(p => p.name.toLowerCase().includes(query));
   if (filteredProds.length === 0) {
     sugBox.classList.add('hidden');
     sugBox.innerHTML = '';
@@ -507,6 +495,29 @@ window.handleItemInput = (index, val) => {
     </div>
   `).join('');
   sugBox.classList.remove('hidden');
+}
+
+window.handleItemInput = (index, val) => {
+  activeItems[index].name = val;
+  const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+  if (matchedProd) {
+    activeItems[index].price = matchedProd.price;
+  }
+  calculateTotals();
+  
+  const rows = itemsBody.querySelectorAll('tr');
+  if (rows[index]) {
+    const totalSpan = rows[index].querySelector('.item-total-text');
+    const priceInput = rows[index].querySelectorAll('input')[2];
+    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
+    if (priceInput && matchedProd) priceInput.value = matchedProd.price;
+  }
+
+  showItemSuggestions(index, val);
+};
+
+window.handleItemFocus = (index, val) => {
+  showItemSuggestions(index, val);
 };
 
 window.selectProductItem = (index, name, price) => {
