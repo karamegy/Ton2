@@ -538,7 +538,6 @@ window.selectProductItem = (index, name, price) => {
     activeItems[index].price = price;
   }
   
-  // تحديث حقول DOM مباشرة بدون إعادة بناء الجدول بالكامل لمنع التجميد على الجوال
   const rows = itemsBody.querySelectorAll('tr');
   if (rows[index]) {
     const inputs = rows[index].querySelectorAll('input');
