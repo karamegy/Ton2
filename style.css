@@ -435,3 +435,31 @@ li:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
   font-size: 0.8rem;
   font-weight: 600;
 }
+/* Autocomplete Dropdown Custom Styles */
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  margin-top: 4px;
+}
+.suggestion-item {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  transition: background 0.15s ease;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover { background: rgba(99, 102, 241, 0.15); }
+}
