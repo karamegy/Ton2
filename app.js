@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
-  getFirestore, doc, setDoc, getDoc, onSnapshot
+  getFirestore, doc, setDoc, getDoc, onSnapshot, 
+  enableIndexedDbPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
@@ -21,6 +22,8 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
+
+enableIndexedDbPersistence(db).catch(() => {});
 
 function triggerAds() {
   try {
@@ -81,19 +84,19 @@ function applyLanguage(lang) {
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (translations[lang] && translations[lang][key]) {
+    if (translations[lang][key]) {
       el.textContent = translations[lang][key];
     }
   });
 }
 
-document.getElementById('toggle-lang-btn')?.addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
-document.getElementById('auth-lang-btn')?.addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
+document.getElementById('toggle-lang-btn').addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
+document.getElementById('auth-lang-btn').addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
 
 function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAmount) {
   function getTlvTag(tag, value) {
     const encoder = new TextEncoder();
-    const valBytes = encoder.encode(value || '');
+    const valBytes = encoder.encode(value);
     const buf = new Uint8Array(2 + valBytes.length);
     buf[0] = tag;
     buf[1] = valBytes.length;
@@ -155,57 +158,56 @@ let activeItems = [];
 let activeLedgerClientName = null;
 let editingInvoiceId = null;
 
+// إدارة نافذة سياسة الخصوصية
 const privacyModal = document.getElementById('privacy-modal');
-
-window.openPrivacyModal = () => {
-  if (privacyModal) privacyModal.classList.remove('hidden');
-};
-
-window.closePrivacyModal = () => {
-  if (privacyModal) privacyModal.classList.add('hidden');
-};
 
 document.getElementById('open-privacy-auth-btn')?.addEventListener('click', (e) => {
   e.preventDefault();
-  window.openPrivacyModal();
+  if (privacyModal) privacyModal.classList.remove('hidden');
 });
 
 document.getElementById('open-privacy-settings-btn')?.addEventListener('click', (e) => {
   e.preventDefault();
   document.getElementById('settings-modal')?.classList.add('hidden');
-  window.openPrivacyModal();
+  if (privacyModal) privacyModal.classList.remove('hidden');
 });
 
-document.getElementById('close-privacy-btn')?.addEventListener('click', window.closePrivacyModal);
-document.getElementById('accept-privacy-btn')?.addEventListener('click', window.closePrivacyModal);
+document.getElementById('close-privacy-btn')?.addEventListener('click', () => {
+  privacyModal?.classList.add('hidden');
+});
+
+document.getElementById('accept-privacy-btn')?.addEventListener('click', () => {
+  privacyModal?.classList.add('hidden');
+});
 
 window.addEventListener('click', (e) => {
   if (e.target === privacyModal) {
-    window.closePrivacyModal();
+    privacyModal.classList.add('hidden');
   }
 });
 
-document.getElementById('tab-login-btn')?.addEventListener('click', () => {
-  document.getElementById('tab-login-btn')?.classList.add('active');
-  document.getElementById('tab-register-btn')?.classList.remove('active');
-  loginForm?.classList.remove('hidden');
-  registerForm?.classList.add('hidden');
+document.getElementById('tab-login-btn').addEventListener('click', () => {
+  document.getElementById('tab-login-btn').classList.add('active');
+  document.getElementById('tab-register-btn').classList.remove('active');
+  loginForm.classList.remove('hidden');
+  registerForm.classList.add('hidden');
   clearAuthMsgs();
 });
 
-document.getElementById('tab-register-btn')?.addEventListener('click', () => {
-  document.getElementById('tab-register-btn')?.classList.add('active');
-  document.getElementById('tab-login-btn')?.classList.remove('active');
-  registerForm?.classList.remove('hidden');
-  loginForm?.classList.add('hidden');
+document.getElementById('tab-register-btn').addEventListener('click', () => {
+  document.getElementById('tab-register-btn').classList.add('active');
+  document.getElementById('tab-login-btn').classList.remove('active');
+  registerForm.classList.remove('hidden');
+  loginForm.classList.add('hidden');
   clearAuthMsgs();
 });
 
 function clearAuthMsgs() {
-  if (authError) authError.classList.add('hidden');
-  if (authSuccess) authSuccess.classList.add('hidden');
+  authError.classList.add('hidden');
+  authSuccess.classList.add('hidden');
 }
 
+// معالجة النتيجة القادمة من إعادة التوجيه (Redirect)
 getRedirectResult(auth).then(async (result) => {
   if (result && result.user) {
     const u = result.user;
@@ -223,19 +225,16 @@ getRedirectResult(auth).then(async (result) => {
   }
 }).catch((err) => {
   console.error("Redirect Error:", err);
-  if (authError) {
-    authError.textContent = `تعذر تسجيل الدخول: (${err.code || err.message})`;
-    authError.classList.remove('hidden');
-  }
+  authError.textContent = `تعذر تسجيل الدخول: (${err.code || err.message})`;
+  authError.classList.remove('hidden');
 });
 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
-    if (loginScreen) loginScreen.classList.add('hidden');
+    loginScreen.classList.add('hidden');
     const isAdmin = user.email === 'haretg@gmail.com';
-    const uidTag = document.getElementById('user-uid-tag');
-    if (uidTag) uidTag.textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
+    document.getElementById('user-uid-tag').textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
     
     const userRef = doc(db, "licenses", user.uid);
     const docSnap = await getDoc(userRef);
@@ -252,22 +251,22 @@ onAuthStateChanged(auth, async (user) => {
 
     onSnapshot(userRef, (snapshot) => {
       if (snapshot.exists() && snapshot.data().isActive === true) {
-        if (lockScreen) lockScreen.classList.add('hidden');
-        if (mainApp) mainApp.classList.remove('hidden');
+        lockScreen.classList.add('hidden');
+        mainApp.classList.remove('hidden');
         attachCloudRealtimeSync(user.uid);
         triggerAds();
       } else {
-        if (mainApp) mainApp.classList.add('hidden');
-        if (lockScreen) lockScreen.classList.remove('hidden');
+        mainApp.classList.add('hidden');
+        lockScreen.classList.remove('hidden');
         detachCloudSync();
       }
     });
   } else {
     currentUser = null;
     detachCloudSync();
-    if (mainApp) mainApp.classList.add('hidden');
-    if (lockScreen) lockScreen.classList.add('hidden');
-    if (loginScreen) loginScreen.classList.remove('hidden');
+    mainApp.classList.add('hidden');
+    lockScreen.classList.add('hidden');
+    loginScreen.classList.remove('hidden');
   }
 });
 
@@ -314,20 +313,18 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
-loginForm?.addEventListener('submit', async (e) => {
+loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
   try {
     await signInWithEmailAndPassword(auth, document.getElementById('login-email').value.trim(), document.getElementById('login-password').value.trim());
   } catch (err) {
-    if (authError) {
-      authError.textContent = "بيانات الدخول غير صحيحة";
-      authError.classList.remove('hidden');
-    }
+    authError.textContent = "بيانات الدخول غير صحيحة";
+    authError.classList.remove('hidden');
   }
 });
 
-document.getElementById('google-login-btn')?.addEventListener('click', async () => {
+document.getElementById('google-login-btn').addEventListener('click', async () => {
   clearAuthMsgs();
   try {
     const result = await signInWithPopup(auth, googleProvider);
@@ -349,21 +346,17 @@ document.getElementById('google-login-btn')?.addEventListener('click', async () 
       try {
         await signInWithRedirect(auth, googleProvider);
       } catch (redirectErr) {
-        if (authError) {
-          authError.textContent = `خطأ: ${redirectErr.code}`;
-          authError.classList.remove('hidden');
-        }
-      }
-    } else {
-      if (authError) {
-        authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code || 'خطأ غير معروف'})`;
+        authError.textContent = `خطأ: ${redirectErr.code}`;
         authError.classList.remove('hidden');
       }
+    } else {
+      authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code || 'خطأ غير معروف'})`;
+      authError.classList.remove('hidden');
     }
   }
 });
 
-registerForm?.addEventListener('submit', async (e) => {
+registerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearAuthMsgs();
   const storeName = document.getElementById('reg-name').value.trim();
@@ -379,27 +372,23 @@ registerForm?.addEventListener('submit', async (e) => {
       role: email === 'haretg@gmail.com' ? "admin_master" : "user",
       createdAt: new Date().toISOString()
     });
-    if (authSuccess) {
-      authSuccess.textContent = "تم إنشاء وتفعيل حسابك المجاني بنجاح!";
-      authSuccess.classList.remove('hidden');
-    }
+    authSuccess.textContent = "تم إنشاء وتفعيل حسابك المجاني بنجاح!";
+    authSuccess.classList.remove('hidden');
   } catch (err) {
-    if (authError) {
-      authError.textContent = err.message.includes('email-already-in-use') ? "البريد مستخدم بالفعل" : "خطأ في التسجيل";
-      authError.classList.remove('hidden');
-    }
+    authError.textContent = err.message.includes('email-already-in-use') ? "البريد مستخدم بالفعل" : "خطأ في التسجيل";
+    authError.classList.remove('hidden');
   }
 });
 
-document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
-document.getElementById('logout-lock-btn')?.addEventListener('click', () => signOut(auth));
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+document.getElementById('logout-lock-btn').addEventListener('click', () => signOut(auth));
 
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById(`tab-${tab.dataset.tab}`)?.classList.add('active');
+    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
   });
 });
 
@@ -409,22 +398,16 @@ function applyTheme(themeName) {
 }
 
 function updateHeaderUI() {
-  const storeNameEl = document.getElementById('header-store-name');
-  const storePhoneEl = document.getElementById('header-store-phone');
-  const currencyDisplayEl = document.getElementById('currency-tag-display');
-  const headerLogo = document.getElementById('header-logo');
-
-  if (storeNameEl) storeNameEl.textContent = storeProfile.name || 'GITI ERP';
-  if (storePhoneEl) storePhoneEl.textContent = storeProfile.phone || '';
-  if (currencyDisplayEl) currencyDisplayEl.textContent = storeProfile.currency || 'ج.م';
+  document.getElementById('header-store-name').textContent = storeProfile.name;
+  document.getElementById('header-store-phone').textContent = storeProfile.phone;
+  document.getElementById('currency-tag-display').textContent = storeProfile.currency || 'ج.م';
   
-  if (headerLogo) {
-    if (storeProfile.logo) {
-      headerLogo.src = storeProfile.logo;
-      headerLogo.classList.remove('hidden');
-    } else {
-      headerLogo.classList.add('hidden');
-    }
+  const headerLogo = document.getElementById('header-logo');
+  if (storeProfile.logo) {
+    headerLogo.src = storeProfile.logo;
+    headerLogo.classList.remove('hidden');
+  } else {
+    headerLogo.classList.add('hidden');
   }
 }
 
@@ -436,16 +419,15 @@ const grandTotalDisplay = document.getElementById('grand-total-val');
 const invNumberDisplay = document.getElementById('inv-number-display');
 
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
-if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
+invNumberDisplay.textContent = `#${nextInvNum}`;
 
 function updateProductsDatalist() {
   const datalist = document.getElementById('products-datalist');
   if (!datalist) return;
-  datalist.innerHTML = productsDB.map(p => `<option value="${p.name || ''}">${p.price || 0} ${storeProfile.currency || 'ج.م'}</option>`).join('');
+  datalist.innerHTML = productsDB.map(p => `<option value="${p.name}">${p.price} ${storeProfile.currency}</option>`).join('');
 }
 
 function renderItemsTable() {
-  if (!itemsBody) return;
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
       <td>
@@ -469,21 +451,18 @@ function renderItemsTable() {
 }
 
 window.updateItem = (index, key, val) => {
-  if (!activeItems[index]) return;
   if (key === 'name') {
     activeItems[index].name = val;
-    const matchedProd = productsDB.find(p => (p.name || '').toLowerCase() === val.trim().toLowerCase());
+    const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
     if (matchedProd) activeItems[index].price = matchedProd.price;
   } else {
     activeItems[index][key] = parseFloat(val) || 0;
   }
   calculateTotals();
-  if (itemsBody) {
-    const rows = itemsBody.querySelectorAll('tr');
-    if (rows[index]) {
-      const totalSpan = rows[index].querySelector('.item-total-text');
-      if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
-    }
+  const rows = itemsBody.querySelectorAll('tr');
+  if (rows[index]) {
+    const totalSpan = rows[index].querySelector('.item-total-text');
+    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * (activeItems[index].price || 0)).toFixed(2);
   }
 };
 
@@ -492,7 +471,7 @@ window.removeItem = (index) => {
   renderItemsTable();
 };
 
-document.getElementById('add-item-btn')?.addEventListener('click', () => {
+document.getElementById('add-item-btn').addEventListener('click', () => {
   activeItems.push({ name: '', qty: 1, price: 0 });
   renderItemsTable();
 });
@@ -500,40 +479,38 @@ document.getElementById('add-item-btn')?.addEventListener('click', () => {
 const payStatusSelect = document.getElementById('payment-status-select');
 const paidAmountWrapper = document.getElementById('paid-amount-wrapper');
 
-payStatusSelect?.addEventListener('change', () => {
+payStatusSelect.addEventListener('change', () => {
   if (payStatusSelect.value === 'مدفوعة جزئياً') {
-    paidAmountWrapper?.classList.remove('hidden');
+    paidAmountWrapper.classList.remove('hidden');
   } else {
-    paidAmountWrapper?.classList.add('hidden');
+    paidAmountWrapper.classList.add('hidden');
   }
 });
 
 function calculateTotals() {
-  if (itemsBody) {
-    const rows = itemsBody.querySelectorAll('tr');
-    rows.forEach((tr, idx) => {
-      if (activeItems[idx]) {
-        const inputs = tr.querySelectorAll('input');
-        if (inputs.length >= 3) {
-          activeItems[idx].name = inputs[0].value;
-          activeItems[idx].qty = parseFloat(inputs[1].value) || 0;
-          activeItems[idx].price = parseFloat(inputs[2].value) || 0;
-        }
+  const rows = itemsBody.querySelectorAll('tr');
+  rows.forEach((tr, idx) => {
+    if (activeItems[idx]) {
+      const inputs = tr.querySelectorAll('input');
+      if (inputs.length >= 3) {
+        activeItems[idx].name = inputs[0].value;
+        activeItems[idx].qty = parseFloat(inputs[1].value) || 0;
+        activeItems[idx].price = parseFloat(inputs[2].value) || 0;
       }
-    });
-  }
+    }
+  });
 
   const subtotal = activeItems.reduce((acc, item) => acc + ((item.qty || 0) * (item.price || 0)), 0);
-  const discount = parseFloat(discountInput?.value) || 0;
-  const taxPercent = parseFloat(taxInput?.value) || 0;
+  const discount = parseFloat(discountInput.value) || 0;
+  const taxPercent = parseFloat(taxInput.value) || 0;
   
   const discountRow = document.getElementById('discount-applied-row');
   const discountDisplay = document.getElementById('discount-amount-display');
 
-  if (discount > 0 && discountRow && discountDisplay) {
+  if (discount > 0) {
     discountRow.classList.remove('hidden');
-    discountDisplay.textContent = `-${discount.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
-  } else if (discountRow) {
+    discountDisplay.textContent = `-${discount.toFixed(2)} ${storeProfile.currency}`;
+  } else {
     discountRow.classList.add('hidden');
   }
 
@@ -541,19 +518,17 @@ function calculateTotals() {
   const taxAmount = afterDiscount * (taxPercent / 100);
   const grandTotal = afterDiscount + taxAmount;
 
-  if (subtotalDisplay) subtotalDisplay.textContent = `${subtotal.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
-  if (grandTotalDisplay) grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  subtotalDisplay.textContent = `${subtotal.toFixed(2)} ${storeProfile.currency}`;
+  grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ${storeProfile.currency}`;
   return { subtotal, discount, taxPercent, taxAmount, grandTotal };
 }
 
-discountInput?.addEventListener('input', calculateTotals);
-taxInput?.addEventListener('input', calculateTotals);
+discountInput.addEventListener('input', calculateTotals);
+taxInput.addEventListener('input', calculateTotals);
 
 async function saveInvoiceData() {
-  const clientNameInp = document.getElementById('client-name');
-  const clientPhoneInp = document.getElementById('client-phone');
-  const clientName = clientNameInp ? clientNameInp.value.trim() : '';
-  const clientPhone = clientPhoneInp ? clientPhoneInp.value.trim() : '';
+  const clientName = document.getElementById('client-name').value.trim();
+  const clientPhone = document.getElementById('client-phone').value.trim();
   
   calculateTotals();
   const validItems = activeItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
@@ -563,11 +538,11 @@ async function saveInvoiceData() {
 
   const totals = calculateTotals();
   const isoTime = new Date().toISOString();
-  const status = payStatusSelect ? payStatusSelect.value : 'مدفوعة';
+  const status = payStatusSelect.value;
   let paidVal = totals.grandTotal;
 
   if (status === 'آجل / غير مدفوعة') paidVal = 0;
-  else if (status === 'مدفوعة جزئياً') paidVal = parseFloat(document.getElementById('paid-amount-input')?.value) || 0;
+  else if (status === 'مدفوعة جزئياً') paidVal = parseFloat(document.getElementById('paid-amount-input').value) || 0;
 
   const currentInvId = editingInvoiceId ? editingInvoiceId : nextInvNum;
   const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
@@ -596,11 +571,11 @@ async function saveInvoiceData() {
     localStorage.setItem('last_inv_num', nextInvNum.toString());
   }
 
-  if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
+  invNumberDisplay.textContent = `#${nextInvNum}`;
 
   await syncDocToCloud('invoices', { list: invoicesDB });
 
-  let clientIndex = clientsDB.findIndex(c => (c.name || '').toLowerCase() === clientName.toLowerCase());
+  let clientIndex = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
   if (clientIndex === -1) {
     clientsDB.push({ name: clientName, phone: clientPhone || '', openingBalance: 0, payments: [] });
   } else if (clientPhone) {
@@ -613,7 +588,7 @@ async function saveInvoiceData() {
   return invoice;
 }
 
-document.getElementById('save-btn')?.addEventListener('click', async () => {
+document.getElementById('save-btn').addEventListener('click', async () => {
   const inv = await saveInvoiceData();
   if (inv) alert('تم حفظ الفاتورة وتحديث الحسابات سحابياً بنجاح');
 });
@@ -623,24 +598,24 @@ function sendWhatsApp(inv) {
   if (!phone) { alert('يرجى كتابة رقم الهاتف لإرسال الفاتورة عبر واتساب'); return; }
   if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
-  let msg = `*${storeProfile.name || 'GITI ERP'}*\n`;
+  let msg = `*${storeProfile.name}*\n`;
   msg += `🧾 *فاتورة مبيعات إلكترونية رقم:* #${inv.id}\n`;
   msg += `👤 *العميل:* ${inv.client}\n`;
   msg += `📅 *التاريخ:* ${inv.date}\n`;
   msg += `-----------------------------------\n`;
-  (inv.items || []).forEach(i => {
-    msg += `• ${i.name} (×${i.qty}) = ${(i.qty * i.price).toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
+  inv.items.forEach(i => {
+    msg += `• ${i.name} (×${i.qty}) = ${(i.qty * i.price).toFixed(2)} ${storeProfile.currency}\n`;
   });
   msg += `-----------------------------------\n`;
-  if (inv.discount > 0) msg += `🏷️ *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
-  msg += `💰 *الإجمالي النهائي:* ${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
+  if (inv.discount > 0) msg += `🏷️ *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency}\n`;
+  msg += `💰 *الإجمالي النهائي:* ${inv.grandTotal.toFixed(2)} ${storeProfile.currency}\n`;
   msg += `📌 *حالة الدفع:* ${inv.status}\n\n`;
   msg += `شكراً لتعاملكم معنا!`;
 
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-document.getElementById('whatsapp-btn')?.addEventListener('click', async () => {
+document.getElementById('whatsapp-btn').addEventListener('click', async () => {
   const inv = await saveInvoiceData();
   if (inv) sendWhatsApp(inv);
 });
@@ -650,70 +625,65 @@ let currentActiveInvoiceForPreview = null;
 function openInvoicePreview(inv) {
   currentActiveInvoiceForPreview = inv;
   const vLogo = document.getElementById('v-logo');
-  if (vLogo) {
-    if (storeProfile.logo) {
-      vLogo.src = storeProfile.logo;
-      vLogo.classList.remove('hidden');
-    } else {
-      vLogo.classList.add('hidden');
-    }
+  if (storeProfile.logo) {
+    vLogo.src = storeProfile.logo;
+    vLogo.classList.remove('hidden');
+  } else {
+    vLogo.classList.add('hidden');
   }
 
-  document.getElementById('v-store-name').textContent = storeProfile.name || 'GITI ERP';
-  document.getElementById('v-store-phone').textContent = storeProfile.phone || '';
+  document.getElementById('v-store-name').textContent = storeProfile.name;
+  document.getElementById('v-store-phone').textContent = storeProfile.phone;
   document.getElementById('v-store-vat').textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
-  document.getElementById('v-store-address').textContent = storeProfile.address || '';
+  document.getElementById('v-store-address').textContent = storeProfile.address;
   document.getElementById('v-inv-id').textContent = `رقم الفاتورة: #${inv.id}`;
   document.getElementById('v-date').textContent = `التاريخ: ${inv.date}`;
-  document.getElementById('v-client-name').textContent = inv.client || '';
+  document.getElementById('v-client-name').textContent = inv.client;
   document.getElementById('v-client-phone').textContent = inv.phone || '-';
-  document.getElementById('v-payment-status').textContent = inv.status || '';
-  document.getElementById('v-subtotal').textContent = `${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
-  document.getElementById('v-discount').textContent = `${(inv.discount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  document.getElementById('v-payment-status').textContent = inv.status;
+  document.getElementById('v-subtotal').textContent = `${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('v-discount').textContent = `${(inv.discount || 0).toFixed(2)} ${storeProfile.currency}`;
   document.getElementById('v-tax').textContent = `${inv.taxPercent || 0}%`;
-  document.getElementById('v-total').textContent = `${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  document.getElementById('v-total').textContent = `${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}`;
 
   document.getElementById('v-items-body').innerHTML = (inv.items || []).map(item => `
-    <tr><td>${item.name || ''}</td><td>${item.qty || 1}</td><td>${(item.price || 0).toFixed(2)}</td><td>${((item.qty || 1) * (item.price || 0)).toFixed(2)}</td></tr>
+    <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
   `).join('');
 
   renderQrCode('preview-qrcode', inv.zatcaQr || generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime || new Date().toISOString(), inv.grandTotal, inv.taxAmount || 0));
 
-  document.getElementById('view-modal')?.classList.remove('hidden');
+  document.getElementById('view-modal').classList.remove('hidden');
 }
 
-document.getElementById('close-view-btn')?.addEventListener('click', () => {
-  document.getElementById('view-modal')?.classList.add('hidden');
+document.getElementById('close-view-btn').addEventListener('click', () => {
+  document.getElementById('view-modal').classList.add('hidden');
 });
 
-document.getElementById('download-img-btn')?.addEventListener('click', () => {
+document.getElementById('download-img-btn').addEventListener('click', () => {
   const previewCard = document.getElementById('invoice-card-preview');
-  if (typeof html2canvas !== 'undefined' && previewCard) {
-    html2canvas(previewCard, { scale: 2 }).then(canvas => {
-      const link = document.createElement('a');
-      link.download = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    });
-  }
+  html2canvas(previewCard, { scale: 2 }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
 });
 
-document.getElementById('print-view-btn')?.addEventListener('click', () => {
+document.getElementById('print-view-btn').addEventListener('click', () => {
   if (currentActiveInvoiceForPreview) printInvoice(currentActiveInvoiceForPreview);
 });
 
-document.getElementById('print-btn')?.addEventListener('click', async () => {
+document.getElementById('print-btn').addEventListener('click', async () => {
   const inv = await saveInvoiceData();
   if (inv) printInvoice(inv);
 });
 
 function printInvoice(inv) {
   const printTemplate = document.getElementById('print-template');
-  if (!printTemplate) return;
   printTemplate.innerHTML = `
     <div class="print-header">
       ${storeProfile.logo ? `<img id="p-logo" class="print-logo" src="${storeProfile.logo}">` : ''}
-      <h1 id="p-store-name">${storeProfile.name || 'GITI ERP'}</h1>
+      <h1 id="p-store-name">${storeProfile.name}</h1>
       <p id="p-store-phone">${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
       <p id="p-store-vat">${storeProfile.vatNo ? 'الرقم الضريبي: ' + storeProfile.vatNo : ''}</p>
       <p id="p-store-address">${storeProfile.address || ''}</p>
@@ -737,16 +707,16 @@ function printInvoice(inv) {
       </thead>
       <tbody id="p-items-body">
         ${(inv.items || []).map(item => `
-          <tr><td>${item.name \vert{}\vert{} ''}</td><td>${item.qty || 1}</td><td>${(item.price \vert{}\vert{} 0).toFixed(2)}</td><td>${((item.qty || 1) * (item.price || 0)).toFixed(2)}</td></tr>
+          <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
         `).join('')}
       </tbody>
     </table>
     <div class="print-footer-container">
       <div class="print-totals">
-        <p>المجموع الفرعي: <span id="p-subtotal">${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</span></p>
-        <p>الخصم: <span id="p-discount">${(inv.discount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</span></p>
+        <p>المجموع الفرعي: <span id="p-subtotal">${(inv.subtotal || 0).toFixed(2)} ${storeProfile.currency}</span></p>
+        <p>الخصم: <span id="p-discount">${(inv.discount || 0).toFixed(2)} ${storeProfile.currency}</span></p>
         <p>الضريبة: <span id="p-tax">${inv.taxPercent || 0}%</span></p>
-        <h3>الإجمالي الكلي: <span id="p-total">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</span></h3>
+        <h3>الإجمالي الكلي: <span id="p-total">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</span></h3>
       </div>
       <div id="print-qrcode" class="qrcode-wrapper"></div>
     </div>
@@ -762,15 +732,12 @@ window.editInvoiceById = (id) => {
   if (!inv) return;
 
   editingInvoiceId = inv.id;
-  if (invNumberDisplay) invNumberDisplay.textContent = `#${inv.id} (تعديل)`;
-  
-  const clientNameInp = document.getElementById('client-name');
-  const clientPhoneInp = document.getElementById('client-phone');
-  if (clientNameInp) clientNameInp.value = inv.client || '';
-  if (clientPhoneInp) clientPhoneInp.value = inv.phone || '';
-  if (discountInput) discountInput.value = inv.discount || 0;
-  if (taxInput) taxInput.value = inv.taxPercent || 0;
-  if (payStatusSelect) payStatusSelect.value = inv.status || 'مدفوعة';
+  invNumberDisplay.textContent = `#${inv.id} (تعديل)`;
+  document.getElementById('client-name').value = inv.client || '';
+  document.getElementById('client-phone').value = inv.phone || '';
+  discountInput.value = inv.discount || 0;
+  taxInput.value = inv.taxPercent || 0;
+  payStatusSelect.value = inv.status || 'مدفوعة';
 
   activeItems = (inv.items || []).map(i => ({ ...i }));
   renderItemsTable();
@@ -779,21 +746,16 @@ window.editInvoiceById = (id) => {
 
 function resetForm() {
   editingInvoiceId = null;
-  if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
-  
-  const clientNameInp = document.getElementById('client-name');
-  const clientPhoneInp = document.getElementById('client-phone');
-  const paidInp = document.getElementById('paid-amount-input');
-
-  if (clientNameInp) clientNameInp.value = '';
-  if (clientPhoneInp) clientPhoneInp.value = '';
+  invNumberDisplay.textContent = `#${nextInvNum}`;
+  document.getElementById('client-name').value = '';
+  document.getElementById('client-phone').value = '';
   activeItems = [];
-  if (discountInput) discountInput.value = 0;
-  if (taxInput) taxInput.value = 14;
-  if (paidInp) paidInp.value = 0;
-  if (paidAmountWrapper) paidAmountWrapper.classList.add('hidden');
-  if (payStatusSelect) payStatusSelect.value = 'مدفوعة';
-  document.getElementById('add-item-btn')?.click();
+  discountInput.value = 0;
+  taxInput.value = 14;
+  document.getElementById('paid-amount-input').value = 0;
+  paidAmountWrapper.classList.add('hidden');
+  payStatusSelect.value = 'مدفوعة';
+  document.getElementById('add-item-btn').click();
 }
 
 function renderSavedInvoices(filter = '') {
@@ -812,8 +774,8 @@ function renderSavedInvoices(filter = '') {
     <li onclick="window.viewInvoiceById(${inv.id})" style="cursor: pointer;">
       <div style="flex: 1;">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <strong>#${inv.id} - ${inv.client || ''}</strong>
-          <span class="badge ${inv.status === 'مدفوعة' ? 'badge-paid' : (inv.status === 'مدفوعة جزئياً' ? 'badge-partial' : 'badge-unpaid')}">${inv.status || ''}</span>
+          <strong>#${inv.id} - ${inv.client}</strong>
+          <span class="badge ${inv.status === 'مدفوعة' ? 'badge-paid' : (inv.status === 'مدفوعة جزئياً' ? 'badge-partial' : 'badge-unpaid')}">${inv.status}</span>
         </div>
         <small style="color:var(--text-muted); display: block; margin-top: 2px;">
           📅 ${inv.date || ''} • 📦 ${(inv.items || []).length} أصناف ${inv.phone ? '• 📞 ' + inv.phone : ''}
@@ -826,7 +788,7 @@ function renderSavedInvoices(filter = '') {
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </div>
-      <strong style="color:var(--accent); font-size: 1.05rem; white-space: nowrap;">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+      <strong style="color:var(--accent); font-size: 1.05rem; white-space: nowrap;">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong>
     </li>
   `).join('');
 }
@@ -852,14 +814,14 @@ window.deleteInvoice = async (id) => {
   await syncDocToCloud('invoices', { list: invoicesDB });
 };
 
-document.getElementById('search-input')?.addEventListener('input', (e) => renderSavedInvoices(e.target.value));
+document.getElementById('search-input').addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
-document.getElementById('product-form')?.addEventListener('submit', async (e) => {
+document.getElementById('product-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = document.getElementById('p-name')?.value || '';
-  const price = parseFloat(document.getElementById('p-price')?.value) || 0;
-  const cost = parseFloat(document.getElementById('p-cost')?.value) || 0;
-  const stock = parseInt(document.getElementById('p-stock')?.value) || 0;
+  const name = document.getElementById('p-name').value;
+  const price = parseFloat(document.getElementById('p-price').value) || 0;
+  const cost = parseFloat(document.getElementById('p-cost').value) || 0;
+  const stock = parseInt(document.getElementById('p-stock').value) || 0;
 
   productsDB.push({ id: Date.now(), name, price, cost, stock });
   await syncDocToCloud('products', { list: productsDB });
@@ -872,11 +834,11 @@ function renderProducts() {
   container.innerHTML = productsDB.map((p, idx) => `
     <li>
       <div>
-        <strong>${p.name || ''}</strong>
-        <br><small style="color:var(--text-muted)">التكلفة: ${p.cost || 0} ${storeProfile.currency || 'ج.م'} | المخزون: ${p.stock || 0}</small>
+        <strong>${p.name}</strong>
+        <br><small style="color:var(--text-muted)">التكلفة: ${p.cost} ${storeProfile.currency} | المخزون: ${p.stock}</small>
       </div>
       <div>
-        <strong style="color:var(--success)">${p.price || 0} ${storeProfile.currency || 'ج.م'}</strong>
+        <strong style="color:var(--success)">${p.price} ${storeProfile.currency}</strong>
         <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="window.deleteProduct(${idx})">🗑️</button>
       </div>
     </li>
@@ -888,13 +850,13 @@ window.deleteProduct = async (idx) => {
   await syncDocToCloud('products', { list: productsDB });
 };
 
-document.getElementById('client-form')?.addEventListener('submit', async (e) => {
+document.getElementById('client-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = (document.getElementById('c-name')?.value || '').trim();
-  const phone = (document.getElementById('c-phone')?.value || '').trim();
-  const openingBalance = parseFloat(document.getElementById('c-balance')?.value) || 0;
+  const name = document.getElementById('c-name').value.trim();
+  const phone = document.getElementById('c-phone').value.trim();
+  const openingBalance = parseFloat(document.getElementById('c-balance').value) || 0;
 
-  if (clientsDB.some(c => (c.name || '').toLowerCase() === name.toLowerCase())) {
+  if (clientsDB.some(c => c.name.toLowerCase() === name.toLowerCase())) {
     alert('العميل موجود بالفعل!');
     return;
   }
@@ -905,9 +867,8 @@ document.getElementById('client-form')?.addEventListener('submit', async (e) => 
 });
 
 function getClientCalculatedLedger(clientName) {
-  const safeName = (clientName || '').toLowerCase();
-  const clientObj = clientsDB.find(c => (c.name || '').toLowerCase() === safeName) || { openingBalance: 0, payments: [] };
-  const clientInvoices = invoicesDB.filter(i => (i.client || '').toLowerCase() === safeName);
+  const clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase()) || { openingBalance: 0, payments: [] };
+  const clientInvoices = invoicesDB.filter(i => i.client.toLowerCase() === clientName.toLowerCase());
 
   let totalPurchases = clientObj.openingBalance || 0;
   let totalPaid = 0;
@@ -928,27 +889,27 @@ function getClientCalculatedLedger(clientName) {
 function renderClients() {
   const datalist = document.getElementById('clients-datalist');
   if (datalist) {
-    datalist.innerHTML = clientsDB.map(c => `<option value="${c.name || ''}">${c.phone || ''}</option>`).join('');
+    datalist.innerHTML = clientsDB.map(c => `<option value="${c.name}">${c.phone || ''}</option>`).join('');
   }
 
   const container = document.getElementById('clients-list-container');
   if (!container) return;
   const searchFilter = (document.getElementById('search-clients-input')?.value || '').toLowerCase();
-  const filtered = clientsDB.filter(c => (c.name || '').toLowerCase().includes(searchFilter));
+  const filtered = clientsDB.filter(c => c.name.toLowerCase().includes(searchFilter));
 
   container.innerHTML = filtered.map(c => {
     const stats = getClientCalculatedLedger(c.name);
     return `
       <li>
         <div>
-          <strong>👤 ${c.name || ''}</strong> <small style="color:var(--text-muted)">(${c.phone || 'بدون رقم'})</small>
+          <strong>👤 ${c.name}</strong> <small style="color:var(--text-muted)">(${c.phone || 'بدون رقم'})</small>
           <br><small style="color:var(--text-muted)">إجمالي التعاملات: ${stats.totalPurchases.toFixed(2)} | المدفوع: ${stats.totalPaid.toFixed(2)}</small>
         </div>
         <div style="text-align:left;">
           <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
             ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
           </span>
-          <button class="btn-sm" style="margin-right:6px; background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name || ''}')">كشف حساب 📄</button>
+          <button class="btn-sm" style="margin-right:6px; background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name}')">كشف حساب 📄</button>
         </div>
       </li>
     `;
@@ -961,15 +922,10 @@ window.openClientLedger = (clientName) => {
   activeLedgerClientName = clientName;
   const stats = getClientCalculatedLedger(clientName);
 
-  const titleEl = document.getElementById('ledger-client-title');
-  const salesEl = document.getElementById('ledger-total-sales');
-  const paidEl = document.getElementById('ledger-total-paid');
-  const balEl = document.getElementById('ledger-balance');
-
-  if (titleEl) titleEl.textContent = `👤 كشف حساب: ${clientName}`;
-  if (salesEl) salesEl.textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
-  if (paidEl) paidEl.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
-  if (balEl) balEl.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  document.getElementById('ledger-client-title').textContent = `👤 كشف حساب: ${clientName}`;
+  document.getElementById('ledger-total-sales').textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('ledger-total-paid').textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency}`;
+  document.getElementById('ledger-balance').textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency}`;
 
   const historyUl = document.getElementById('client-ledger-history');
   let historyHtml = '';
@@ -977,8 +933,8 @@ window.openClientLedger = (clientName) => {
   stats.clientInvoices.forEach(inv => {
     historyHtml += `
       <li style="border-right: 4px solid var(--accent)">
-        <div>فاتورة #${inv.id} (${inv.date || ''})<br><small>${(inv.items || []).length} أصناف - ${inv.status || ''}</small></div>
-        <strong>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+        <div>فاتورة #${inv.id} (${inv.date})<br><small>${(inv.items || []).length} أصناف - ${inv.status}</small></div>
+        <strong>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong>
       </li>
     `;
   });
@@ -986,66 +942,61 @@ window.openClientLedger = (clientName) => {
   stats.payments.forEach(p => {
     historyHtml += `
       <li style="border-right: 4px solid var(--success)">
-        <div>دفعة سداد نقدي 💵 (${p.date || ''})</div>
-        <strong class="text-success">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+        <div>دفعة سداد 💵 (${p.date})</div>
+        <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
       </li>
     `;
   });
 
-  if (historyUl) {
-    historyUl.innerHTML = historyHtml || '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
-  }
-  document.getElementById('client-ledger-modal')?.classList.remove('hidden');
+  historyUl.innerHTML = historyHtml || '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
+  document.getElementById('client-ledger-modal').classList.remove('hidden');
 };
 
-document.getElementById('close-ledger-btn')?.addEventListener('click', () => {
-  document.getElementById('client-ledger-modal')?.classList.add('hidden');
+document.getElementById('close-ledger-btn').addEventListener('click', () => {
+  document.getElementById('client-ledger-modal').classList.add('hidden');
 });
 
-document.getElementById('ledger-whatsapp-btn')?.addEventListener('click', () => {
+document.getElementById('ledger-whatsapp-btn').addEventListener('click', () => {
   if (!activeLedgerClientName) return;
   const stats = getClientCalculatedLedger(activeLedgerClientName);
-  const clientObj = clientsDB.find(c => (c.name || '').toLowerCase() === activeLedgerClientName.toLowerCase());
+  const clientObj = clientsDB.find(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
   let phone = (clientObj?.phone || '').replace(/[^0-9]/g, '');
   if (!phone) { alert('يرجى تسجيل رقم الهاتف للعميل أولاً في سجل العملاء'); return; }
   if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
-  let msg = `*${storeProfile.name || 'GITI ERP'}*\n`;
+  let msg = `*${storeProfile.name}*\n`;
   msg += `📄 *كشف حساب العميل:* ${activeLedgerClientName}\n`;
   msg += `📅 *التاريخ:* ${new Date().toLocaleDateString('ar-EG')}\n`;
   msg += `-----------------------------------\n`;
-  msg += `🛍️ *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
-  msg += `✅ *إجمالي المدفوعات:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
-  msg += `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}\n`;
+  msg += `🛍️ *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
+  msg += `✅ *إجمالي المدفوعات:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
+  msg += `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
   msg += `-----------------------------------\n`;
   msg += `شكراً لتعاملكم معنا!`;
 
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 });
 
-document.getElementById('ledger-download-btn')?.addEventListener('click', () => {
+document.getElementById('ledger-download-btn').addEventListener('click', () => {
   const ledgerCard = document.getElementById('ledger-printable-card');
-  if (typeof html2canvas !== 'undefined' && ledgerCard) {
-    html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
-      const link = document.createElement('a');
-      link.download = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    });
-  }
+  html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
 });
 
-document.getElementById('ledger-print-btn')?.addEventListener('click', () => {
+document.getElementById('ledger-print-btn').addEventListener('click', () => {
   if (!activeLedgerClientName) return;
   const stats = getClientCalculatedLedger(activeLedgerClientName);
   const printTemplate = document.getElementById('print-template');
-  if (!printTemplate) return;
 
   printTemplate.innerHTML = `
     <div class="print-header">
       ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
       <h1>كشف حساب عميل</h1>
-      <h2>${storeProfile.name || 'GITI ERP'}</h2>
+      <h2>${storeProfile.name}</h2>
       <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
       <p>${storeProfile.address || ''}</p>
       <hr>
@@ -1054,9 +1005,9 @@ document.getElementById('ledger-print-btn')?.addEventListener('click', () => {
     </div>
 
     <div style="margin: 15px 0; padding: 10px; border: 1px solid #000; border-radius: 6px;">
-      <p><strong>إجمالي التعاملات:</strong> ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}</p>
-      <p><strong>إجمالي المدفوعات:</strong> ${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}</p>
-      <p style="font-size: 1.1rem; font-weight: bold; margin-top: 5px;"><strong>الرصيد المتبقي / المديونية:</strong> ${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}</p>
+      <p><strong>إجمالي التعاملات:</strong> ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}</p>
+      <p><strong>إجمالي المدفوعات:</strong> ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}</p>
+      <p style="font-size: 1.1rem; font-weight: bold; margin-top: 5px;"><strong>الرصيد المتبقي / المديونية:</strong> ${stats.balance.toFixed(2)} ${storeProfile.currency}</p>
     </div>
 
     <h3>سجل الحركة الحسابية التفصيلي:</h3>
@@ -1071,16 +1022,16 @@ document.getElementById('ledger-print-btn')?.addEventListener('click', () => {
       <tbody>
         ${stats.clientInvoices.map(inv => `
           <tr>
-            <td>فاتورة مبيعات #${inv.id} (${(inv.items \vert{}\vert{} []).length} أصناف - ${inv.status || ''})</td>
-            <td>${inv.date || ''}</td>
-            <td>${(inv.grandTotal \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency || 'ج.م'}</td>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items \vert{}\vert{} []).length} أصناف - ${inv.status})</td>
+            <td>${inv.date}</td>
+            <td>${(inv.grandTotal \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency}</td>
           </tr>
         `).join('')}
         ${stats.payments.map(p => `
           <tr>
             <td>دفعة سداد نقدي 💵</td>
-            <td>${p.date || ''}</td>
-            <td>-${(p.amount \vert{}\vert{} 0).toFixed(2)}${storeProfile.currency || 'ج.م'}</td>
+            <td>${p.date}</td>
+            <td>-${p.amount.toFixed(2)}${storeProfile.currency}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -1090,34 +1041,32 @@ document.getElementById('ledger-print-btn')?.addEventListener('click', () => {
   window.print();
 });
 
-document.getElementById('submit-payment-btn')?.addEventListener('click', async () => {
-  const payInp = document.getElementById('pay-amount-input');
-  const amount = parseFloat(payInp?.value) || 0;
+document.getElementById('submit-payment-btn').addEventListener('click', async () => {
+  const amount = parseFloat(document.getElementById('pay-amount-input').value) || 0;
   if (amount <= 0 || !activeLedgerClientName) return;
 
-  const idx = clientsDB.findIndex(c => (c.name || '').toLowerCase() === activeLedgerClientName.toLowerCase());
+  const idx = clientsDB.findIndex(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
   if (idx !== -1) {
     if (!clientsDB[idx].payments) clientsDB[idx].payments = [];
     clientsDB[idx].payments.push({ amount, date: new Date().toLocaleDateString('ar-EG') });
     await syncDocToCloud('clients', { list: clientsDB });
-    if (payInp) payInp.value = '';
+    document.getElementById('pay-amount-input').value = '';
     window.openClientLedger(activeLedgerClientName);
     renderAllModules();
   }
 });
 
-document.getElementById('client-name')?.addEventListener('input', (e) => {
-  const match = clientsDB.find(c => (c.name || '').toLowerCase() === e.target.value.trim().toLowerCase());
+document.getElementById('client-name').addEventListener('input', (e) => {
+  const match = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
   if (match && match.phone) {
-    const phoneInp = document.getElementById('client-phone');
-    if (phoneInp) phoneInp.value = match.phone;
+    document.getElementById('client-phone').value = match.phone;
   }
 });
 
-document.getElementById('expense-form')?.addEventListener('submit', async (e) => {
+document.getElementById('expense-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const title = document.getElementById('exp-title')?.value || '';
-  const amount = parseFloat(document.getElementById('exp-amount')?.value) || 0;
+  const title = document.getElementById('exp-title').value;
+  const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
 
   expensesDB.push({ id: Date.now(), title, amount, date: new Date().toLocaleDateString('ar-EG') });
   await syncDocToCloud('expenses', { list: expensesDB });
@@ -1130,11 +1079,11 @@ function renderExpenses() {
   container.innerHTML = expensesDB.map((exp, idx) => `
     <li>
       <div>
-        <strong>${exp.title || ''}</strong>
-        <br><small style="color:var(--text-muted)">${exp.date || ''}</small>
+        <strong>${exp.title}</strong>
+        <br><small style="color:var(--text-muted)">${exp.date}</small>
       </div>
       <div>
-        <strong style="color:var(--danger)">-${(exp.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+        <strong style="color:var(--danger)">-${exp.amount.toFixed(2)} ${storeProfile.currency}</strong>
         <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="window.deleteExpense(${idx})">🗑️</button>
       </div>
     </li>
@@ -1161,13 +1110,13 @@ function updateDashboardStats() {
   const profitEl = document.getElementById('stat-net-profit');
   const countEl = document.getElementById('stat-count');
 
-  if (salesEl) salesEl.textContent = `${totalSales.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
-  if (debtsEl) debtsEl.textContent = `${totalDebts.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
-  if (profitEl) profitEl.textContent = `${netProfit.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+  if (salesEl) salesEl.textContent = `${totalSales.toFixed(2)} ${storeProfile.currency}`;
+  if (debtsEl) debtsEl.textContent = `${totalDebts.toFixed(2)} ${storeProfile.currency}`;
+  if (profitEl) profitEl.textContent = `${netProfit.toFixed(2)} ${storeProfile.currency}`;
   if (countEl) countEl.textContent = invoicesDB.length;
 }
 
-document.getElementById('export-json-btn')?.addEventListener('click', () => {
+document.getElementById('export-json-btn').addEventListener('click', () => {
   const data = { invoices: invoicesDB, clients: clientsDB, products: productsDB, expenses: expensesDB, storeProfile };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -1176,10 +1125,10 @@ document.getElementById('export-json-btn')?.addEventListener('click', () => {
   a.click();
 });
 
-document.getElementById('export-csv-btn')?.addEventListener('click', () => {
+document.getElementById('export-csv-btn').addEventListener('click', () => {
   let csv = 'رقم الفاتورة,العميل,الهاتف,الحالة,التاريخ,الإجمالي\n';
   invoicesDB.forEach(inv => {
-    csv += `${inv.id},"${inv.client || ''}","${inv.phone || ''}",${inv.status || ''},${inv.date || ''},${inv.grandTotal || 0}\n`;
+    csv += `${inv.id},"${inv.client}","${inv.phone || ''}",${inv.status},${inv.date},${inv.grandTotal}\n`;
   });
   const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
@@ -1189,47 +1138,39 @@ document.getElementById('export-csv-btn')?.addEventListener('click', () => {
 });
 
 const settingsModal = document.getElementById('settings-modal');
-document.getElementById('open-settings-btn')?.addEventListener('click', () => {
-  const themeSel = document.getElementById('theme-select');
-  const currSel = document.getElementById('currency-select');
-  const nameInp = document.getElementById('store-name-input');
-  const phoneInp = document.getElementById('store-phone-input');
-  const vatInp = document.getElementById('store-vat-input');
-  const addrInp = document.getElementById('store-address-input');
-
-  if (themeSel) themeSel.value = localStorage.getItem('app_theme') || 'dark';
-  if (currSel) currSel.value = storeProfile.currency || 'ج.م';
-  if (nameInp) nameInp.value = storeProfile.name || '';
-  if (phoneInp) phoneInp.value = storeProfile.phone || '';
-  if (vatInp) vatInp.value = storeProfile.vatNo || '';
-  if (addrInp) addrInp.value = storeProfile.address || '';
-  settingsModal?.classList.remove('hidden');
+document.getElementById('open-settings-btn').addEventListener('click', () => {
+  document.getElementById('theme-select').value = localStorage.getItem('app_theme') || 'dark';
+  document.getElementById('currency-select').value = storeProfile.currency || 'ج.م';
+  document.getElementById('store-name-input').value = storeProfile.name;
+  document.getElementById('store-phone-input').value = storeProfile.phone;
+  document.getElementById('store-vat-input').value = storeProfile.vatNo || '';
+  document.getElementById('store-address-input').value = storeProfile.address;
+  settingsModal.classList.remove('hidden');
 });
 
-document.getElementById('close-settings-btn')?.addEventListener('click', () => settingsModal?.classList.add('hidden'));
+document.getElementById('close-settings-btn').addEventListener('click', () => settingsModal.classList.add('hidden'));
 
-document.getElementById('save-settings-btn')?.addEventListener('click', () => {
-  const themeVal = document.getElementById('theme-select')?.value || 'dark';
-  applyTheme(themeVal);
+document.getElementById('save-settings-btn').addEventListener('click', () => {
+  applyTheme(document.getElementById('theme-select').value);
 
   const logoInput = document.getElementById('store-logo-input');
   
   const saveProfileData = async (logoBase64) => {
     storeProfile = {
-      name: document.getElementById('store-name-input')?.value || "GITI Enterprise ERP",
-      phone: document.getElementById('store-phone-input')?.value || "",
-      vatNo: (document.getElementById('store-vat-input')?.value || "").trim(),
-      address: document.getElementById('store-address-input')?.value || "",
-      currency: document.getElementById('currency-select')?.value || "ج.م",
+      name: document.getElementById('store-name-input').value || "GITI Enterprise ERP",
+      phone: document.getElementById('store-phone-input').value,
+      vatNo: document.getElementById('store-vat-input').value.trim(),
+      address: document.getElementById('store-address-input').value,
+      currency: document.getElementById('currency-select').value || "ج.م",
       logo: logoBase64 !== null ? logoBase64 : storeProfile.logo
     };
     await syncDocToCloud('profile', storeProfile);
     updateHeaderUI();
     renderAllModules();
-    settingsModal?.classList.add('hidden');
+    settingsModal.classList.add('hidden');
   };
 
-  if (logoInput && logoInput.files && logoInput.files[0]) {
+  if (logoInput.files && logoInput.files[0]) {
     const reader = new FileReader();
     reader.onload = function (e) { saveProfileData(e.target.result); };
     reader.readAsDataURL(logoInput.files[0]);
@@ -1255,4 +1196,4 @@ if ('serviceWorker' in navigator) {
 }
 
 updateHeaderUI();
-document.getElementById('add-item-btn')?.click();
+document.getElementById('add-item-btn').click();
