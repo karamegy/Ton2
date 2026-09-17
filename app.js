@@ -942,7 +942,7 @@ window.openClientLedger = (clientName) => {
   stats.payments.forEach(p => {
     historyHtml += `
       <li style="border-right: 4px solid var(--success)">
-        <div>دفعة سداد 💵 (${p.date})</div>
+        <div>دفعة سداد نقدي 💵 (${p.date})</div>
         <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
       </li>
     `;
