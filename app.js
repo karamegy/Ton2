@@ -5,7 +5,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged 
+  GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, 
+  signOut, onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -187,6 +188,28 @@ function clearAuthMsgs() {
   authSuccess.classList.add('hidden');
 }
 
+// معالجة النتيجة القادمة من إعادة التوجيه (Redirect)
+getRedirectResult(auth).then(async (result) => {
+  if (result && result.user) {
+    const u = result.user;
+    const userRef = doc(db, "licenses", u.uid);
+    const docSnap = await getDoc(userRef);
+    if (!docSnap.exists()) {
+      await setDoc(userRef, {
+        email: u.email,
+        storeName: u.displayName || "نشاط جديد",
+        isActive: true,
+        role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
+        createdAt: new Date().toISOString()
+      });
+    }
+  }
+}).catch((err) => {
+  console.error("Redirect Error:", err);
+  authError.textContent = `تعذر تسجيل الدخول: (${err.code || err.message})`;
+  authError.classList.remove('hidden');
+});
+
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
@@ -299,8 +322,18 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
       });
     }
   } catch (err) {
-    authError.textContent = "تعذر تسجيل الدخول بواسطة Google";
-    authError.classList.remove('hidden');
+    console.error("Google Auth Error:", err);
+    if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' || /Android|iPhone/i.test(navigator.userAgent)) {
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirectErr) {
+        authError.textContent = `خطأ: ${redirectErr.code}`;
+        authError.classList.remove('hidden');
+      }
+    } else {
+      authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code || 'خطأ غير معروف'})`;
+      authError.classList.remove('hidden');
+    }
   }
 });
 
