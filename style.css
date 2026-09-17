@@ -378,3 +378,6 @@ li:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
   .print-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
   .print-table th, .print-table td { border: 1px solid #000000; padding: 6px; text-align: right; }
 }
+#privacy-modal {
+  z-index: 100005 !important;
+}
