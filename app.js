@@ -455,7 +455,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// --- نظام جدول أصناف الفاتورة مع قائمة منسدلة ذكية للمخزن ---
+// --- نظام جدول أصناف الفاتورة بدون إعادة بناء مهلكة لتجنب التجميد تماماً ---
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
@@ -604,10 +604,7 @@ function calculateTotals() {
       if (inputs.length >= 3) {
         activeItems[idx].name = inputs[0].value;
         activeItems[idx].qty = parseFloat(inputs[1].value) || 0;
-        const parsedPrice = parseFloat(inputs[2].value);
-        if (!isNaN(parsedPrice) && parsedPrice >= 0) {
-          activeItems[idx].price = parsedPrice;
-        }
+        activeItems[idx].price = parseFloat(inputs[2].value) || 0;
       }
     }
   });
