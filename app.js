@@ -1259,6 +1259,7 @@ document.getElementById('open-settings-btn').addEventListener('click', () => {
   document.getElementById('store-phone-input').value = storeProfile.phone;
   document.getElementById('store-vat-input').value = storeProfile.vatNo || '';
   document.getElementById('store-address-input').value = storeProfile.address;
+  settingsModal.classList.org?.remove ? settingsModal.classList.remove('hidden') : settingsModal.classList.remove('hidden');
   settingsModal.classList.remove('hidden');
 });
 
@@ -1284,13 +1285,13 @@ document.getElementById('save-settings-btn').addEventListener('click', () => {
     settingsModal.classList.add('hidden');
   };
 
-  if (logoInput.files && logoInput.files[0]) {
-    const reader = new FileReader();
-    reader.onload = function (e) { saveProfileData(e.target.result); };
-    reader.readAsDataURL(logoInput.files[0]);
-  } else {
-    saveProfileData(null);
-  }
+  (logoInput.files && logoInput.files[0]) ? (
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(logoInput.files[0]);
+    }).then(res => saveProfileData(res))
+  ) : saveProfileData(null);
 });
 
 function renderAllModules() {
