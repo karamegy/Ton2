@@ -401,7 +401,6 @@ const invNumberDisplay = document.getElementById('inv-number-display');
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
 invNumberDisplay.textContent = `#${nextInvNum}`;
 
-// --- نظام القائمة المنسدلة الذكية للعملاء داخل الفاتورة ---
 const clientInput = document.getElementById('client-name');
 const clientPhoneInput = document.getElementById('client-phone');
 const clientSuggestions = document.getElementById('client-suggestions');
@@ -455,7 +454,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// --- نظام جدول أصناف الفاتورة مع قائمة منسدلة ذكية للمخزن ---
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
@@ -638,7 +636,6 @@ function calculateTotals() {
 discountInput.addEventListener('input', calculateTotals);
 taxInput.addEventListener('input', calculateTotals);
 
-// --- دالة حفظ الفاتورة مع مزامنة المخزن والعملاء بطريقة Non-blocking آمنة تماماً ---
 async function saveInvoiceData() {
   const clientName = clientInput.value.trim();
   const clientPhone = clientPhoneInput.value.trim();
@@ -674,7 +671,6 @@ async function saveInvoiceData() {
     zatcaQr: zatcaBase64
   };
 
-  // خصم الكميات المباعة من المخزون تلقائياً
   validItems.forEach(soldItem => {
     const prod = productsDB.find(p => p.name.toLowerCase() === soldItem.name.toLowerCase());
     if (prod) {
@@ -694,7 +690,6 @@ async function saveInvoiceData() {
 
   invNumberDisplay.textContent = `#${nextInvNum}`;
 
-  // تحديث أو إضافة العميل في السجل
   let clientIndex = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
   if (clientIndex === -1) {
     clientsDB.push({ name: clientName, phone: clientPhone || '', openingBalance: 0, payments: [] });
@@ -702,7 +697,6 @@ async function saveInvoiceData() {
     clientsDB[clientIndex].phone = clientPhone;
   }
 
-  // مزامنة البيانات سحابياً في الخلفية باستخدام Promise.all لمنع تجميد واجهة التطبيق
   Promise.all([
     syncDocToCloud('invoices', { list: invoicesDB }),
     syncDocToCloud('clients', { list: clientsDB }),
@@ -1259,7 +1253,6 @@ document.getElementById('open-settings-btn').addEventListener('click', () => {
   document.getElementById('store-phone-input').value = storeProfile.phone;
   document.getElementById('store-vat-input').value = storeProfile.vatNo || '';
   document.getElementById('store-address-input').value = storeProfile.address;
-  settingsModal.classList.org?.remove ? settingsModal.classList.remove('hidden') : settingsModal.classList.remove('hidden');
   settingsModal.classList.remove('hidden');
 });
 
