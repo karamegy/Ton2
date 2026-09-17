@@ -188,6 +188,7 @@ function clearAuthMsgs() {
   authSuccess.classList.add('hidden');
 }
 
+// معالجة النتيجة القادمة من إعادة التوجيه (Redirect)
 getRedirectResult(auth).then(async (result) => {
   if (result && result.user) {
     const u = result.user;
@@ -401,20 +402,18 @@ const invNumberDisplay = document.getElementById('inv-number-display');
 let nextInvNum = parseInt(localStorage.getItem('last_inv_num') || '1001');
 invNumberDisplay.textContent = `#${nextInvNum}`;
 
-// ==========================================
-// 1. نظام الفواتير والمنتجات المُحسّن (Autocomplete)
-// ==========================================
+function updateProductsDatalist() {
+  const datalist = document.getElementById('products-datalist');
+  if (!datalist) return;
+  datalist.innerHTML = productsDB.map(p => `<option value="${p.name}">${p.price} ${storeProfile.currency}</option>`).join('');
+}
+
 function renderItemsTable() {
   itemsBody.innerHTML = activeItems.map((item, index) => `
     <tr>
-      <td>
-        <div class="autocomplete-wrapper">
-          <input type="text" autocomplete="off" id="prod-input-${index}" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف"
-            oninput="window.updateItem(${index}, 'name', this.value); window.showProdSuggest(${index}, this)"
-            onfocus="window.showProdSuggest(${index}, this)"
-            onblur="setTimeout(() => window.hideProdSuggest(${index}), 200)">
-          <div id="prod-suggest-${index}" class="autocomplete-list"></div>
-        </div>
+      <td style="position: relative;">
+        <input type="text" value="${item.name || ''}" placeholder="أدخل أو اختر الصنف (اكتب أول حرف...)" oninput="window.updateItem(${index}, 'name', this.value)" onfocus="window.showProductSuggestions(${index}, this.value)" autocomplete="off">
+        <div id="suggestions-${index}" class="autocomplete-dropdown hidden"></div>
       </td>
       <td>
         <input type="number" value="${item.qty || 1}" min="1" oninput="window.updateItem(${index}, 'qty', this.value)">
@@ -433,45 +432,59 @@ function renderItemsTable() {
   calculateTotals();
 }
 
-window.showProdSuggest = (index, inputEl) => {
-  const listEl = document.getElementById(`prod-suggest-${index}`);
-  if (!listEl) return;
-  const val = inputEl.value.toLowerCase();
-  
-  const filtered = productsDB.filter(p => p.name.toLowerCase().includes(val));
+window.showProductSuggestions = (index, query) => {
+  const dropdown = document.getElementById(`suggestions-${index}`);
+  if (!dropdown) return;
+
+  const q = (query || '').toLowerCase().trim();
+  const filtered = productsDB.filter(p => p.name.toLowerCase().includes(q));
 
   if (filtered.length === 0) {
-    listEl.classList.remove('active');
+    dropdown.classList.add('hidden');
+    dropdown.innerHTML = '';
     return;
   }
 
-  listEl.innerHTML = filtered.map(p => `
-    <div class="autocomplete-item" onmousedown="event.preventDefault(); window.selectProduct(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})">
-      <span class="autocomplete-item-title">${p.name}</span>
-      <span class="autocomplete-item-sub" style="color:var(--success)">
-        ${p.price} ${storeProfile.currency} 
-        <small style="color:var(--text-muted); margin-right:6px">مخزون: ${p.stock}</small>
-      </span>
+  dropdown.innerHTML = filtered.map(p => `
+    <div class="suggestion-item" onclick="window.selectProductSuggestion(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.price})">
+      <span>${p.name}</span>
+      <span style="color: var(--success); font-weight: 700;">${p.price} ${storeProfile.currency}</span>
     </div>
   `).join('');
-  listEl.classList.add('active');
+  dropdown.classList.remove('hidden');
 };
 
-window.hideProdSuggest = (index) => {
-  const listEl = document.getElementById(`prod-suggest-${index}`);
-  if (listEl) listEl.classList.remove('active');
-};
-
-window.selectProduct = (index, name, price) => {
+window.selectProductSuggestion = (index, name, price) => {
   activeItems[index].name = name;
   activeItems[index].price = price;
-  renderItemsTable(); 
+  
+  const rows = itemsBody.querySelectorAll('tr');
+  if (rows[index]) {
+    const inputs = rows[index].querySelectorAll('input');
+    if (inputs[0]) inputs[0].value = name;
+    if (inputs[2]) inputs[2].value = price;
+    const totalSpan = rows[index].querySelector('.item-total-text');
+    if (totalSpan) totalSpan.textContent = ((activeItems[index].qty || 0) * price).toFixed(2);
+  }
+  
+  const dropdown = document.getElementById(`suggestions-${index}`);
+  if (dropdown) dropdown.classList.add('hidden');
+  
   calculateTotals();
 };
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('td') && !e.target.closest('.autocomplete-dropdown')) {
+    document.querySelectorAll('.autocomplete-dropdown').forEach(d => d.classList.add('hidden'));
+  }
+});
 
 window.updateItem = (index, key, val) => {
   if (key === 'name') {
     activeItems[index].name = val;
+    const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+    if (matchedProd) activeItems[index].price = matchedProd.price;
+    window.showProductSuggestions(index, val);
   } else {
     activeItems[index][key] = parseFloat(val) || 0;
   }
@@ -493,52 +506,6 @@ document.getElementById('add-item-btn').addEventListener('click', () => {
   renderItemsTable();
 });
 
-// ==========================================
-// 2. نظام العملاء المُحسّن (Autocomplete)
-// ==========================================
-const clientInput = document.getElementById('client-name');
-const clientSuggestions = document.getElementById('client-suggestions');
-
-function renderClientSuggestions(val) {
-  clientSuggestions.innerHTML = '';
-  const match = val.toLowerCase();
-  const filtered = clientsDB.filter(c => c.name.toLowerCase().includes(match));
-
-  if (filtered.length === 0 || !val) {
-    clientSuggestions.classList.remove('active');
-    return;
-  }
-
-  filtered.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'autocomplete-item';
-    div.innerHTML = `
-      <span class="autocomplete-item-title">👤 ${c.name}</span> 
-      <span class="autocomplete-item-sub" style="color:var(--text-muted)">${c.phone || 'بدون رقم'}</span>
-    `;
-    
-    div.onmousedown = (e) => { 
-      e.preventDefault();
-      clientInput.value = c.name;
-      document.getElementById('client-phone').value = c.phone || '';
-      clientSuggestions.classList.remove('active');
-    };
-    clientSuggestions.appendChild(div);
-  });
-  clientSuggestions.classList.add('active');
-}
-
-clientInput.addEventListener('input', (e) => {
-  renderClientSuggestions(e.target.value);
-  const exact = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
-  if (exact && exact.phone) document.getElementById('client-phone').value = exact.phone;
-});
-clientInput.addEventListener('focus', () => renderClientSuggestions(clientInput.value));
-clientInput.addEventListener('blur', () => setTimeout(() => clientSuggestions.classList.remove('active'), 200));
-
-// ==========================================
-// 3. الحسابات وحفظ الفواتير
-// ==========================================
 const payStatusSelect = document.getElementById('payment-status-select');
 const paidAmountWrapper = document.getElementById('paid-amount-wrapper');
 
@@ -551,6 +518,18 @@ payStatusSelect.addEventListener('change', () => {
 });
 
 function calculateTotals() {
+  const rows = itemsBody.querySelectorAll('tr');
+  rows.forEach((tr, idx) => {
+    if (activeItems[idx]) {
+      const inputs = tr.querySelectorAll('input');
+      if (inputs.length >= 3) {
+        activeItems[idx].name = inputs[0].value;
+        activeItems[idx].qty = parseFloat(inputs[1].value) || 0;
+        activeItems[idx].price = parseFloat(inputs[2].value) || 0;
+      }
+    }
+  });
+
   const subtotal = activeItems.reduce((acc, item) => acc + ((item.qty || 0) * (item.price || 0)), 0);
   const discount = parseFloat(discountInput.value) || 0;
   const taxPercent = parseFloat(taxInput.value) || 0;
@@ -938,6 +917,11 @@ function getClientCalculatedLedger(clientName) {
 }
 
 function renderClients() {
+  const datalist = document.getElementById('clients-datalist');
+  if (datalist) {
+    datalist.innerHTML = clientsDB.map(c => `<option value="${c.name}">${c.phone || ''}</option>`).join('');
+  }
+
   const container = document.getElementById('clients-list-container');
   if (!container) return;
   const searchFilter = (document.getElementById('search-clients-input')?.value || '').toLowerCase();
@@ -1102,6 +1086,13 @@ document.getElementById('submit-payment-btn').addEventListener('click', async ()
   }
 });
 
+document.getElementById('client-name').addEventListener('input', (e) => {
+  const match = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
+  if (match && match.phone) {
+    document.getElementById('client-phone').value = match.phone;
+  }
+});
+
 document.getElementById('expense-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const title = document.getElementById('exp-title').value;
@@ -1223,6 +1214,7 @@ function renderAllModules() {
   renderProducts();
   renderClients();
   renderExpenses();
+  updateProductsDatalist();
   updateDashboardStats();
 }
 
