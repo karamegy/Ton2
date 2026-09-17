@@ -8,14 +8,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
+    /* الثيم الافتراضي (فاتح / أبيض) */
     :root {
+      --bg-color: #f0f4f8;
+      --card-bg: #ffffff;
+      --text-main: #1f2937;
+      --text-sub: #4b5563;
+      --accent: #0284c7;
+      --border: #e5e7eb;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+    }
+
+    /* الثيم الداكن (يتم تفعيله عند تغيير ثيم التطبيق) */
+    body.dark-theme {
       --bg-color: #090d16;
       --card-bg: #111827;
       --text-main: #f3f4f6;
       --text-sub: #9ca3af;
       --accent: #3b82f6;
       --border: #1f2937;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     }
+
     body {
       font-family: 'Cairo', sans-serif;
       background-color: var(--bg-color);
@@ -23,16 +37,43 @@
       margin: 0;
       padding: 20px;
       line-height: 1.8;
+      transition: background-color 0.3s, color 0.3s;
     }
+    
+    .nav-bar {
+      max-width: 800px;
+      margin: 10px auto 0;
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .back-btn {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
     .container {
       max-width: 800px;
-      margin: 40px auto;
+      margin: 15px auto 40px;
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 30px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      box-shadow: var(--shadow);
+      transition: background-color 0.3s, border-color 0.3s;
     }
+
     h1 {
       color: var(--accent);
       font-size: 1.8rem;
@@ -40,26 +81,32 @@
       padding-bottom: 12px;
       margin-bottom: 20px;
     }
+
     h2 {
-      color: #60a5fa;
+      color: var(--accent);
       font-size: 1.2rem;
       margin-top: 24px;
       margin-bottom: 8px;
     }
+
     p, li {
       color: var(--text-sub);
       font-size: 0.95rem;
     }
+
     ul {
       padding-right: 20px;
     }
+
     a {
       color: var(--accent);
       text-decoration: none;
     }
+
     a:hover {
       text-decoration: underline;
     }
+
     .footer {
       margin-top: 30px;
       padding-top: 15px;
@@ -71,6 +118,10 @@
   </style>
 </head>
 <body>
+
+  <div class="nav-bar">
+    <button class="back-btn" onclick="goToApp()">➔ العودة للتطبيق</button>
+  </div>
 
   <div class="container">
     <h1>🔒 سياسة الخصوصية (Privacy Policy)</h1>
@@ -106,5 +157,36 @@
     </div>
   </div>
 
+  <script>
+    // 1. مزامنة الثيم تلقائياً (من LocalStorage أو رابط الصفحة أو إعدادات النظام)
+    function syncTheme() {
+      const savedTheme = localStorage.getItem('theme');
+      const urlParams = new URLSearchParams(window.location.search);
+      const themeParam = urlParams.get('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      if (themeParam === 'dark' || savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.body.classList.add('dark-theme');
+      } else {
+        document.body.classList.remove('dark-theme');
+      }
+    }
+    syncTheme();
+
+    // 2. معالجة زر الرجوع لتفادي إغلاق التطبيق
+    function goToApp() {
+      if (window.history.length > 1 && document.referrer) {
+        window.history.back();
+      } else {
+        window.location.href = 'index.html'; // غير هذا المسار إلى اسم صفحة الدخول أو الواجهة الرئيسية لديك
+      }
+    }
+
+    // الاعتراض على زر الرجوع في الهاتف (Android Hardware Back Button)
+    history.pushState({ page: 'privacy' }, null, location.href);
+    window.onpopstate = function () {
+      goToApp();
+    };
+  </script>
 </body>
 </html>
