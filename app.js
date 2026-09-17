@@ -155,7 +155,6 @@ let activeItems = [];
 let activeLedgerClientName = null;
 let editingInvoiceId = null;
 
-// إدارة نافذة سياسة الخصوصية بصورة عامة ومباشرة
 window.openPrivacyModal = () => {
   const privacyModal = document.getElementById('privacy-modal');
   if (privacyModal) privacyModal.classList.remove('hidden');
