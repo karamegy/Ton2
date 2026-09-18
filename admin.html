@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090d16">
+  <title>GITI - Enterprise ERP Admin Dashboard</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- شاشة تسجيل دخول المشرف -->
+  <div id="admin-auth-screen" class="login-overlay">
+    <div class="login-card">
+      <div class="giti-brand-auth">
+        <img src="logo.png" alt="GITI Logo" class="giti-logo-auth">
+        <h1 class="giti-title-auth">GITI Admin</h1>
+        <p class="giti-sub-auth">لوحة تحكم الإدارة العليا والتحكم السحابي</p>
+      </div>
+
+      <form id="admin-login-form" class="auth-form" style="margin-top: 20px;">
+        <div class="form-group">
+          <label>البريد الإلكتروني للإدارة</label>
+          <input type="email" id="admin-email" required placeholder="admin@domain.com">
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label>كلمة المرور</label>
+          <input type="password" id="admin-password" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn-primary auth-submit-btn" style="margin-top: 20px;">دخول لوحة الإدارة 🔐</button>
+      </form>
+
+      <div id="admin-auth-error" class="auth-msg error hidden" style="margin-top: 10px;"></div>
+    </div>
+  </div>
+
+  <!-- لوحة التحكم الرئيسية للإدارة -->
+  <div id="admin-main-app" class="hidden" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
+    
+    <header class="app-header" style="border-radius: 12px; margin-bottom: 20px; padding: 15px 20px;">
+      <div class="brand-container">
+        <img src="logo.png" alt="GITI Logo" class="giti-header-logo">
+        <div>
+          <h1>GITI Enterprise Admin</h1>
+          <p class="subtitle">إدارة الرخص، التктиلات، وحسابات المنشآت</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="btn-icon" title="الذهاب للتطبيق الرئيسية">🏠</a>
+        <button id="admin-logout-btn" class="btn-icon btn-logout" title="تسجيل الخروج">🚪</button>
+      </div>
+    </header>
+
+    <!-- إحصائيات عامة للنظام -->
+    <section class="stats-grid" style="margin-bottom: 20px;">
+      <div class="stat-card">
+        <span class="stat-title">إجمالي المتاجر / الحسابات</span>
+        <strong id="stat-total-users" class="stat-value">0</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">الحسابات المفعلة</span>
+        <strong id="stat-active-users" class="stat-value text-success">0</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">الحسابات بانتظار التفعيل</span>
+        <strong id="stat-pending-users" class="stat-value text-danger">0</strong>
+      </div>
+    </section>
+
+    <!-- إدارة الحسابات والتراخيص -->
+    <section class="card" style="margin-bottom: 20px;">
+      <div class="card-header">
+        <h3>👥 إدارة حسابات المنشآت والنشاطات التجارية</h3>
+        <input type="text" id="search-admin-users" placeholder="بحث بالبريد أو اسم النشاط..." style="max-width: 250px; padding: 6px 10px;">
+      </div>
+      <div class="list-container" style="max-height: 400px; overflow-y: auto;">
+        <table class="modern-items-table" style="width: 100%; text-align: right;">
+          <thead>
+            <tr>
+              <th>اسم النشاط / المستخدم</th>
+              <th>البريد الإلكتروني</th>
+              <th>حالة الحساب</th>
+              <th>الإجراء (تفعيل / تعطيل)</th>
+            </tr>
+          </thead>
+          <tbody id="admin-users-tbody">
+            <!-- سيتم تعبئة البيانات برمجياً -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- سكربت الربط مع فايربيس وإدارة لوحة التحكم -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // إعدادات فايربيس (تأكد من مطابقتها لملف app.js الخاص بك)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const authScreen = document.getElementById('admin-auth-screen');
+    const mainApp = document.getElementById('admin-main-app');
+    const loginForm = document.getElementById('admin-login-form');
+    const logoutBtn = document.getElementById('admin-logout-btn');
+    const errorDiv = document.getElementById('admin-auth-error');
+
+    // مراقبة حالة تسجيل الدخول
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // يمكنك هنا التحقق مما إذا كان البريد الإلكتروني هو بريد المشرف الأساسي
+        authScreen.classList.add('hidden');
+        mainApp.classList.remove('hidden');
+        loadSystemUsers();
+      } else {
+        authScreen.classList.remove('hidden');
+        mainApp.classList.add('hidden');
+      }
+    });
+
+    // تسجيل الدخول
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('admin-email').value;
+      const password = document.getElementById('admin-password').value;
+      errorDiv.classList.add('hidden');
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        errorDiv.textContent = "خطأ في بيانات الدخول: " + error.message;
+        errorDiv.classList.remove('hidden');
+      }
+    });
+
+    // تسجيل الخروج
+    logoutBtn.addEventListener('click', () => {
+      signOut(auth);
+    });
+
+    // جلب وعرض المستخدمين والتحكم بحالتهم
+    async function loadSystemUsers() {
+      const tbody = document.getElementById('admin-users-tbody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>';
+      
+      try {
+        // افتراض وجود مجموعة في Firestore تخزن بيانات المستخدمين / المنشآت باسم "users" أو "settings"
+        const querySnapshot = await getDocs(collection(db, "users"));
+        tbody.innerHTML = '';
+        
+        let total = 0;
+        let active = 0;
+        let pending = 0;
+
+        querySnapshot.forEach((documentSnap) => {
+          const data = documentSnap.data();
+          total++;
+          const isActive = data.status === 'active' || data.isActive === true;
+          if (isActive) active++; else pending++;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${data.storeName || data.name || 'غير محدد'}</td>
+            <td>${data.email || 'غير متوفر'}</td>
+            <td><span class="${isActive ? 'text-success' : 'text-danger'}">${isActive ? '🟢 مفعل' : '🔴 بانتظار التفعيل'}</span></td>
+            <td>
+              <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" onclick="toggleUserStatus('${documentSnap.id}', ${!isActive})">
+                ${isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById('stat-total-users').textContent = total;
+        document.getElementById('stat-active-users').textContent = active;
+        document.getElementById('stat-pending-users').textContent = pending;
+
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-danger);">فشل جلب الحسابات: تأكد من صلاحيات قاعدة البيانات (Firestore Rules).</td></tr>`;
+      }
+    }
+
+    // دالة لتغيير حالة المستخدم (تفعيل / تعطيل) وترتبط بـ lock-screen في index.html
+    window.toggleUserStatus = async function(userId, newStatus) {
+      try {
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, {
+          status: newStatus ? 'active' : 'pending',
+          isActive: newStatus
+        });
+        alert("تم تحديث حالة الحساب بنجاح!");
+        loadSystemUsers();
+      } catch (err) {
+        alert("حدث خطأ أثناء التحديث: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
