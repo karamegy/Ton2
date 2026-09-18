@@ -49,11 +49,11 @@
         <img src="logo.png" alt="GITI Logo" class="giti-header-logo">
         <div>
           <h1>GITI Enterprise Admin</h1>
-          <p class="subtitle">إدارة الرخص، التктиلات، وحسابات المنشآت</p>
+          <p class="subtitle">إدارة الرخص، التراخيص، وحسابات المنشآت</p>
         </div>
       </div>
       <div class="header-actions">
-        <a href="index.html" class="btn-icon" title="الذهاب للتطبيق الرئيسية">🏠</a>
+        <a href="index.html" class="btn-icon" title="الذهاب للتطبيق الرئيسي">🏠</a>
         <button id="admin-logout-btn" class="btn-icon btn-logout" title="تسجيل الخروج">🚪</button>
       </div>
     </header>
@@ -105,14 +105,14 @@
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // إعدادات فايربيس (تأكد من مطابقتها لملف app.js الخاص بك)
+    // إعدادات فايربيس الصحيحة والمتطابقة مع ملف app.js الخاص بك
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
+      authDomain: "giti-68750.firebaseapp.com",
+      projectId: "giti-68750",
+      storageBucket: "giti-68750.firebasestorage.app",
+      messagingSenderId: "753885709520",
+      appId: "1:753885709520:web:eda57cd4efdb5c4ef48ad5"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -125,13 +125,17 @@
     const logoutBtn = document.getElementById('admin-logout-btn');
     const errorDiv = document.getElementById('admin-auth-error');
 
-    // مراقبة حالة تسجيل الدخول
+    // مراقبة حالة تسجيل الدخول والتحقق من صلاحيات المشرف
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // يمكنك هنا التحقق مما إذا كان البريد الإلكتروني هو بريد المشرف الأساسي
-        authScreen.classList.add('hidden');
-        mainApp.classList.remove('hidden');
-        loadSystemUsers();
+        if (user.email === 'haretg@gmail.com') {
+          authScreen.classList.add('hidden');
+          mainApp.classList.remove('hidden');
+          loadSystemUsers();
+        } else {
+          alert('عذراً، هذا الحساب ليس له صلاحيات المشرف العام!');
+          signOut(auth);
+        }
       } else {
         authScreen.classList.remove('hidden');
         mainApp.classList.add('hidden');
@@ -141,8 +145,8 @@
     // تسجيل الدخول
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('admin-email').value;
-      const password = document.getElementById('admin-password').value;
+      const email = document.getElementById('admin-email').value.trim();
+      const password = document.getElementById('admin-password').value.trim();
       errorDiv.classList.add('hidden');
       try {
         await signInWithEmailAndPassword(auth, email, password);
@@ -157,14 +161,13 @@
       signOut(auth);
     });
 
-    // جلب وعرض المستخدمين والتحكم بحالتهم
+    // جلب وعرض المستخدمين والتحكم بحالتهم من مجموعة licenses
     async function loadSystemUsers() {
       const tbody = document.getElementById('admin-users-tbody');
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>';
       
       try {
-        // افتراض وجود مجموعة في Firestore تخزن بيانات المستخدمين / المنشآت باسم "users" أو "settings"
-        const querySnapshot = await getDocs(collection(db, "users"));
+        const querySnapshot = await getDocs(collection(db, "licenses"));
         tbody.innerHTML = '';
         
         let total = 0;
@@ -174,16 +177,16 @@
         querySnapshot.forEach((documentSnap) => {
           const data = documentSnap.data();
           total++;
-          const isActive = data.status === 'active' || data.isActive === true;
+          const isActive = data.isActive === true;
           if (isActive) active++; else pending++;
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${data.storeName || data.name || 'غير محدد'}</td>
+            <td>${data.storeName || 'غير محدد'}</td>
             <td>${data.email || 'غير متوفر'}</td>
-            <td><span class="${isActive ? 'text-success' : 'text-danger'}">${isActive ? '🟢 مفعل' : '🔴 بانتظار التفعيل'}</span></td>
+            <td><span class="${isActive ? 'text-success' : 'text-danger'}">${isActive ? '🟢 مفعل' : '🔴 معطل'}</span></td>
             <td>
-              <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" onclick="toggleUserStatus('${documentSnap.id}', ${!isActive})">
+              <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" onclick="window.toggleUserStatus('${documentSnap.id}', ${!isActive})">
                 ${isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
               </button>
             </td>
@@ -200,12 +203,11 @@
       }
     }
 
-    // دالة لتغيير حالة المستخدم (تفعيل / تعطيل) وترتبط بـ lock-screen في index.html
+    // دالة لتغيير حالة المستخدم (تفعيل / تعطيل) وتحديث حقل isActive
     window.toggleUserStatus = async function(userId, newStatus) {
       try {
-        const userRef = doc(db, "users", userId);
+        const userRef = doc(db, "licenses", userId);
         await updateDoc(userRef, {
-          status: newStatus ? 'active' : 'pending',
           isActive: newStatus
         });
         alert("تم تحديث حالة الحساب بنجاح!");
