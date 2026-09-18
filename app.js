@@ -231,10 +231,23 @@ getRedirectResult(auth).then(async (result) => {
 });
 
 onAuthStateChanged(auth, async (user) => {
+  const adminBtn = document.getElementById('admin-btn');
+
   if (user) {
     currentUser = user;
     if (loginScreen) loginScreen.classList.add('hidden');
+    
     const isAdmin = user.email === 'haretg@gmail.com';
+    
+    // إظهار أو إخفاء زر لوحة الإدارة بناءً على البريد الإلكتروني حصرياً
+    if (adminBtn) {
+      if (isAdmin) {
+        adminBtn.classList.remove('hidden');
+      } else {
+        adminBtn.classList.add('hidden');
+      }
+    }
+
     const userUidTag = document.getElementById('user-uid-tag');
     if (userUidTag) userUidTag.textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
     
@@ -265,12 +278,19 @@ onAuthStateChanged(auth, async (user) => {
     });
   } else {
     currentUser = null;
+    
+    // إخفاء زر الإدارة عند تسجيل الخروج
+    if (adminBtn) {
+      adminBtn.classList.add('hidden');
+    }
+
     detachCloudSync();
     if (mainApp) mainApp.classList.add('hidden');
     if (lockScreen) lockScreen.classList.add('hidden');
     if (loginScreen) loginScreen.classList.remove('hidden');
   }
 });
+
 
 function attachCloudRealtimeSync(uid) {
   detachCloudSync();
