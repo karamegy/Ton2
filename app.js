@@ -1155,7 +1155,6 @@ document.getElementById('ledger-print-btn').addEventListener('click', () => {
 
   window.print();
 });
-
 document.getElementById('submit-payment-btn').addEventListener('click', async () => {
   const amount = parseFloat(document.getElementById('pay-amount-input').value) || 0;
   if (amount <= 0 || !activeLedgerClientName) return;
