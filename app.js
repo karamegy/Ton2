@@ -25,12 +25,22 @@ const googleProvider = new GoogleAuthProvider();
 
 enableIndexedDbPersistence(db).catch(() => {});
 
+// دالة تفعيل الإعلانات المحسّنة
 function triggerAds() {
-  try {
-    document.querySelectorAll('.adsbygoogle').forEach(() => {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    });
-  } catch (e) {}
+  // استخدام مهلة زمنية بـ 300ms لضمان اكتمال ظهور واجهة main-app وبنائها في الـ DOM
+  setTimeout(() => {
+    try {
+      const adElements = document.querySelectorAll('.adsbygoogle');
+      adElements.forEach(ad => {
+        // التحقق من أن الإعلان لم يتم تحميله أو معالجته مسبقاً
+        if (!ad.getAttribute('data-adsbygoogle-status')) {
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+        }
+      });
+    } catch (e) {
+      console.warn("AdSense Trigger Error:", e);
+    }
+  }, 300);
 }
 
 const translations = {
@@ -239,7 +249,6 @@ onAuthStateChanged(auth, async (user) => {
     
     const isAdmin = user.email === 'haretg@gmail.com';
     
-    // إظهار أو إخفاء زر لوحة الإدارة بناءً على البريد الإلكتروني حصرياً
     if (adminBtn) {
       if (isAdmin) {
         adminBtn.classList.remove('hidden');
@@ -269,6 +278,8 @@ onAuthStateChanged(auth, async (user) => {
         if (lockScreen) lockScreen.classList.add('hidden');
         if (mainApp) mainApp.classList.remove('hidden');
         attachCloudRealtimeSync(user.uid);
+        
+        // تفعيل طلب الإعلانات بعد إظهار الصفحة الرئيسية في الـ DOM
         triggerAds();
       } else {
         if (mainApp) mainApp.classList.add('hidden');
@@ -279,7 +290,6 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     currentUser = null;
     
-    // إخفاء زر الإدارة عند تسجيل الخروج
     if (adminBtn) {
       adminBtn.classList.add('hidden');
     }
@@ -290,7 +300,6 @@ onAuthStateChanged(auth, async (user) => {
     if (loginScreen) loginScreen.classList.remove('hidden');
   }
 });
-
 
 function attachCloudRealtimeSync(uid) {
   detachCloudSync();
