@@ -18,7 +18,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
-  <!-- 🛑 رمز Google AdSense المباشر المطلوب للمراجعة 🛑 -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6651309355082807" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -85,7 +84,7 @@
       <div id="auth-success" class="auth-msg success hidden"></div>
 
       <div style="margin-top: 15px; text-align: center;">
-        <a href="privacy.html" target="_blank" rel="noopener" class="btn-ghost" style="font-size: 0.75rem; text-decoration: underline; color: var(--text-muted); display: inline-block;">🔒 سياسة الخصوصية (Privacy Policy)</a>
+        <button type="button" id="open-privacy-auth-btn" class="btn-ghost" style="font-size: 0.75rem; text-decoration: underline; color: var(--text-muted); display: inline-block;">🔒 سياسة الخصوصية (Privacy Policy)</button>
       </div>
     </div>
   </div>
@@ -121,7 +120,6 @@
         </div>
       </div>
       <div class="header-actions">
-        <!-- زر لوحة الإدارة يظهر فقط لحساب الإدارة -->
         <button id="admin-btn" class="btn-icon hidden" title="لوحة الإدارة" onclick="window.location.href='admin.html'">🛡️</button>
         <button id="toggle-lang-btn" class="btn-icon">🌐 EN/عربي</button>
         <button id="open-settings-btn" class="btn-icon">⚙️</button>
@@ -160,7 +158,6 @@
     <main id="tab-invoices" class="tab-content active">
       <div class="dashboard-grid">
         
-        <!-- ورقة الفاتورة التفاعلية الحية -->
         <section class="invoice-paper-card">
           <div class="paper-header">
             <div class="paper-brand">
@@ -185,7 +182,6 @@
             </div>
           </div>
 
-          <!-- جدول الأصناف -->
           <div class="modern-table-container">
             <table class="modern-items-table">
               <thead>
@@ -202,7 +198,6 @@
             <button type="button" id="add-item-btn" class="btn-add-row">+ إضافة بند جديد للفاتورة</button>
           </div>
 
-          <!-- شريط الحسابات -->
           <div class="live-summary-box">
             <div class="summary-line">
               <span>المجموع قبل الخصم:</span>
@@ -257,11 +252,9 @@
           </div>
         </section>
 
-        <!-- سجل الفواتير السريع -->
         <section class="card invoice-list-section">
           <div class="card-header">
             <h3 data-i18n="invHistory">سجل الفواتير السحابي</h3>
-            <!-- تم إضافة زر واستيراد النسخة الاحتياطية هنا -->
             <div class="backup-btns" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
               <button id="export-json-btn" class="btn-sm">💾 نسخة احتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
@@ -527,7 +520,28 @@
       <button id="save-settings-btn" class="btn-primary" style="margin-top: 15px;" data-i18n="saveSettings">حفظ التغييرات السحابية</button>
       
       <div style="margin-top: 15px; border-top: 1px dashed var(--border-color); padding-top: 12px; text-align: center;">
-        <a href="privacy.html" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration: none; display: block; text-align: center;">🔒 عرض سياسة الخصوصية</a>
+        <button type="button" id="open-privacy-settings-btn" class="btn-secondary" style="display: block; width: 100%; text-align: center;">🔒 عرض سياسة الخصوصية</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal سياسة الخصوصية -->
+  <div id="privacy-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h3>🔒 سياسة الخصوصية وأمان البيانات</h3>
+        <button id="close-privacy-btn" class="btn-close">✕</button>
+      </div>
+      <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main); margin-top: 10px;">
+        <p>مرحباً بك في منصة <strong>GITI ERP</strong>. نحن نلتزم بأعلى معايير الحماية والخصوصية لتأمين بيانات نشاطك التجارى:</p>
+        <ul style="margin-right: 20px; margin-top: 8px;">
+          <li><strong>تشفير البيانات:</strong> يتم تشفير جميع الفواتير وحسابات العملاء وتخزينها بأمان في قواعد بيانات Firebase السحابية.</li>
+          <li><strong>العمل بدون إنترنت:</strong> تُحفظ كافة المعاملات محلياً على جهازك وتتزامن تلقائياً عند إعادة الاتصال بالشبكة.</li>
+          <li><strong>عدم المشاركة:</strong> لا يتم مشاركة بياناتك أو معلومات عملائك مع أي أطراف خارجية مطلقاً.</li>
+        </ul>
+      </div>
+      <div style="margin-top: 20px; text-align: left;">
+        <button id="accept-privacy-btn" class="btn-primary">موافقة وإغلاق</button>
       </div>
     </div>
   </div>
