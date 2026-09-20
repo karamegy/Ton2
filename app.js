@@ -1526,3 +1526,56 @@ if ('serviceWorker' in navigator) {
 
 updateHeaderUI();
 if (addItemBtn) addItemBtn.click();
+
+// دالة استيراد النسخة الاحتياطية وتحديث السحابة
+const importJsonInput = document.getElementById('import-json-input');
+if (importJsonInput) {
+  importJsonInput.addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        
+        // التحقق من صحة الملف الهيكلي
+        if (!importedData || typeof importedData !== 'object') {
+          throw new Error('ملف التنسيق غير صالح');
+        }
+
+        if (confirm('⚠️ هل أنت متأكد من استيراد هذه النسخة الاحتياطية؟ سيتم دمج البيانات وتحديثها في سحابة حسابك فوراً.')) {
+          
+          // تحديث الذاكرة المحلية (State)
+          if (Array.isArray(importedData.invoices)) invoicesDB = importedData.invoices;
+          if (Array.isArray(importedData.clients)) clientsDB = importedData.clients;
+          if (Array.isArray(importedData.products)) productsDB = importedData.products;
+          if (Array.isArray(importedData.expenses)) expensesDB = importedData.expenses;
+          if (importedData.storeProfile) {
+            storeProfile = Object.assign({}, storeProfile, importedData.storeProfile);
+          }
+
+          // رفع البيانات المستوردة إلى سحابة Firebase مباشرة
+          await Promise.all([
+            syncDocToCloud('invoices', { list: invoicesDB }),
+            syncDocToCloud('clients', { list: clientsDB }),
+            syncDocToCloud('products', { list: productsDB }),
+            syncDocToCloud('expenses', { list: expensesDB }),
+            syncDocToCloud('profile', storeProfile)
+          ]);
+
+          alert('✅ تم استيراد وحفظ النسخة الاحتياطية وتزامنها سحابياً بنجاح!');
+          renderAllModules();
+          updateHeaderUI();
+        }
+      } catch (error) {
+        alert('❌ حدث خطأ أثناء قراءة الملف. تأكد من اختيار ملف JSON صحيح ومطابق للنظام.');
+        console.error(error);
+      } finally {
+        // إعادة تعيين حقل الإدخال ليسمح باختيار نفس الملف مجدداً إن لزم
+        event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+}
