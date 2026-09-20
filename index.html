@@ -261,9 +261,15 @@
         <section class="card invoice-list-section">
           <div class="card-header">
             <h3 data-i18n="invHistory">سجل الفواتير السحابي</h3>
-            <div class="backup-btns">
+            <!-- تم إضافة زر واستيراد النسخة الاحتياطية هنا -->
+            <div class="backup-btns" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
               <button id="export-json-btn" class="btn-sm">💾 نسخة احتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
+              
+              <label for="import-json-input" class="btn-sm" style="cursor: pointer; background-color: #10b981; color: white; display: inline-flex; align-items: center; gap: 4px;" title="استيراد ملف نسخة احتياطية سابقة">
+                📂 استيراد
+              </label>
+              <input type="file" id="import-json-input" accept=".json" class="hidden">
             </div>
           </div>
           <div class="search-box">
