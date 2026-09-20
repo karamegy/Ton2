@@ -1,6 +1,5 @@
-const CACHE_NAME = 'giti-invoices-v30'; // تم رفع الإصدار لإجبار التحديث وحذف الكاش التالف
+const CACHE_NAME = 'giti-invoices-v31';
 
-// تخزين الملفات المحلية الأساسية فقط (تجنبنا الـ CDNs لمنع فشل التثبيت)
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -10,7 +9,6 @@ const ASSETS_TO_CACHE = [
   './logo.png'
 ];
 
-// 1. تثبيت الـ Service Worker بأمان تام دون انهيار
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -19,7 +17,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// 2. تفعيل الملف وتنظيف الكاش القديم فوراً
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -34,14 +31,13 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. اعتراض الطلبات وتوفير الأداء أوفلاين
 self.addEventListener('fetch', (event) => {
-  // استثناء اتصالات السحابة والإعلانات لضمان عدم التعليق
   if (
     event.request.url.includes('firestore.googleapis.com') ||
     event.request.url.includes('identitytoolkit.googleapis.com') ||
     event.request.url.includes('securetoken.googleapis.com') ||
-    event.request.url.includes('pagead2.googlesyndication.com')
+    event.request.url.includes('pagead2.googlesyndication.com') ||
+    event.request.url.includes('googleads')
   ) {
     return;
   }
@@ -51,7 +47,19 @@ self.addEventListener('fetch', (event) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request).catch(() => {
+
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && !event.request.url.includes('cdnjs.cloudflare.com') && !event.request.url.includes('fonts.gstatic.com'))) {
+          return networkResponse;
+        }
+
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
+        return networkResponse;
+      }).catch(() => {
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
