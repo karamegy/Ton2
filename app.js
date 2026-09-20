@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
   getFirestore, doc, setDoc, getDoc, onSnapshot, 
-  enableIndexedDbPersistence 
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
@@ -19,11 +19,16 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+
+// ⚡ تفعيل كاش Firestore الدائم للمتصفحات والعمل بدون إنترنت
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});
+
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
-
-enableIndexedDbPersistence(db).catch(() => {});
 
 // دالة تفعيل الإعلانات المحسّنة والمؤمنة
 function triggerAds() {
@@ -1184,7 +1189,7 @@ function renderClients() {
           <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
             ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
           </span>
-          <button class="btn-sm" style="margin-right:6px; background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name}')">كشف حساب 📄</button>
+          <button class="btn-sm" style="margin-right:6px; background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name.replace(/'/g, "\\'")}')">كشف حساب 📄</button>
         </div>
       </li>
     `;
@@ -1220,11 +1225,17 @@ window.openClientLedger = (clientName) => {
     `;
   });
 
-  stats.payments.forEach(p => {
+  stats.payments.forEach((p, pIndex) => {
     historyHtml += `
-      <li style="border-right: 4px solid var(--success)">
-        <div>دفعة سداد 💵 (${p.date})</div>
-        <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
+      <li style="border-right: 4px solid var(--success); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div>دفعة سداد 💵 (${p.date})</div>
+          <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editClientPayment('${clientName.replace(/'/g, "\\'")}', ${pIndex})">✏️</button>
+          <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteClientPayment('${clientName.replace(/'/g, "\\'")}', ${pIndex})">🗑️</button>
+        </div>
       </li>
     `;
   });
@@ -1232,6 +1243,34 @@ window.openClientLedger = (clientName) => {
   historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
   const ledgerModal = document.getElementById('client-ledger-modal');
   if (ledgerModal) ledgerModal.classList.remove('hidden');
+};
+
+window.deleteClientPayment = async (clientName, paymentIndex) => {
+  if (!confirm('هل أنت متأكد من حذف هذه الدفعة؟')) return;
+  const idx = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
+  if (idx !== -1 && clientsDB[idx].payments) {
+    clientsDB[idx].payments.splice(paymentIndex, 1);
+    await syncDocToCloud('clients', { list: clientsDB });
+    window.openClientLedger(clientName);
+    renderAllModules();
+  }
+};
+
+window.editClientPayment = async (clientName, paymentIndex) => {
+  const idx = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
+  if (idx !== -1 && clientsDB[idx].payments && clientsDB[idx].payments[paymentIndex]) {
+    const currentAmount = clientsDB[idx].payments[paymentIndex].amount;
+    const newAmountStr = prompt('تعديل قيمة الدفعة:', currentAmount);
+    if (newAmountStr !== null) {
+      const newAmount = parseFloat(newAmountStr);
+      if (!isNaN(newAmount) && newAmount > 0) {
+        clientsDB[idx].payments[paymentIndex].amount = newAmount;
+        await syncDocToCloud('clients', { list: clientsDB });
+        window.openClientLedger(clientName);
+        renderAllModules();
+      }
+    }
+  }
 };
 
 const closeLedgerBtn = document.getElementById('close-ledger-btn');
@@ -1428,7 +1467,6 @@ if (exportJsonBtn) {
   });
 }
 
-// 📂 معالجة استيراد النسخة الاحتياطية وتحديث السحابة
 const importJsonInput = document.getElementById('import-json-input');
 if (importJsonInput) {
   importJsonInput.addEventListener('change', function(event) {
