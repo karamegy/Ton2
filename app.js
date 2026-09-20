@@ -20,7 +20,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// ⚡ تفعيل كاش Firestore الدائم للمتصفحات والعمل بدون إنترنت
+// ⚡ تفعيل كاش Firestore الدائم والعمل بدون إنترنت باحترافية عالية
 const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
@@ -1177,19 +1177,21 @@ function renderClients() {
   const searchFilter = searchClientsInput ? searchClientsInput.value.toLowerCase() : '';
   const filtered = clientsDB.filter(c => c.name.toLowerCase().includes(searchFilter));
 
-  container.innerHTML = filtered.map(c => {
+  container.innerHTML = filtered.map((c, index) => {
     const stats = getClientCalculatedLedger(c.name);
     return `
       <li>
-        <div>
+        <div style="flex: 1;">
           <strong>👤 ${c.name}</strong> <small style="color:var(--text-muted)">(${c.phone ? c.phone : 'بدون رقم'})</small>
           <br><small style="color:var(--text-muted)">إجمالي التعاملات: ${stats.totalPurchases.toFixed(2)} | المدفوع: ${stats.totalPaid.toFixed(2)}</small>
         </div>
-        <div style="text-align:left;">
+        <div style="text-align:left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
           <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
             ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
           </span>
-          <button class="btn-sm" style="margin-right:6px; background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name.replace(/'/g, "\\'")}')">كشف حساب 📄</button>
+          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name.replace(/'/g, "\\'")}')">كشف 📄</button>
+          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editClient(${index})" title="تعديل العميل">✏️</button>
+          <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteClient(${index})" title="حذف العميل">🗑️</button>
         </div>
       </li>
     `;
@@ -1198,6 +1200,60 @@ function renderClients() {
 
 const searchClientsInput = document.getElementById('search-clients-input');
 if (searchClientsInput) searchClientsInput.addEventListener('input', renderClients);
+
+// 🛠️ دوال تعديل وحذف العملاء الرئيسية
+window.editClient = async (index) => {
+  const client = clientsDB[index];
+  if (!client) return;
+
+  const newName = prompt('تعديل اسم العميل / الشركة:', client.name);
+  if (newName === null) return;
+
+  const newPhone = prompt('تعديل رقم الهاتف:', client.phone || '');
+  if (newPhone === null) return;
+
+  const newBalanceStr = prompt('تعديل الرصيد الافتتاحي (مديونية سابقة):', client.openingBalance || 0);
+  if (newBalanceStr === null) return;
+
+  const newBalance = parseFloat(newBalanceStr);
+  if (isNaN(newBalance)) {
+    alert('يرجى إدخال رقم صحيح للرصيد.');
+    return;
+  }
+
+  const trimmedName = newName.trim();
+  if (!trimmedName) {
+    alert('اسم العميل لا يمكن أن يكون فارغاً.');
+    return;
+  }
+
+  const exists = clientsDB.some((c, i) => i !== index && c.name.toLowerCase() === trimmedName.toLowerCase());
+  if (exists) {
+    alert('يوجد عميل آخر بنفس الاسم بالفعل!');
+    return;
+  }
+
+  clientsDB[index] = Object.assign({}, client, {
+    name: trimmedName,
+    phone: newPhone.trim(),
+    openingBalance: newBalance
+  });
+
+  await syncDocToCloud('clients', { list: clientsDB });
+  renderAllModules();
+  alert('✅ تم تعديل بيانات العميل بنجاح!');
+};
+
+window.deleteClient = async (index) => {
+  const client = clientsDB[index];
+  if (!client) return;
+
+  if (!confirm(`⚠️ هل أنت متأكد من حذف العميل "${client.name}"؟ سيتم إزالته من الدفتر السحابي.`)) return;
+
+  clientsDB.splice(index, 1);
+  await syncDocToCloud('clients', { list: clientsDB });
+  renderAllModules();
+};
 
 window.openClientLedger = (clientName) => {
   activeLedgerClientName = clientName;
