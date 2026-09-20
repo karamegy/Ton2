@@ -282,6 +282,8 @@ onAuthStateChanged(auth, async (user) => {
         if (lockScreen) lockScreen.classList.remove('hidden');
         detachCloudSync();
       }
+    }, (err) => {
+      console.error("License Snapshot Error:", err);
     });
   } else {
     currentUser = null;
@@ -305,27 +307,27 @@ function attachCloudRealtimeSync(uid) {
       storeProfile = Object.assign({}, storeProfile, snap.data());
       updateHeaderUI();
     }
-  });
+  }, (err) => console.error("Profile Sync Error:", err));
 
   const unsubInvoices = onSnapshot(doc(db, "users", uid, "data", "invoices"), (snap) => {
     invoicesDB = snap.exists() && snap.data().list ? snap.data().list : [];
     renderAllModules();
-  });
+  }, (err) => console.error("Invoices Sync Error:", err));
 
   const unsubClients = onSnapshot(doc(db, "users", uid, "data", "clients"), (snap) => {
     clientsDB = snap.exists() && snap.data().list ? snap.data().list : [];
     renderAllModules();
-  });
+  }, (err) => console.error("Clients Sync Error:", err));
 
   const unsubProducts = onSnapshot(doc(db, "users", uid, "data", "products"), (snap) => {
     productsDB = snap.exists() && snap.data().list ? snap.data().list : [];
     renderAllModules();
-  });
+  }, (err) => console.error("Products Sync Error:", err));
 
   const unsubExpenses = onSnapshot(doc(db, "users", uid, "data", "expenses"), (snap) => {
     expensesDB = snap.exists() && snap.data().list ? snap.data().list : [];
     renderAllModules();
-  });
+  }, (err) => console.error("Expenses Sync Error:", err));
 
   activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubProducts, unsubExpenses];
 }
@@ -1426,6 +1428,55 @@ if (exportJsonBtn) {
   });
 }
 
+// 📂 معالجة استيراد النسخة الاحتياطية وتحديث السحابة
+const importJsonInput = document.getElementById('import-json-input');
+if (importJsonInput) {
+  importJsonInput.addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        
+        if (!importedData || typeof importedData !== 'object') {
+          throw new Error('ملف التنسيق غير صالح');
+        }
+
+        if (confirm('⚠️ هل أنت متأكد من استيراد هذه النسخة الاحتياطية؟ سيتم دمج البيانات وتحديثها في سحابة حسابك فوراً.')) {
+          
+          if (Array.isArray(importedData.invoices)) invoicesDB = importedData.invoices;
+          if (Array.isArray(importedData.clients)) clientsDB = importedData.clients;
+          if (Array.isArray(importedData.products)) productsDB = importedData.products;
+          if (Array.isArray(importedData.expenses)) expensesDB = importedData.expenses;
+          if (importedData.storeProfile) {
+            storeProfile = Object.assign({}, storeProfile, importedData.storeProfile);
+          }
+
+          await Promise.all([
+            syncDocToCloud('invoices', { list: invoicesDB }),
+            syncDocToCloud('clients', { list: clientsDB }),
+            syncDocToCloud('products', { list: productsDB }),
+            syncDocToCloud('expenses', { list: expensesDB }),
+            syncDocToCloud('profile', storeProfile)
+          ]);
+
+          alert('✅ تم استيراد وحفظ النسخة الاحتياطية وتزامنها سحابياً بنجاح!');
+          renderAllModules();
+          updateHeaderUI();
+        }
+      } catch (error) {
+        alert('❌ حدث خطأ أثناء قراءة الملف. تأكد من اختيار ملف JSON صحيح ومطابق للنظام.');
+        console.error("Import JSON Error:", error);
+      } finally {
+        event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
 const exportCsvBtn = document.getElementById('export-csv-btn');
 if (exportCsvBtn) {
   exportCsvBtn.addEventListener('click', () => {
@@ -1526,56 +1577,3 @@ if ('serviceWorker' in navigator) {
 
 updateHeaderUI();
 if (addItemBtn) addItemBtn.click();
-
-// دالة استيراد النسخة الاحتياطية وتحديث السحابة
-const importJsonInput = document.getElementById('import-json-input');
-if (importJsonInput) {
-  importJsonInput.addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-      try {
-        const importedData = JSON.parse(e.target.result);
-        
-        // التحقق من صحة الملف الهيكلي
-        if (!importedData || typeof importedData !== 'object') {
-          throw new Error('ملف التنسيق غير صالح');
-        }
-
-        if (confirm('⚠️ هل أنت متأكد من استيراد هذه النسخة الاحتياطية؟ سيتم دمج البيانات وتحديثها في سحابة حسابك فوراً.')) {
-          
-          // تحديث الذاكرة المحلية (State)
-          if (Array.isArray(importedData.invoices)) invoicesDB = importedData.invoices;
-          if (Array.isArray(importedData.clients)) clientsDB = importedData.clients;
-          if (Array.isArray(importedData.products)) productsDB = importedData.products;
-          if (Array.isArray(importedData.expenses)) expensesDB = importedData.expenses;
-          if (importedData.storeProfile) {
-            storeProfile = Object.assign({}, storeProfile, importedData.storeProfile);
-          }
-
-          // رفع البيانات المستوردة إلى سحابة Firebase مباشرة
-          await Promise.all([
-            syncDocToCloud('invoices', { list: invoicesDB }),
-            syncDocToCloud('clients', { list: clientsDB }),
-            syncDocToCloud('products', { list: productsDB }),
-            syncDocToCloud('expenses', { list: expensesDB }),
-            syncDocToCloud('profile', storeProfile)
-          ]);
-
-          alert('✅ تم استيراد وحفظ النسخة الاحتياطية وتزامنها سحابياً بنجاح!');
-          renderAllModules();
-          updateHeaderUI();
-        }
-      } catch (error) {
-        alert('❌ حدث خطأ أثناء قراءة الملف. تأكد من اختيار ملف JSON صحيح ومطابق للنظام.');
-        console.error(error);
-      } finally {
-        // إعادة تعيين حقل الإدخال ليسمح باختيار نفس الملف مجدداً إن لزم
-        event.target.value = '';
-      }
-    };
-    reader.readAsText(file);
-  });
-}
