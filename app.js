@@ -1526,10 +1526,16 @@ if (submitPaymentBtn) {
     if (idx !== -1) {
       if (!clientsDB[idx].payments) clientsDB[idx].payments = [];
       clientsDB[idx].payments.push({ amount, date: new Date().toLocaleDateString('ar-EG') });
-      await syncDocToCloud('clients', { list: clientsDB });
+      
+      // 1. تفريغ خانة الإدخال وتحديث الواجهة والجدول فوراً بدون تأخير
       if (payAmountInput) payAmountInput.value = '';
       window.openClientLedger(activeLedgerClientName);
       renderAllModules();
+
+      // 2. مزامنة البيانات مع السحابة في الخلفية بهدوء
+      syncDocToCloud('clients', { list: clientsDB }).catch(err => {
+        console.error("Cloud Sync Error:", err);
+      });
     }
   });
 }
