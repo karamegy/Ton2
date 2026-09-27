@@ -347,7 +347,7 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
-// ⚡ دالة جلب البيانات يدوياً من السحابة مع دعم التشخيص الكامل للـ UID الحالي
+// ⚡ دالة جلب البيانات يدوياً من السحابة مباشرة وتجاوز الكاش المحلي
 async function fetchAllDataFromCloud() {
   if (!currentUser) {
     alert('يرجى تسجيل الدخول أولاً لجلب البيانات.');
@@ -356,26 +356,27 @@ async function fetchAllDataFromCloud() {
 
   try {
     const uid = currentUser.uid;
-    console.log("🔄 جاري جلب البيانات من السحابة للـ UID الحالي:", uid);
+    console.log("🔄 جاري جلب البيانات مباشرة من السحابة للـ UID الحالي:", uid);
     
-    const invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"));
+    const invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"), { source: 'server' });
     if (invSnap.exists()) {
       invoicesDB = invSnap.data().list || [];
       console.log("✅ تم العثور على الفواتير:", invoicesDB.length);
     } else {
       console.log("⚠️ لا توجد وثيقة فواتير مسجلة لهذا الـ UID في السحابة.");
+      invoicesDB = [];
     }
 
-    const clientSnap = await getDoc(doc(db, "users", uid, "data", "clients"));
-    if (clientSnap.exists()) clientsDB = clientSnap.data().list || [];
+    const clientSnap = await getDoc(doc(db, "users", uid, "data", "clients"), { source: 'server' });
+    clientsDB = clientSnap.exists() ? (clientSnap.data().list || []) : [];
 
-    const prodSnap = await getDoc(doc(db, "users", uid, "data", "products"));
-    if (prodSnap.exists()) productsDB = prodSnap.data().list || [];
+    const prodSnap = await getDoc(doc(db, "users", uid, "data", "products"), { source: 'server' });
+    productsDB = prodSnap.exists() ? (prodSnap.data().list || []) : [];
 
-    const expSnap = await getDoc(doc(db, "users", uid, "data", "expenses"));
-    if (expSnap.exists()) expensesDB = expSnap.data().list || [];
+    const expSnap = await getDoc(doc(db, "users", uid, "data", "expenses"), { source: 'server' });
+    expensesDB = expSnap.exists() ? (expSnap.data().list || []) : [];
 
-    const profSnap = await getDoc(doc(db, "users", uid, "data", "profile"));
+    const profSnap = await getDoc(doc(db, "users", uid, "data", "profile"), { source: 'server' });
     if (profSnap.exists()) {
       storeProfile = Object.assign({}, storeProfile, profSnap.data());
       updateHeaderUI();
@@ -1527,12 +1528,10 @@ if (submitPaymentBtn) {
       if (!clientsDB[idx].payments) clientsDB[idx].payments = [];
       clientsDB[idx].payments.push({ amount, date: new Date().toLocaleDateString('ar-EG') });
       
-      // 1. تفريغ خانة الإدخال وتحديث الواجهة والجدول فوراً بدون تأخير
       if (payAmountInput) payAmountInput.value = '';
       window.openClientLedger(activeLedgerClientName);
       renderAllModules();
 
-      // 2. مزامنة البيانات مع السحابة في الخلفية بهدوء
       syncDocToCloud('clients', { list: clientsDB }).catch(err => {
         console.error("Cloud Sync Error:", err);
       });
