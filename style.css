@@ -86,22 +86,34 @@ body {
   overflow-x: hidden;
 }
 
-/* خلفية متحركة خفيفة جداً ومحسنة للأداء العالي */
+/* خلفية إضاءة ثلاثية الأبعاد (3D) متحركة في العمق بأداء خارقة وخالية من التهنيج */
 body::before {
   content: '';
   position: fixed;
-  inset: 0;
-  background: linear-gradient(125deg, transparent 0%, rgba(99, 102, 241, 0.04) 50%, transparent 100%);
-  background-size: 200% 200%;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
   z-index: -1;
   pointer-events: none;
-  animation: lightBgMove 15s ease infinite alternate;
-  will-change: background-position;
+  animation: ambientLightMove 20s ease-in-out infinite alternate;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
-@keyframes lightBgMove {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 100% 50%; }
+@keyframes ambientLightMove {
+  0% {
+    transform: translate3d(-5%, -5%, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(5%, 3%, 0) scale(1.04) rotate(2deg);
+  }
+  100% {
+    transform: translate3d(-3%, 5%, 0) scale(1) rotate(-2deg);
+  }
 }
 
 #main-app { max-width: 1200px; margin: 0 auto; }
@@ -109,7 +121,7 @@ body::before {
 html[dir="ltr"] body { text-align: left; }
 html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 
-/* تأثير الوهج المتحرك الخفيف جداً للأزرار (بدون فلتر لضمان السرعة) */
+/* تأثير الوهج المتحرك الخفيف جداً للأزرار */
 @keyframes btnMultiGlow {
   0% {
     box-shadow: 0 0 6px rgba(99, 102, 241, 0.25), inset 0 0 3px rgba(255, 255, 255, 0.15);
@@ -384,7 +396,7 @@ li:hover {
   position: fixed; 
   inset: 0; 
   background: rgba(8, 12, 20, 0.85); 
-  backdrop-filter: blur(3px); /* تقليل البلور قليلاً لمنع ثقل المعالج الرسومي */
+  backdrop-filter: blur(3px); 
   -webkit-backdrop-filter: blur(3px);
   display: flex; 
   justify-content: center; 
@@ -392,7 +404,7 @@ li:hover {
   z-index: 9999; 
   padding: 15px; 
   will-change: opacity;
-  transform: translateZ(0); /* تسريع الهاردوير للنافذة */
+  transform: translateZ(0); 
 }
 
 .modal-content { 
@@ -433,7 +445,7 @@ li:hover {
 
 .ledger-summary-card { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; background: var(--input-bg); padding: 12px; border-radius: 12px; text-align: center; font-size: 0.75rem; margin-bottom: 14px; border: 1px solid var(--border-color); }
 .ledger-summary-card strong { display: block; font-size: 0.95rem; margin-top: 4px; }
-.pay-section { background: rgba(16, 185, 129, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 14px; }
+.pay-section { background: rgba(16, 185, 129,.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 14px; }
 
 .sub-text { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; word-break: break-all; }
 
@@ -496,7 +508,7 @@ li:hover {
 }
 
 .suggestion-item {
-  padding: 10px 14px;
+  `padding`: 10px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
