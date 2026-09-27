@@ -76,14 +76,15 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', system-ui, -apple-system, sans-serif; }
 
-/* نقل لون الخلفية إلى عنصر الـ html لكي تظهر التأثيرات واللوجو خلف الصفحة بوضوح بدون تهنيج */
+/* جعل عنصر الـ html شفافاً لكي لا يحجب الخلفية واللوجو */
 html {
-  background-color: var(--bg-main);
+  background-color: transparent;
   min-height: 100vh;
 }
 
+/* وضع لون الخلفية الأساسي للثيمات مباشرة على الـ body */
 body {
-  background-color: transparent;
+  background-color: var(--bg-main);
   color: var(--text-main);
   line-height: 1.6;
   padding: 12px;
@@ -101,31 +102,31 @@ body::before {
   width: 200%;
   height: 200%;
   background-image: 
-    radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.18) 0%, transparent 45%),
-    radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.15) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.12) 0%, transparent 50%);
-  z-index: -2;
+    radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.20) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.15) 0%, transparent 50%);
+  z-index: 0;
   pointer-events: none;
   animation: ambientLightMove 15s ease-in-out infinite alternate;
   will-change: transform;
   transform: translateZ(0);
 }
 
-/* اللوجو في الخلفية بحجم ظاهر ومرن وبدون أي تأثيرات تهنيج */
+/* اللوجو في الخلفية مع ضبط الوضوح وطبقة العرض لكي يظهر تماماً */
 body::after {
   content: '';
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) translateZ(0);
-  width: 320px;
-  height: 320px;
+  width: 300px;
+  height: 300px;
   background-image: url('1000318385.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  opacity: 0.07;
-  z-index: -1;
+  opacity: 0.12;
+  z-index: 1;
   pointer-events: none;
   will-change: opacity;
 }
@@ -135,7 +136,12 @@ body::after {
   100% { transform: translate3d(4%, 4%, 0) scale(1.03); }
 }
 
-#main-app { max-width: 1200px; margin: 0 auto; }
+#main-app { 
+  max-width: 1200px; 
+  margin: 0 auto; 
+  position: relative;
+  z-index: 2;
+}
 
 html[dir="ltr"] body { text-align: left; }
 html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
@@ -151,6 +157,14 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 }
 .app-header:hover {
   box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
+}
+
+/* تأثير الزجاج العصري (Glassmorphism) للشريط العلوي اختياري */
+.app-header.glass-nav {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background-opacity: 0.85;
 }
 
 .brand-container { display: flex; align-items: center; gap: 12px; }
@@ -521,3 +535,43 @@ li:hover {
 
 .suggestion-item:last-child { border-bottom: none; }
 .suggestion-item:hover { background: rgba(99, 102, 241, 0.2); }
+
+/* ==========================================================
+   إضافات التحسينات الجديدة (أشرطة تمرير، توست، وتحميل وهمي)
+   ========================================================== */
+
+/* 1. تخصيص أشرطة التمرير (Custom Scrollbars) */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--input-bg); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* 2. تصميم إشعارات التنبيه السريعة (Toast Notifications) */
+.toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 10000;
+  display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+}
+.toast {
+  background: var(--card-bg); color: var(--text-main);
+  border: 1px solid var(--card-border); padding: 12px 18px;
+  border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 10px;
+  pointer-events: auto;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* 3. عناصر التحميل الوهمية (Skeleton Loaders) */
+@keyframes skeletonPulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+.skeleton-loader {
+  background: var(--border-color);
+  border-radius: 8px;
+  animation: skeletonPulse 1.5s infinite ease-in-out;
+}
