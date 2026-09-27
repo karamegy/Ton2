@@ -42,7 +42,7 @@
   </div>
 
   <!-- لوحة التحكم الرئيسية للإدارة -->
-  <div id="admin-main-app" class="hidden" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
+  <div id="admin-main-app" class="hidden" style="padding: 20px; max-width: 1300px; margin: 0 auto;">
     
     <header class="app-header" style="border-radius: 12px; margin-bottom: 20px; padding: 15px 20px;">
       <div class="brand-container">
@@ -52,14 +52,15 @@
           <p class="subtitle">إدارة الرخص، التراخيص، وحسابات المنشآت</p>
         </div>
       </div>
-      <div class="header-actions">
+      <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
+        <button id="admin-export-json-btn" class="btn-sm" style="background: var(--accent); color: #fff; padding: 8px 14px;" title="تصدير نسخة احتياطية لجميع الرخص بصيغة JSON">📥 تصدير رخص JSON</button>
         <a href="index.html" class="btn-icon" title="الذهاب للتطبيق الرئيسي">🏠</a>
         <button id="admin-logout-btn" class="btn-icon btn-logout" title="تسجيل الخروج">🚪</button>
       </div>
     </header>
 
     <!-- إحصائيات عامة للنظام -->
-    <section class="stats-grid" style="margin-bottom: 20px;">
+    <section class="stats-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
       <div class="stat-card">
         <span class="stat-title">إجمالي المتاجر / الحسابات</span>
         <strong id="stat-total-users" class="stat-value">0</strong>
@@ -69,8 +70,27 @@
         <strong id="stat-active-users" class="stat-value text-success">0</strong>
       </div>
       <div class="stat-card">
-        <span class="stat-title">الحسابات بانتظار التفعيل</span>
-        <strong id="stat-pending-users" class="stat-value text-danger">0</strong>
+        <span class="stat-title">الحسابات المعطلة</span>
+        <strong id="stat-disabled-users" class="stat-value text-danger">0</strong>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">تحتاج لمتابعة / بانتظار التفعيل</span>
+        <strong id="stat-pending-users" class="stat-value" style="color: var(--warning);">0</strong>
+      </div>
+    </section>
+
+    <!-- أدوات البحث والتصفية الذكية -->
+    <section class="card" style="margin-bottom: 20px; padding: 15px 20px;">
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+        <div style="flex: 1; min-width: 250px;">
+          <input type="text" id="search-admin-users" placeholder="🔍 بحث سريع بالاسم أو البريد الإلكتروني..." style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);">
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button class="filter-chip active" data-filter="all" onclick="window.setAdminFilter('all')">الكل</button>
+          <button class="filter-chip" data-filter="active" onclick="window.setAdminFilter('active')">🟢 مفعلة</button>
+          <button class="filter-chip" data-filter="disabled" onclick="window.setAdminFilter('disabled')">🔴 معطلة</button>
+          <button class="filter-chip" data-filter="pending" onclick="window.setAdminFilter('pending')">🟡 للمتابعة</button>
+        </div>
       </div>
     </section>
 
@@ -78,16 +98,17 @@
     <section class="card" style="margin-bottom: 20px;">
       <div class="card-header">
         <h3>👥 إدارة حسابات المنشآت والنشاطات التجارية</h3>
-        <input type="text" id="search-admin-users" placeholder="بحث بالبريد أو اسم النشاط..." style="max-width: 250px; padding: 6px 10px;">
+        <span id="admin-count-display" style="color: var(--text-muted); font-size: 0.9rem;">عرض 0 حساب</span>
       </div>
-      <div class="list-container" style="max-height: 400px; overflow-y: auto;">
+      <div class="list-container" style="max-height: 480px; overflow-y: auto;">
         <table class="modern-items-table" style="width: 100%; text-align: right;">
           <thead>
             <tr>
               <th>اسم النشاط / المستخدم</th>
               <th>البريد الإلكتروني</th>
+              <th>انتهاء الاشتراك والملاحظات</th>
               <th>حالة الحساب</th>
-              <th>الإجراء (تفعيل / تعطيل)</th>
+              <th>الإجراءات المتقدمة</th>
             </tr>
           </thead>
           <tbody id="admin-users-tbody">
@@ -99,13 +120,38 @@
 
   </div>
 
+  <!-- نافذة تعديل بيانات الرخصة والملاحظات -->
+  <div id="edit-license-modal" class="login-overlay hidden">
+    <div class="login-card" style="max-width: 450px; text-align: right;">
+      <h3 style="margin-bottom: 15px;">✏️ تعديل بيانات الرخصة والاشتراك</h3>
+      <form id="edit-license-form">
+        <input type="hidden" id="edit-license-id">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>اسم النشاط التجاري</label>
+          <input type="text" id="edit-store-name" required style="width: 100%; padding: 8px 12px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>تاريخ انتهاء الاشتراك</label>
+          <input type="date" id="edit-expiry-date" style="width: 100%; padding: 8px 12px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label>ملاحظات إدارية خاصة بالعميل</label>
+          <textarea id="edit-admin-notes" rows="3" placeholder="ملاحظات الدعم أو الترتيبات المالية..." style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);"></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn-sm" style="background: var(--bg-secondary); color: var(--text-main);" onclick="window.closeEditModal()">إلغاء</button>
+          <button type="submit" class="btn-sm" style="background: var(--accent); color: #fff;">حفظ التغييرات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- سكربت الربط مع فايربيس وإدارة لوحة التحكم -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // إعدادات فايربيس الصحيحة والمتطابقة مع ملف app.js الخاص بك
     const firebaseConfig = {
       apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
       authDomain: "giti-68750.firebaseapp.com",
@@ -125,7 +171,10 @@
     const logoutBtn = document.getElementById('admin-logout-btn');
     const errorDiv = document.getElementById('admin-auth-error');
 
-    // مراقبة حالة تسجيل الدخول والتحقق من صلاحيات المشرف
+    let allLicensesData = [];
+    let currentFilter = 'all';
+    let searchQuery = '';
+
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         if (user.email === 'haretg@gmail.com') {
@@ -142,7 +191,6 @@
       }
     });
 
-    // تسجيل الدخول
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('admin-email').value.trim();
@@ -156,66 +204,192 @@
       }
     });
 
-    // تسجيل الخروج
     logoutBtn.addEventListener('click', () => {
       signOut(auth);
     });
 
-    // جلب وعرض المستخدمين والتحكم بحالتهم من مجموعة licenses
     async function loadSystemUsers() {
       const tbody = document.getElementById('admin-users-tbody');
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل البيانات...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل البيانات وسحب التراخيص من السحابة...</td></tr>';
       
       try {
         const querySnapshot = await getDocs(collection(db, "licenses"));
-        tbody.innerHTML = '';
+        allLicensesData = [];
         
-        let total = 0;
-        let active = 0;
-        let pending = 0;
-
         querySnapshot.forEach((documentSnap) => {
-          const data = documentSnap.data();
-          total++;
-          const isActive = data.isActive === true;
-          if (isActive) active++; else pending++;
-
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${data.storeName || 'غير محدد'}</td>
-            <td>${data.email || 'غير متوفر'}</td>
-            <td><span class="${isActive ? 'text-success' : 'text-danger'}">${isActive ? '🟢 مفعل' : '🔴 معطل'}</span></td>
-            <td>
-              <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" onclick="window.toggleUserStatus('${documentSnap.id}', ${!isActive})">
-                ${isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
-              </button>
-            </td>
-          `;
-          tbody.appendChild(tr);
+          allLicensesData.push(Object.assign({ id: documentSnap.id }, documentSnap.data()));
         });
 
-        document.getElementById('stat-total-users').textContent = total;
-        document.getElementById('stat-active-users').textContent = active;
-        document.getElementById('stat-pending-users').textContent = pending;
+        renderFilteredUsers();
 
       } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-danger);">فشل جلب الحسابات: تأكد من صلاحيات قاعدة البيانات (Firestore Rules).</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-danger);">فشل جلب الحسابات: تأكد من صلاحيات قاعدة البيانات (Firestore Rules). (${error.message})</td></tr>`;
       }
     }
 
-    // دالة لتغيير حالة المستخدم (تفعيل / تعطيل) وتحديث حقل isActive
+    window.setAdminFilter = function(filterType) {
+      currentFilter = filterType;
+      document.querySelectorAll('.filter-chip').forEach(btn => {
+        if (btn.dataset.filter === filterType) {
+          btn.classList.add('active');
+          btn.style.background = 'var(--accent)';
+          btn.style.color = '#fff';
+        } else {
+          btn.classList.remove('active');
+          btn.style.background = 'var(--bg-secondary)';
+          btn.style.color = 'var(--text-main)';
+        }
+      });
+      renderFilteredUsers();
+    };
+
+    const searchInputEl = document.getElementById('search-admin-users');
+    if (searchInputEl) {
+      searchInputEl.addEventListener('input', (e) => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        renderFilteredUsers();
+      });
+    }
+
+    function renderFilteredUsers() {
+      const tbody = document.getElementById('admin-users-tbody');
+      
+      let total = allLicensesData.length;
+      let active = 0;
+      let disabled = 0;
+      let pending = 0;
+
+      const filtered = allLicensesData.filter(data => {
+        const isActive = data.isActive === true;
+        const isPending = data.isActive === undefined || data.isActive === null;
+        
+        if (isActive) active++; 
+        else if (data.isActive === false) disabled++; 
+        else pending++;
+
+        if (currentFilter === 'active' && !isActive) return false;
+        if (currentFilter === 'disabled' && data.isActive !== false) return false;
+        if (currentFilter === 'pending' && !isPending && isActive) return false;
+
+        if (searchQuery) {
+          const store = (data.storeName || '').toLowerCase();
+          const email = (data.email || '').toLowerCase();
+          if (!store.includes(searchQuery) && !email.includes(searchQuery)) return false;
+        }
+
+        return true;
+      });
+
+      document.getElementById('stat-total-users').textContent = total;
+      document.getElementById('stat-active-users').textContent = active;
+      document.getElementById('stat-disabled-users').textContent = disabled;
+      document.getElementById('stat-pending-users').textContent = pending;
+      
+      const countDisplay = document.getElementById('admin-count-display');
+      if (countDisplay) countDisplay.textContent = `عرض ${filtered.length} من أصل ${total} حساب`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد نتائج مطابقة للبحث أو التصفية</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(data => {
+        const isActive = data.isActive === true;
+        const expiryText = data.expiryDate ? `انتهاء: ${data.expiryDate}` : 'غير محدد';
+        const notesText = data.adminNotes ? `<br><small style="color:var(--warning);">ملاحظة: ${data.adminNotes}</small>` : '';
+
+        return `
+          <tr>
+            <td><strong>${data.storeName || 'غير محدد'}</strong></td>
+            <td>${data.email || 'غير متوفر'}</td>
+            <td>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">${expiryText}</span>
+              ${notesText}
+            </td>
+            <td><span class="${isActive ? 'text-success' : 'text-danger'}">${isActive ? '🟢 مفعل' : '🔴 معطل'}</span></td>
+            <td>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" onclick="window.toggleUserStatus('${data.id}', ${!isActive})">
+                  ${isActive ? 'تعطيل' : 'تفعيل'}
+                </button>
+                <button class="btn-sm" style="background: var(--warning); color: #fff;" onclick="window.openEditModal('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}', '${data.expiryDate || ''}', '${(data.adminNotes || '').replace(/'/g, "\\'")}')">✏️ تعديل</button>
+                <button class="btn-sm" style="background: var(--danger); color: #fff;" onclick="window.deleteUserLicense('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}')">🗑️ حذف</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
     window.toggleUserStatus = async function(userId, newStatus) {
       try {
         const userRef = doc(db, "licenses", userId);
-        await updateDoc(userRef, {
-          isActive: newStatus
-        });
-        alert("تم تحديث حالة الحساب بنجاح!");
+        await updateDoc(userRef, { isActive: newStatus });
+        alert("✅ تم تحديث حالة الحساب بنجاح سحابياً!");
         loadSystemUsers();
       } catch (err) {
-        alert("حدث خطأ أثناء التحديث: " + err.message);
+        alert("❌ حدث خطأ أثناء التحديث: " + err.message);
       }
     };
+
+    window.openEditModal = function(id, storeName, expiryDate, adminNotes) {
+      document.getElementById('edit-license-id').value = id;
+      document.getElementById('edit-store-name').value = storeName;
+      document.getElementById('edit-expiry-date').value = expiryDate;
+      document.getElementById('edit-admin-notes').value = adminNotes;
+      document.getElementById('edit-license-modal').classList.remove('hidden');
+    };
+
+    window.closeEditModal = function() {
+      document.getElementById('edit-license-modal').classList.add('hidden');
+    };
+
+    const editForm = document.getElementById('edit-license-form');
+    if (editForm) {
+      editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-license-id').value;
+        const storeName = document.getElementById('edit-store-name').value.trim();
+        const expiryDate = document.getElementById('edit-expiry-date').value;
+        const adminNotes = document.getElementById('edit-admin-notes').value.trim();
+
+        try {
+          const userRef = doc(db, "licenses", id);
+          await updateDoc(userRef, {
+            storeName,
+            expiryDate,
+            adminNotes
+          });
+          window.closeEditModal();
+          alert('✅ تم تعديل بيانات الرخصة والملاحظات بنجاح!');
+          loadSystemUsers();
+        } catch (err) {
+          alert('❌ فشل حفظ التعديلات: ' + err.message);
+        }
+      });
+    }
+
+    window.deleteUserLicense = async function(userId, storeName) {
+      if (!confirm(`⚠️ تحذير نهائي: هل أنت متأكد من حذف رخصة الحساب "${storeName}" نهائياً من قاعدة البيانات؟`)) return;
+      try {
+        await deleteDoc(doc(db, "licenses", userId));
+        alert('🗑️ تم حذف الحساب والرخصة بنجاح.');
+        loadSystemUsers();
+      } catch (err) {
+        alert('❌ فشل حذف الحساب: ' + err.message);
+      }
+    };
+
+    const exportJsonBtn = document.getElementById('admin-export-json-btn');
+    if (exportJsonBtn) {
+      exportJsonBtn.addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify(allLicensesData, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `giti_licenses_backup_${Date.now()}.json`;
+        a.click();
+      });
+    }
   </script>
 </body>
 </html>
