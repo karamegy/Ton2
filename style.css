@@ -86,7 +86,7 @@ body {
   overflow-x: hidden;
 }
 
-/* خلفية إضاءة ثلاثية الأبعاد متحركة، زاهية، واضحة تماماً وبدون أي تعتيم لضمان أداء خارق وسريع */
+/* خلفية إضاءة ثلاثية الأبعاد متحركة وخفيفة للأداء السريع */
 body::before {
   content: '';
   position: fixed;
@@ -94,49 +94,44 @@ body::before {
   width: 200%;
   height: 200%;
   background-image: 
-    radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.22) 0%, transparent 45%),
-    radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.20) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.18) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.18) 0%, transparent 40%);
-  z-index: -1;
+    radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.10) 0%, transparent 50%);
+  z-index: -2;
   pointer-events: none;
-  animation: ambientLightMove 10s ease-in-out infinite alternate;
+  animation: ambientLightMove 15s ease-in-out infinite alternate;
   will-change: transform;
   transform: translateZ(0);
 }
 
+/* إضافة اللوجو في الخلفية بحجم ظاهر ومرن بدون تهنيج[span_2](start_span)[span_2](end_span) */
+body::after {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateZ(0);
+  width: 320px;
+  height: 320px;
+  background-image: url('1000318385.png'); /*[span_3](start_span)[span_3](end_span) */
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.07;
+  z-index: -1;
+  pointer-events: none;
+  will-change: opacity;
+}
+
 @keyframes ambientLightMove {
-  0% {
-    transform: translate3d(-6%, -6%, 0) scale(1) rotate(0deg);
-  }
-  50% {
-    transform: translate3d(6%, 4%, 0) scale(1.06) rotate(3deg);
-  }
-  100% {
-    transform: translate3d(-4%, 6%, 0) scale(1.02) rotate(-3deg);
-  }
+  0% { transform: translate3d(-4%, -4%, 0) scale(1); }
+  100% { transform: translate3d(4%, 4%, 0) scale(1.03); }
 }
 
 #main-app { max-width: 1200px; margin: 0 auto; }
 
 html[dir="ltr"] body { text-align: left; }
 html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
-
-/* تأثير الوهج المتحرك الخفيف جداً للأزرار */
-@keyframes btnMultiGlow {
-  0% {
-    box-shadow: 0 0 6px rgba(99, 102, 241, 0.25), inset 0 0 3px rgba(255, 255, 255, 0.15);
-  }
-  33% {
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3), inset 0 0 4px rgba(255, 255, 255, 0.2);
-  }
-  66% {
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.3), inset 0 0 4px rgba(255, 255, 255, 0.2);
-  }
-  100% {
-    box-shadow: 0 0 6px rgba(99, 102, 241, 0.25), inset 0 0 3px rgba(255, 255, 255, 0.15);
-  }
-}
 
 /* Header & Nav Styling */
 .app-header {
@@ -187,9 +182,7 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
   border: 1px solid var(--card-border);
   transition: border-color 0.2s ease;
 }
-.stat-card:hover {
-  border-color: var(--accent);
-}
+.stat-card:hover { border-color: var(--accent); }
 .stat-title { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 .stat-value { font-size: 1.2rem; color: var(--accent); margin-top: 4px; display: block; font-weight: 800; }
 .text-success { color: var(--success) !important; }
@@ -339,14 +332,12 @@ input:focus, select:focus {
 .grand-total-banner h3 { font-size: 1.4rem; font-weight: 900; color: var(--accent); line-height: 1.2; }
 .currency-tag { font-size: 0.85rem; font-weight: 800; background: var(--accent); color: #fff; padding: 4px 10px; border-radius: 8px; }
 
-/* Buttons with optimized glowing animation */
+/* Buttons optimized and lag-free */
 button {
   padding: 10px 16px; border-radius: 10px; border: none; font-weight: 700;
-  cursor: pointer; font-size: 0.85rem; transition: transform 0.1s ease;
+  cursor: pointer; font-size: 0.85rem; transition: transform 0.1s ease, background-color 0.2s ease;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 40px;
-  animation: btnMultiGlow 5s infinite ease-in-out;
-  will-change: box-shadow;
 }
 .btn-primary { background: var(--accent); color: #ffffff; }
 .btn-primary:hover { background: var(--accent-hover); }
@@ -511,7 +502,7 @@ li:hover {
 .suggestion-item {
   padding: 10px 14px;
   display: flex;
-  justify-content: space-between;
+  justify-content: space-header;
   align-items: center;
   cursor: pointer;
   border-bottom: 1px solid var(--border-color);
