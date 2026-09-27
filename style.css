@@ -91,7 +91,7 @@ body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: linear-gradient(125deg, transparent 0%, rgba(99, 102, 241, 0.03) 50%, transparent 100%);
+  background: linear-gradient(125deg, transparent 0%, rgba(99, 102, 241, 0.04) 50%, transparent 100%);
   background-size: 200% 200%;
   z-index: -1;
   pointer-events: none;
@@ -109,6 +109,22 @@ body::before {
 html[dir="ltr"] body { text-align: left; }
 html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 
+/* تأثير الوهج المتحرك الخفيف جداً للأزرار (بدون فلتر لضمان السرعة) */
+@keyframes btnMultiGlow {
+  0% {
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.25), inset 0 0 3px rgba(255, 255, 255, 0.15);
+  }
+  33% {
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3), inset 0 0 4px rgba(255, 255, 255, 0.2);
+  }
+  66% {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.3), inset 0 0 4px rgba(255, 255, 255, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.25), inset 0 0 3px rgba(255, 255, 255, 0.15);
+  }
+}
+
 /* Header & Nav Styling */
 .app-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -116,6 +132,10 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
   border: 1px solid var(--card-border); border-radius: var(--radius);
   margin-bottom: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
   flex-wrap: wrap; gap: 10px;
+  transition: box-shadow 0.2s ease;
+}
+.app-header:hover {
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
 }
 
 .brand-container { display: flex; align-items: center; gap: 12px; }
@@ -152,6 +172,10 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 .stat-card {
   background: var(--card-bg); padding: 14px 16px; border-radius: var(--radius);
   border: 1px solid var(--card-border);
+  transition: border-color 0.2s ease;
+}
+.stat-card:hover {
+  border-color: var(--accent);
 }
 .stat-title { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 .stat-value { font-size: 1.2rem; color: var(--accent); margin-top: 4px; display: block; font-weight: 800; }
@@ -302,31 +326,27 @@ input:focus, select:focus {
 .grand-total-banner h3 { font-size: 1.4rem; font-weight: 900; color: var(--accent); line-height: 1.2; }
 .currency-tag { font-size: 0.85rem; font-weight: 800; background: var(--accent); color: #fff; padding: 4px 10px; border-radius: 8px; }
 
-/* الأزرار بدون تهنيج: وهج مضيء ناعم يظهر فقط عند التفاعل أو المرور عليها */
+/* Buttons with optimized glowing animation */
 button {
   padding: 10px 16px; border-radius: 10px; border: none; font-weight: 700;
-  cursor: pointer; font-size: 0.85rem; transition: all 0.2s ease;
+  cursor: pointer; font-size: 0.85rem; transition: transform 0.1s ease;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 40px;
-}
-button:hover {
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
-  transform: translateY(-1px);
+  animation: btnMultiGlow 5s infinite ease-in-out;
+  will-change: box-shadow;
 }
 .btn-primary { background: var(--accent); color: #ffffff; }
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-secondary { background: rgba(255,255,255,0.05); color: var(--text-main); width: 100%; border: 1px dashed var(--border-color); margin-top: 8px; }
 .btn-secondary:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
 .btn-success { background: var(--success); color: #ffffff; }
-.btn-success:hover { box-shadow: 0 0 12px rgba(16, 185, 129, 0.4); }
 .btn-whatsapp { background: var(--whatsapp); color: #ffffff; }
-.btn-whatsapp:hover { box-shadow: 0 0 12px rgba(34, 197, 94, 0.4); }
 .btn-sm { padding: 5px 10px; font-size: 0.75rem; border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--text-main); min-height: auto; }
 .btn-icon { background: rgba(255,255,255,0.08); color: var(--text-main); padding: 6px 10px; min-height: auto; }
 .btn-ghost { background: transparent; color: var(--text-muted); }
 .btn-ghost:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
 .btn-remove { background: rgba(244, 63, 94, 0.15); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.3); padding: 4px 8px; border-radius: 8px; transition: background 0.2s ease; }
-.btn-remove:hover { background: rgba(244, 63, 94, 0.25); box-shadow: 0 0 10px rgba(244, 63, 94, 0.4); }
+.btn-remove:hover { background: rgba(244, 63, 94, 0.25); }
 
 .btn-google {
   width: 100%; background: #ffffff; color: #3c4043;
@@ -359,16 +379,20 @@ li:hover {
 .badge-unpaid { background: rgba(244, 63, 94, 0.15); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.3); }
 .badge-partial { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-/* مودال سريع وخفيف كالبرق (بدون تهنيج نهائياً) */
+/* تحسين خرافى لأداء المودال وفتح معاينة الفاتورة بدون تهنيج */
 .modal { 
   position: fixed; 
   inset: 0; 
-  background: rgba(8, 12, 20, 0.8); 
+  background: rgba(8, 12, 20, 0.85); 
+  backdrop-filter: blur(3px); /* تقليل البلور قليلاً لمنع ثقل المعالج الرسومي */
+  -webkit-backdrop-filter: blur(3px);
   display: flex; 
   justify-content: center; 
   align-items: center; 
   z-index: 9999; 
   padding: 15px; 
+  will-change: opacity;
+  transform: translateZ(0); /* تسريع الهاردوير للنافذة */
 }
 
 .modal-content { 
@@ -377,23 +401,24 @@ li:hover {
   border-radius: 18px; 
   width: 100%; 
   max-width: 480px; 
-  border: 1px solid var(--accent); 
-  box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 20px rgba(99, 102, 241, 0.2); 
+  border: 1px solid var(--card-border); 
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
   max-height: 90vh; 
   overflow-y: auto; 
-  animation: modalInstantPop 0.15s ease-out forwards;
+  will-change: transform, opacity;
+  animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes modalInstantPop {
-  from { opacity: 0; transform: scale(0.95); }
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
 .preview-modal-content { max-width: 520px; }
 
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.btn-close { background: transparent; color: var(--text-muted); font-size: 1.2rem; min-height: auto; padding: 4px; animation: none !important; }
-.btn-close:hover { color: var(--danger); box-shadow: none !important; }
+.btn-close { background: transparent; color: var(--text-muted); font-size: 1.2rem; min-height: auto; padding: 4px; }
+.btn-close:hover { color: var(--danger); }
 
 .invoice-card-preview { background: var(--preview-bg); color: var(--preview-text); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 15px; }
 .preview-header { text-align: center; margin-bottom: 12px; }
