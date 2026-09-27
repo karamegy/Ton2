@@ -94,14 +94,14 @@
       </div>
     </section>
 
-    <!-- إدارة الحسابات والتراخيص (تصميم بطاقات متجاوبة ومنظمة بدلاً من الجداول المعقدة) -->
+    <!-- إدارة الحسابات والتراخيص (بطاقات بتصميم 3D متطور) -->
     <section class="card" style="background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color); padding: 15px;">
       <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
         <h3 style="font-size: 1.05rem; margin: 0;">👥 إدارة حسابات المنشآت والنشاطات التجارية</h3>
         <span id="admin-count-display" style="color: var(--text-muted); font-size: 0.85rem;">عرض 0 حساب</span>
       </div>
 
-      <!-- حاوية البطاقات المنظمة -->
+      <!-- حاوية البطاقات المنظمة بتصميم 3D -->
       <div id="admin-users-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 520px; overflow-y: auto; padding-left: 4px;">
         <!-- سيتم تعبئة البطاقات برمجياً هنا -->
       </div>
@@ -282,16 +282,18 @@
         return;
       }
 
+      // عرض البطاقات مع ثيمات الثري دي المتقدمة (3D Depth & Glassmorphism)
       container.innerHTML = filtered.map(data => {
         const isActive = data.isActive === true;
         const expiryText = data.expiryDate ? `📅 انتهاء الاشتراك: ${data.expiryDate}` : '📅 تاريخ الانتهاء: غير محدد';
-        const notesText = data.adminNotes ? `<div style="color: var(--warning); font-size: 0.8rem; margin-top: 4px;">📌 ملاحظة: ${data.adminNotes}</div>` : '';
+        const notesText = data.adminNotes ? `<div style="color: var(--warning); font-size: 0.8rem; margin-top: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">📌 ملاحظة: ${data.adminNotes}</div>` : '';
 
         return `
-          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="background: linear-gradient(135deg, rgba(25, 33, 56, 0.85), rgba(12, 18, 32, 0.95)); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-top: 1px solid rgba(255, 255, 255, 0.18); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateZ(0);" onmouseover="this.style.transform='translateY(-3px) scale(1.005)'; this.style.boxShadow='0 18px 40px -10px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.25)';" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 12px 30px -8px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15)';">
+            
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-              <h4 style="margin: 0; font-size: 1rem; color: var(--text-main); font-weight: 700;">🏢 ${data.storeName || 'غير محدد'}</h4>
-              <span style="font-size: 0.8rem; font-weight: 600; padding: 3px 10px; border-radius: 20px; background: rgba(0,0,0,0.25);" class="${isActive ? 'text-success' : 'text-danger'}">
+              <h4 style="margin: 0; font-size: 1.05rem; color: var(--text-main); font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">🏢 ${data.storeName || 'غير محدد'}</h4>
+              <span style="font-size: 0.8rem; font-weight: 600; padding: 4px 12px; border-radius: 20px; background: rgba(0,0,0,0.4); box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);" class="${isActive ? 'text-success' : 'text-danger'}">
                 ${isActive ? '🟢 مفعل' : '🔴 معطل'}
               </span>
             </div>
@@ -300,17 +302,17 @@
               📧 ${data.email || 'غير متوفر'}
             </div>
 
-            <div style="font-size: 0.82rem; background: rgba(0,0,0,0.12); padding: 8px 10px; border-radius: 6px; color: var(--text-muted);">
+            <div style="font-size: 0.82rem; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.04); padding: 10px 12px; border-radius: 8px; color: var(--text-muted); box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);">
               ${expiryText}
               ${notesText}
             </div>
 
-            <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.04);">
-              <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer;" onclick="window.toggleUserStatus('${data.id}', ${!isActive})">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+              <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: filter 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'" onclick="window.toggleUserStatus('${data.id}', ${!isActive})">
                 ${isActive ? '🔴 تعطيل الحساب' : '🟢 تفعيل الحساب'}
               </button>
-              <button class="btn-sm" style="background: var(--warning); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer;" onclick="window.openEditModal('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}', '${data.expiryDate || ''}', '${(data.adminNotes || '').replace(/'/g, "\\'")}')">✏️ تعديل</button>
-              <button class="btn-sm" style="background: var(--danger); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer;" onclick="window.deleteUserLicense('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}')">🗑️ حذف</button>
+              <button class="btn-sm" style="background: var(--warning); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: filter 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'" onclick="window.openEditModal('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}', '${data.expiryDate || ''}', '${(data.adminNotes || '').replace(/'/g, "\\'")}')">✏️ تعديل</button>
+              <button class="btn-sm" style="background: var(--danger); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: filter 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'" onclick="window.deleteUserLicense('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}')">🗑️ حذف</button>
             </div>
           </div>
         `;
