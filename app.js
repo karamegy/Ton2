@@ -243,6 +243,7 @@ getRedirectResult(auth).then(async (result) => {
   }
 });
 
+// ✅ تعديل دالة المراقبة لمنع الشاشة السوداء وضمان استقرار الإقلاع
 onAuthStateChanged(auth, async (user) => {
   const adminBtn = document.getElementById('admin-btn');
 
@@ -264,20 +265,23 @@ onAuthStateChanged(auth, async (user) => {
     if (userUidTag) userUidTag.textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
     
     const userRef = doc(db, "licenses", user.uid);
-    const docSnap = await getDoc(userRef);
-
-    if (!docSnap.exists()) {
-      await setDoc(userRef, {
-        email: user.email,
-        storeName: user.displayName ? user.displayName : "نشاط تجاري جديد",
-        isActive: true,
-        role: isAdmin ? "admin_master" : "user",
-        createdAt: new Date().toISOString()
-      });
+    try {
+      const docSnap = await getDoc(userRef);
+      if (!docSnap.exists()) {
+        await setDoc(userRef, {
+          email: user.email,
+          storeName: user.displayName ? user.displayName : "نشاط تجاري جديد",
+          isActive: true,
+          role: isAdmin ? "admin_master" : "user",
+          createdAt: new Date().toISOString()
+        });
+      }
+    } catch (e) {
+      console.warn("License check warning:", e);
     }
 
     onSnapshot(userRef, (snapshot) => {
-      if (snapshot.exists() && snapshot.data().isActive === true) {
+      if (!snapshot.exists() || snapshot.data().isActive !== false) {
         if (lockScreen) lockScreen.classList.add('hidden');
         if (mainApp) mainApp.classList.remove('hidden');
         attachCloudRealtimeSync(user.uid);
@@ -289,6 +293,9 @@ onAuthStateChanged(auth, async (user) => {
       }
     }, (err) => {
       console.error("License Snapshot Error:", err);
+      if (mainApp) mainApp.classList.remove('hidden');
+      if (lockScreen) lockScreen.classList.add('hidden');
+      attachCloudRealtimeSync(user.uid);
     });
   } else {
     currentUser = null;
