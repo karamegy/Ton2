@@ -1165,14 +1165,21 @@ if (productForm) {
     const costEl = document.getElementById('p-cost');
     const stockEl = document.getElementById('p-stock');
 
-    const name = nameEl ? nameEl.value : '';
+    const name = nameEl ? nameEl.value.trim() : '';
     const price = priceEl ? (parseFloat(priceEl.value) ? parseFloat(priceEl.value) : 0) : 0;
     const cost = costEl ? (parseFloat(costEl.value) ? parseFloat(costEl.value) : 0) : 0;
     const stock = stockEl ? (parseInt(stockEl.value) ? parseInt(stockEl.value) : 0) : 0;
 
+    if (!name) {
+      alert('يرجى إدخال اسم المنتج');
+      return;
+    }
+
     productsDB.push({ id: Date.now(), name, price, cost, stock });
     await syncDocToCloud('products', { list: productsDB });
     e.target.reset();
+    renderAllModules();
+    alert('✅ تم حفظ المنتج في المخزن بنجاح!');
   });
 }
 
@@ -1181,21 +1188,67 @@ function renderProducts() {
   if (!container) return;
   container.innerHTML = productsDB.map((p, idx) => `
     <li>
-      <div>
-        <strong>${p.name}</strong>
+      <div style="flex: 1;">
+        <strong>📦 ${p.name}</strong>
         <br><small style="color:var(--text-muted)">التكلفة: ${p.cost} ${storeProfile.currency} | المخزون: ${p.stock}</small>
       </div>
-      <div>
+      <div style="text-align:left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
         <strong style="color:var(--success)">${p.price} ${storeProfile.currency}</strong>
-        <button class="btn-sm" style="color:var(--danger); margin-right:8px;" onclick="window.deleteProduct(${idx})">🗑️</button>
+        <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 4px 8px;" onclick="window.editProduct(${idx})" title="تعديل المنتج">✏️</button>
+        <button class="btn-sm" style="color:var(--danger); padding: 4px 8px;" onclick="window.deleteProduct(${idx})" title="حذف المنتج">🗑️</button>
       </div>
     </li>
   `).join('');
 }
 
+window.editProduct = async (index) => {
+  const p = productsDB[index];
+  if (!p) return;
+
+  const newName = prompt('تعديل اسم المنتج:', p.name);
+  if (newName === null) return;
+
+  const newPriceStr = prompt('تعديل سعر البيع:', p.price || 0);
+  if (newPriceStr === null) return;
+
+  const newCostStr = prompt('تعديل سعر التكلفة:', p.cost || 0);
+  if (newCostStr === null) return;
+
+  const newStockStr = prompt('تعديل الكمية بالمخزن:', p.stock || 0);
+  if (newStockStr === null) return;
+
+  const price = parseFloat(newPriceStr);
+  const cost = parseFloat(newCostStr);
+  const stock = parseInt(newStockStr);
+
+  if (isNaN(price) || isNaN(cost) || isNaN(stock)) {
+    alert('يرجى إدخال قيم صحيحة للأرقام.');
+    return;
+  }
+
+  const trimmedName = newName.trim();
+  if (!trimmedName) {
+    alert('اسم المنتج لا يمكن أن يكون فارغاً.');
+    return;
+  }
+
+  productsDB[index] = Object.assign({}, p, {
+    name: trimmedName,
+    price: price,
+    cost: cost,
+    stock: stock
+  });
+
+  await syncDocToCloud('products', { list: productsDB });
+  renderAllModules();
+  alert('✅ تم تعديل بيانات المنتج وتحديث المخزن بنجاح!');
+};
+
 window.deleteProduct = async (idx) => {
+  if (!confirm('⚠️ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
   productsDB.splice(idx, 1);
   await syncDocToCloud('products', { list: productsDB });
+  renderAllModules();
 };
 
 const clientForm = document.getElementById('client-form');
