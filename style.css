@@ -76,14 +76,21 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', system-ui, -apple-system, sans-serif; }
 
-body {
+/* نقل لون الخلفية إلى عنصر الـ html لكي تظهر التأثيرات واللوجو خلف الصفحة بوضوح بدون تهنيج */
+html {
   background-color: var(--bg-main);
+  min-height: 100vh;
+}
+
+body {
+  background-color: transparent;
   color: var(--text-main);
   line-height: 1.6;
   padding: 12px;
   -webkit-font-smoothing: antialiased;
   position: relative;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
 /* خلفية إضاءة ثلاثية الأبعاد متحركة وخفيفة للأداء السريع */
@@ -94,9 +101,9 @@ body::before {
   width: 200%;
   height: 200%;
   background-image: 
-    radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 45%),
-    radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.12) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.10) 0%, transparent 50%);
+    radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.15) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.12) 0%, transparent 50%);
   z-index: -2;
   pointer-events: none;
   animation: ambientLightMove 15s ease-in-out infinite alternate;
@@ -104,7 +111,7 @@ body::before {
   transform: translateZ(0);
 }
 
-/* إضافة اللوجو في الخلفية بحجم ظاهر ومرن بدون تهنيج[span_2](start_span)[span_2](end_span) */
+/* اللوجو في الخلفية بحجم ظاهر ومرن وبدون أي تأثيرات تهنيج */
 body::after {
   content: '';
   position: fixed;
@@ -113,7 +120,7 @@ body::after {
   transform: translate(-50%, -50%) translateZ(0);
   width: 320px;
   height: 320px;
-  background-image: url('1000318385.png'); /*[span_3](start_span)[span_3](end_span) */
+  background-image: url('1000318385.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
@@ -182,7 +189,9 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
   border: 1px solid var(--card-border);
   transition: border-color 0.2s ease;
 }
-.stat-card:hover { border-color: var(--accent); }
+.stat-card:hover {
+  border-color: var(--accent);
+}
 .stat-title { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 .stat-value { font-size: 1.2rem; color: var(--accent); margin-top: 4px; display: block; font-weight: 800; }
 .text-success { color: var(--success) !important; }
@@ -332,7 +341,7 @@ input:focus, select:focus {
 .grand-total-banner h3 { font-size: 1.4rem; font-weight: 900; color: var(--accent); line-height: 1.2; }
 .currency-tag { font-size: 0.85rem; font-weight: 800; background: var(--accent); color: #fff; padding: 4px 10px; border-radius: 8px; }
 
-/* Buttons optimized and lag-free */
+/* Buttons optimized for speed and lag-free performance */
 button {
   padding: 10px 16px; border-radius: 10px; border: none; font-weight: 700;
   cursor: pointer; font-size: 0.85rem; transition: transform 0.1s ease, background-color 0.2s ease;
@@ -383,7 +392,7 @@ li:hover {
 .badge-unpaid { background: rgba(244, 63, 94, 0.15); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.3); }
 .badge-partial { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-/* تحسين خرافى لأداء المودال وفتح معاينة الفاتورة بدون تهنيج */
+/* أداء فائق السرعة للمودال */
 .modal { 
   position: fixed; 
   inset: 0; 
@@ -502,7 +511,7 @@ li:hover {
 .suggestion-item {
   padding: 10px 14px;
   display: flex;
-  justify-content: space-header;
+  justify-content: space-between;
   align-items: center;
   cursor: pointer;
   border-bottom: 1px solid var(--border-color);
