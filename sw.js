@@ -1,8 +1,10 @@
-const CACHE_NAME = 'giti-invoices-v32';
+const CACHE_NAME = 'giti-invoices-v33';
 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
+  './admin.html',
+  './privacy.html',
   './style.css',
   './app.js',
   './manifest.json',
