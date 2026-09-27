@@ -426,7 +426,7 @@ button {
 
 .form-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 16px; }
 
-/* Lists & Modals */
+/* Lists & Modals (تم تعديلها لمنع الرعشة والوميض بالكامل) */
 .list-container { max-height: 420px; overflow-y: auto; }
 #invoices-container, #products-list-container, #clients-list-container, #expenses-list-container { list-style: none; }
 li {
@@ -446,26 +446,42 @@ li:hover {
 .badge-unpaid { background: rgba(244, 63, 94, 0.15); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.3); }
 .badge-partial { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
+/* تعديلات المودال لمنع الرعشة نهائياً */
 .modal { 
-  position: fixed; inset: 0; background: rgba(8, 12, 20, 0.75); backdrop-filter: blur(8px); 
-  display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 15px; 
-  animation: fadeInModal 0.3s ease;
+  position: fixed; 
+  inset: 0; 
+  background: rgba(8, 12, 20, 0.75); 
+  backdrop-filter: blur(8px); 
+  -webkit-backdrop-filter: blur(8px);
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  z-index: 9999; 
+  padding: 15px; 
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
-@keyframes fadeInModal {
-  from { opacity: 0; }
-  to { opacity: 1; }
+
+.modal:not(.hidden), .modal.active {
+  opacity: 1;
+  visibility: visible;
 }
 
 .modal-content { 
-  background: var(--card-bg); padding: 22px; border-radius: 18px; width: 100%; max-width: 480px; 
-  border: 1px solid var(--accent); box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 25px rgba(99, 102, 241, 0.2); 
-  max-height: 90vh; overflow-y: auto;
-  animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background: var(--card-bg); 
+  padding: 22px; 
+  border-radius: 18px; 
+  width: 100%; 
+  max-width: 480px; 
+  border: 1px solid var(--accent); 
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 25px rgba(99, 102, 241, 0.2); 
+  max-height: 90vh; 
+  overflow-y: auto;
+  transform: translateY(0);
+  will-change: opacity;
 }
-@keyframes scaleUp {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
+
 .preview-modal-content { max-width: 520px; }
 
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
