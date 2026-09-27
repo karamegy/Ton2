@@ -347,7 +347,7 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
-// ⚡ دالة جلب البيانات يدوياً من السحابة للتعامل مع أي تأخير أو تغيير أجهزة
+// ⚡ دالة جلب البيانات يدوياً من السحابة مع دعم التشخيص الكامل للـ UID الحالي
 async function fetchAllDataFromCloud() {
   if (!currentUser) {
     alert('يرجى تسجيل الدخول أولاً لجلب البيانات.');
@@ -356,9 +356,15 @@ async function fetchAllDataFromCloud() {
 
   try {
     const uid = currentUser.uid;
+    console.log("🔄 جاري جلب البيانات من السحابة للـ UID الحالي:", uid);
     
     const invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"));
-    if (invSnap.exists()) invoicesDB = invSnap.data().list || [];
+    if (invSnap.exists()) {
+      invoicesDB = invSnap.data().list || [];
+      console.log("✅ تم العثور على الفواتير:", invoicesDB.length);
+    } else {
+      console.log("⚠️ لا توجد وثيقة فواتير مسجلة لهذا الـ UID في السحابة.");
+    }
 
     const clientSnap = await getDoc(doc(db, "users", uid, "data", "clients"));
     if (clientSnap.exists()) clientsDB = clientSnap.data().list || [];
@@ -781,7 +787,6 @@ function calculateTotals() {
 if (discountInput) discountInput.addEventListener('input', calculateTotals);
 if (taxInput) taxInput.addEventListener('input', calculateTotals);
 
-// ⚡ دالة حفظ الفاتورة المحدثة مع توليدclientId فريد لكل عميل لمنع التضارب
 async function saveInvoiceData() {
   const clientName = clientInput ? clientInput.value.trim() : '';
   const clientPhone = clientPhoneInput ? clientPhoneInput.value.trim() : '';
@@ -792,7 +797,6 @@ async function saveInvoiceData() {
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
   if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل وتحديد الكمية والسعر'); return null; }
 
-  // البحث عن العميل أو توليد ID فريد للعميل لمنع أي تضارب
   let clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase());
   let assignedClientId = null;
 
@@ -828,7 +832,7 @@ async function saveInvoiceData() {
 
   const invoice = Object.assign({
     id: currentInvId,
-    clientId: assignedClientId, // ربط صريح بمعرف العميل الفريد
+    clientId: assignedClientId,
     client: clientName,
     phone: clientPhone ? clientPhone : '',
     status: status,
@@ -910,7 +914,6 @@ if (whatsappBtn) {
 
 let currentActiveInvoiceForPreview = null;
 
-// ⚡ دالة معاينة الفاتورة المحسّنة (تفتح فوراً)
 function openInvoicePreview(inv) {
   currentActiveInvoiceForPreview = inv;
   
@@ -1204,14 +1207,12 @@ if (clientForm) {
       return;
     }
 
-    // توليد id فريد للحساب الجديد
     clientsDB.push({ id: Date.now(), name, phone, openingBalance, payments: [] });
     await syncDocToCloud('clients', { list: clientsDB });
     e.target.reset();
   });
 }
 
-// ⚡ دالة حساب كشف الحساب المحدثة بالربط بـ clientId والتوافق مع الاسم
 function getClientCalculatedLedger(clientParam) {
   let clientObj = null;
   if (typeof clientParam === 'string') {
@@ -1224,7 +1225,6 @@ function getClientCalculatedLedger(clientParam) {
     clientObj = { name: typeof clientParam === 'string' ? clientParam : '', openingBalance: 0, payments: [] };
   }
 
-  // تصفية الفواتير بالـ clientId أولاً مع التوافق العكسي للاسم
   const clientInvoices = invoicesDB.filter(i => 
     (clientObj.id && i.clientId === clientObj.id) || 
     (i.client && clientObj.name && i.client.toLowerCase() === clientObj.name.toLowerCase())
