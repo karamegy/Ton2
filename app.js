@@ -1757,3 +1757,28 @@ if ('serviceWorker' in navigator) {
 
 updateHeaderUI();
 if (addItemBtn) addItemBtn.click();
+
+// التحكم بتشغيل وإيقاف الموسيقى الخلفية الهادئة
+const bgMusic = document.getElementById('bg-music');
+const musicToggleBtn = document.getElementById('music-toggle-btn');
+const musicStatusText = document.getElementById('music-status-text');
+
+if (bgMusic && musicToggleBtn) {
+  // خفض صوت الموسيقى لتكون هادئة جداً في الخلفية (مثلاً 20% من الصوت الأصلي)
+  bgMusic.volume = 0.2;
+
+  musicToggleBtn.addEventListener('click', () => {
+    if (bgMusic.paused) {
+      bgMusic.play().then(() => {
+        musicStatusText.textContent = "الموسيقى: تعمل";
+        musicToggleBtn.style.borderColor = "var(--success)";
+      }).catch(err => {
+        console.warn("Audio playback prevented:", err);
+      });
+    } else {
+      bgMusic.pause();
+      musicStatusText.textContent = "الموسيقى: متوقفة";
+      musicToggleBtn.style.borderColor = "var(--border-color)";
+    }
+  });
+}
