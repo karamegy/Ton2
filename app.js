@@ -347,6 +347,47 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
+// ⚡ دالة جلب البيانات يدوياً من السحابة للتعامل مع أي تأخير أو تغيير أجهزة
+async function fetchAllDataFromCloud() {
+  if (!currentUser) {
+    alert('يرجى تسجيل الدخول أولاً لجلب البيانات.');
+    return;
+  }
+
+  try {
+    const uid = currentUser.uid;
+    
+    const invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"));
+    if (invSnap.exists()) invoicesDB = invSnap.data().list || [];
+
+    const clientSnap = await getDoc(doc(db, "users", uid, "data", "clients"));
+    if (clientSnap.exists()) clientsDB = clientSnap.data().list || [];
+
+    const prodSnap = await getDoc(doc(db, "users", uid, "data", "products"));
+    if (prodSnap.exists()) productsDB = prodSnap.data().list || [];
+
+    const expSnap = await getDoc(doc(db, "users", uid, "data", "expenses"));
+    if (expSnap.exists()) expensesDB = expSnap.data().list || [];
+
+    const profSnap = await getDoc(doc(db, "users", uid, "data", "profile"));
+    if (profSnap.exists()) {
+      storeProfile = Object.assign({}, storeProfile, profSnap.data());
+      updateHeaderUI();
+    }
+
+    renderAllModules();
+    alert('✅ تم جلب وتحديث جميع الفواتير والحسابات من السحابة بنجاح!');
+  } catch (err) {
+    console.error("Fetch Cloud Error:", err);
+    alert('❌ حدث خطأ أثناء جلب البيانات من السحابة. تحقق من اتصال الإنترنت.');
+  }
+}
+
+const fetchCloudBtn = document.getElementById('fetch-cloud-btn');
+if (fetchCloudBtn) {
+  fetchCloudBtn.addEventListener('click', fetchAllDataFromCloud);
+}
+
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -740,6 +781,7 @@ function calculateTotals() {
 if (discountInput) discountInput.addEventListener('input', calculateTotals);
 if (taxInput) taxInput.addEventListener('input', calculateTotals);
 
+// ⚡ دالة حفظ الفاتورة المحدثة مع توليدclientId فريد لكل عميل لمنع التضارب
 async function saveInvoiceData() {
   const clientName = clientInput ? clientInput.value.trim() : '';
   const clientPhone = clientPhoneInput ? clientPhoneInput.value.trim() : '';
@@ -749,6 +791,26 @@ async function saveInvoiceData() {
 
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
   if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل وتحديد الكمية والسعر'); return null; }
+
+  // البحث عن العميل أو توليد ID فريد للعميل لمنع أي تضارب
+  let clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+  let assignedClientId = null;
+
+  if (!clientObj) {
+    assignedClientId = Date.now();
+    clientObj = { 
+      id: assignedClientId, 
+      name: clientName, 
+      phone: clientPhone ? clientPhone : '', 
+      openingBalance: 0, 
+      payments: [] 
+    };
+    clientsDB.push(clientObj);
+  } else {
+    if (!clientObj.id) clientObj.id = Date.now();
+    assignedClientId = clientObj.id;
+    if (clientPhone) clientObj.phone = clientPhone;
+  }
 
   const totals = calculateTotals();
   const isoTime = new Date().toISOString();
@@ -766,6 +828,7 @@ async function saveInvoiceData() {
 
   const invoice = Object.assign({
     id: currentInvId,
+    clientId: assignedClientId, // ربط صريح بمعرف العميل الفريد
     client: clientName,
     phone: clientPhone ? clientPhone : '',
     status: status,
@@ -795,13 +858,6 @@ async function saveInvoiceData() {
   }
 
   if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
-
-  let clientIndex = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
-  if (clientIndex === -1) {
-    clientsDB.push({ name: clientName, phone: clientPhone ? clientPhone : '', openingBalance: 0, payments: [] });
-  } else if (clientPhone) {
-    clientsDB[clientIndex].phone = clientPhone;
-  }
 
   Promise.all([
     syncDocToCloud('invoices', { list: invoicesDB }),
@@ -854,15 +910,13 @@ if (whatsappBtn) {
 
 let currentActiveInvoiceForPreview = null;
 
-// ⚡ دالة معاينة الفاتورة المحسّنة (تمنع التهنيج تماماً وتفتح فوراً)
+// ⚡ دالة معاينة الفاتورة المحسّنة (تفتح فوراً)
 function openInvoicePreview(inv) {
   currentActiveInvoiceForPreview = inv;
   
-  // فتح النافذة المنبثقة فوراً وبدون أي تأخير لاستجابة فائقة السرعة
   const viewModal = document.getElementById('view-modal');
   if (viewModal) viewModal.classList.remove('hidden');
 
-  // تأجيل ملء البيانات ورسم الـ QR Code للإطار التالي لمنع تجميد واجهة المستخدم
   requestAnimationFrame(() => {
     const vLogo = document.getElementById('v-logo');
     if (vLogo) {
@@ -1150,15 +1204,31 @@ if (clientForm) {
       return;
     }
 
-    clientsDB.push({ name, phone, openingBalance, payments: [] });
+    // توليد id فريد للحساب الجديد
+    clientsDB.push({ id: Date.now(), name, phone, openingBalance, payments: [] });
     await syncDocToCloud('clients', { list: clientsDB });
     e.target.reset();
   });
 }
 
-function getClientCalculatedLedger(clientName) {
-  const clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase()) ? clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase()) : { openingBalance: 0, payments: [] };
-  const clientInvoices = invoicesDB.filter(i => i.client.toLowerCase() === clientName.toLowerCase());
+// ⚡ دالة حساب كشف الحساب المحدثة بالربط بـ clientId والتوافق مع الاسم
+function getClientCalculatedLedger(clientParam) {
+  let clientObj = null;
+  if (typeof clientParam === 'string') {
+    clientObj = clientsDB.find(c => c.name.toLowerCase() === clientParam.toLowerCase());
+  } else if (clientParam && typeof clientParam === 'object') {
+    clientObj = clientParam;
+  }
+
+  if (!clientObj) {
+    clientObj = { name: typeof clientParam === 'string' ? clientParam : '', openingBalance: 0, payments: [] };
+  }
+
+  // تصفية الفواتير بالـ clientId أولاً مع التوافق العكسي للاسم
+  const clientInvoices = invoicesDB.filter(i => 
+    (clientObj.id && i.clientId === clientObj.id) || 
+    (i.client && clientObj.name && i.client.toLowerCase() === clientObj.name.toLowerCase())
+  );
 
   let totalPurchases = clientObj.openingBalance ? clientObj.openingBalance : 0;
   let totalPaid = 0;
@@ -1184,7 +1254,7 @@ function renderClients() {
   const filtered = clientsDB.filter(c => c.name.toLowerCase().includes(searchFilter));
 
   container.innerHTML = filtered.map((c, index) => {
-    const stats = getClientCalculatedLedger(c.name);
+    const stats = getClientCalculatedLedger(c);
     return `
       <li>
         <div style="flex: 1;">
@@ -1261,11 +1331,14 @@ window.deleteClient = async (index) => {
 };
 
 window.openClientLedger = (clientName) => {
-  activeLedgerClientName = clientName;
-  const stats = getClientCalculatedLedger(clientName);
+  const clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+  if (!clientObj) return;
+
+  activeLedgerClientName = clientObj.name;
+  const stats = getClientCalculatedLedger(clientObj);
 
   const ledgerTitle = document.getElementById('ledger-client-title');
-  if (ledgerTitle) ledgerTitle.textContent = `👤 كشف حساب: ${clientName}`;
+  if (ledgerTitle) ledgerTitle.textContent = `👤 كشف حساب: ${clientObj.name}`;
   const ledgerTotalSales = document.getElementById('ledger-total-sales');
   if (ledgerTotalSales) ledgerTotalSales.textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}`;
   const ledgerTotalPaid = document.getElementById('ledger-total-paid');
@@ -1294,8 +1367,8 @@ window.openClientLedger = (clientName) => {
           <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
-          <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editClientPayment('${clientName.replace(/'/g, "\\'")}', ${pIndex})">✏️</button>
-          <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteClientPayment('${clientName.replace(/'/g, "\\'")}', ${pIndex})">🗑️</button>
+          <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editClientPayment('${clientObj.name.replace(/'/g, "\\'")}', ${pIndex})">✏️</button>
+          <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteClientPayment('${clientObj.name.replace(/'/g, "\\'")}', ${pIndex})">🗑️</button>
         </div>
       </li>
     `;
@@ -1346,9 +1419,10 @@ const ledgerWhatsappBtn = document.getElementById('ledger-whatsapp-btn');
 if (ledgerWhatsappBtn) {
   ledgerWhatsappBtn.addEventListener('click', () => {
     if (!activeLedgerClientName) return;
-    const stats = getClientCalculatedLedger(activeLedgerClientName);
     const clientObj = clientsDB.find(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
-    let phone = (clientObj && clientObj.phone ? clientObj.phone : '').replace(/[^0-9]/g, '');
+    if (!clientObj) return;
+    const stats = getClientCalculatedLedger(clientObj);
+    let phone = (clientObj.phone ? clientObj.phone : '').replace(/[^0-9]/g, '');
     if (!phone) { alert('يرجى تسجيل رقم الهاتف للعميل أولاً في سجل العملاء'); return; }
     if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
@@ -1385,7 +1459,9 @@ const ledgerPrintBtn = document.getElementById('ledger-print-btn');
 if (ledgerPrintBtn) {
   ledgerPrintBtn.addEventListener('click', () => {
     if (!activeLedgerClientName) return;
-    const stats = getClientCalculatedLedger(activeLedgerClientName);
+    const clientObj = clientsDB.find(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
+    if (!clientObj) return;
+    const stats = getClientCalculatedLedger(clientObj);
     const printTemplate = document.getElementById('print-template');
     if (!printTemplate) return;
 
@@ -1502,7 +1578,7 @@ function updateDashboardStats() {
 
   let totalDebts = 0;
   clientsDB.forEach(c => {
-    totalDebts += getClientCalculatedLedger(c.name).balance;
+    totalDebts += getClientCalculatedLedger(c).balance;
   });
 
   const salesEl = document.getElementById('stat-total-sales');
