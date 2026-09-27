@@ -86,10 +86,48 @@ body {
   overflow-x: hidden;
 }
 
+/* خلفية متحركة خفيفة جداً ومحسنة للأداء (بدون تهنيج نهائياً) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(125deg, transparent 0%, rgba(99, 102, 241, 0.04) 50%, transparent 100%);
+  background-size: 200% 200%;
+  z-index: -1;
+  pointer-events: none;
+  animation: lightBgMove 15s ease infinite alternate;
+  will-change: background-position;
+}
+
+@keyframes lightBgMove {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
 #main-app { max-width: 1200px; margin: 0 auto; }
 
 html[dir="ltr"] body { text-align: left; }
 html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
+
+/* تأثير الوهج المتحرك المضيء للأزرار */
+@keyframes btnMultiGlow {
+  0% {
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.3), inset 0 0 4px rgba(255, 255, 255, 0.2);
+    filter: brightness(1);
+  }
+  33% {
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.4), inset 0 0 6px rgba(255, 255, 255, 0.3);
+    filter: brightness(1.05);
+  }
+  66% {
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.4), inset 0 0 6px rgba(255, 255, 255, 0.3);
+    filter: brightness(1.05);
+  }
+  100% {
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.3), inset 0 0 4px rgba(255, 255, 255, 0.2);
+    filter: brightness(1);
+  }
+}
 
 /* Header & Nav Styling */
 .app-header {
@@ -158,14 +196,13 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 
-/* Interactive Live Invoice Paper Design (بدون أنيميشن ثقيل) */
+/* Interactive Live Invoice Paper Design */
 .invoice-paper-card {
   background: var(--card-bg);
-  border: 1px solid var(--accent);
   border-radius: 20px;
   padding: 20px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
   position: relative;
+  border: 1px solid var(--card-border);
 }
 
 .paper-header {
@@ -293,12 +330,14 @@ input:focus, select:focus {
 .grand-total-banner h3 { font-size: 1.4rem; font-weight: 900; color: var(--accent); line-height: 1.2; }
 .currency-tag { font-size: 0.85rem; font-weight: 800; background: var(--accent); color: #fff; padding: 4px 10px; border-radius: 8px; }
 
-/* Buttons with smooth hover */
+/* Buttons with glowing multi-color animation */
 button {
   padding: 10px 16px; border-radius: 10px; border: none; font-weight: 700;
-  cursor: pointer; font-size: 0.85rem; transition: background 0.2s ease, transform 0.1s ease;
+  cursor: pointer; font-size: 0.85rem; transition: transform 0.1s ease;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 40px;
+  animation: btnMultiGlow 5s infinite ease-in-out;
+  will-change: box-shadow;
 }
 .btn-primary { background: var(--accent); color: #ffffff; }
 .btn-primary:hover { background: var(--accent-hover); }
@@ -326,7 +365,7 @@ button {
 
 .form-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 16px; }
 
-/* Lists & Modals (أداء فائق بدون وميض أو رعشة) */
+/* Lists & Modals */
 .list-container { max-height: 420px; overflow-y: auto; }
 #invoices-container, #products-list-container, #clients-list-container, #expenses-list-container { list-style: none; }
 li {
@@ -390,8 +429,6 @@ li:hover {
 .ledger-summary-card strong { display: block; font-size: 0.95rem; margin-top: 4px; }
 .pay-section { background: rgba(16, 185, 129, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 14px; }
 
-#lock-screen { position: fixed; inset: 0; background: rgba(8, 12, 20, 0.95); display: flex; justify-content: center; align-items: center; z-index: 99999; }
-.lock-card { background: var(--card-bg); padding: 25px; border-radius: 16px; text-align: center; border: 1px solid var(--danger); max-width: 400px; width: 90%; }
 .sub-text { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; word-break: break-all; }
 
 .login-overlay { position: fixed; inset: 0; background: var(--bg-main); display: flex; justify-content: center; align-items: center; z-index: 10000; padding: 15px; }
