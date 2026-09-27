@@ -323,7 +323,7 @@ function attachCloudRealtimeSync(uid) {
 
   const unsubInvoices = onSnapshot(doc(db, "users", uid, "data", "invoices"), (snap) => {
     invoicesDB = snap.exists() && snap.data().list ? snap.data().list : [];
-    updateNextInvoiceNumber(); // ⚡ تحديث رقم الفاتورة التالي بناءً على الموجود بالسحابة
+    updateNextInvoiceNumber(); 
     renderAllModules();
   }, (err) => console.error("Invoices Sync Error:", err));
 
@@ -355,6 +355,7 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
+// ⚡ دالة جلب السحابة المحسّنة والمحمية ضد أي أخطاء انقطاع شبكة أثناء مراجعة التطبيق
 async function fetchAllDataFromCloud() {
   if (!currentUser) {
     alert('يرجى تسجيل الدخول أولاً لجلب البيانات.');
@@ -363,9 +364,16 @@ async function fetchAllDataFromCloud() {
 
   try {
     const uid = currentUser.uid;
-    console.log("🔄 جاري جلب البيانات مباشرة من السحابة للـ UID الحالي:", uid);
+    console.log("🔄 جاري جلب البيانات من السحابة للـ UID الحالي:", uid);
     
-    const invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"), { source: 'server' });
+    let invSnap;
+    try {
+      invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"), { source: 'server' });
+    } catch (serverErr) {
+      console.warn("⚠️ تعذر الجلب المباشر من الخادم، يتم الجلب من الكاش المحلي:", serverErr);
+      invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"));
+    }
+
     if (invSnap.exists()) {
       invoicesDB = invSnap.data().list || [];
       console.log("✅ تم العثور على الفواتير:", invoicesDB.length);
@@ -374,17 +382,17 @@ async function fetchAllDataFromCloud() {
       invoicesDB = [];
     }
 
-    const clientSnap = await getDoc(doc(db, "users", uid, "data", "clients"), { source: 'server' });
-    clientsDB = clientSnap.exists() ? (clientSnap.data().list || []) : [];
+    const clientSnap = await getDoc(doc(db, "users", uid, "data", "clients"), { source: 'server' }).catch(() => getDoc(doc(db, "users", uid, "data", "clients")));
+    clientsDB = clientSnap && clientSnap.exists() ? (clientSnap.data().list || []) : [];
 
-    const prodSnap = await getDoc(doc(db, "users", uid, "data", "products"), { source: 'server' });
-    productsDB = prodSnap.exists() ? (prodSnap.data().list || []) : [];
+    const prodSnap = await getDoc(doc(db, "users", uid, "data", "products"), { source: 'server' }).catch(() => getDoc(doc(db, "users", uid, "data", "products")));
+    productsDB = prodSnap && prodSnap.exists() ? (prodSnap.data().list || []) : [];
 
-    const expSnap = await getDoc(doc(db, "users", uid, "data", "expenses"), { source: 'server' });
-    expensesDB = expSnap.exists() ? (expSnap.data().list || []) : [];
+    const expSnap = await getDoc(doc(db, "users", uid, "data", "expenses"), { source: 'server' }).catch(() => getDoc(doc(db, "users", uid, "data", "expenses")));
+    expensesDB = expSnap && expSnap.exists() ? (expSnap.data().list || []) : [];
 
-    const profSnap = await getDoc(doc(db, "users", uid, "data", "profile"), { source: 'server' });
-    if (profSnap.exists()) {
+    const profSnap = await getDoc(doc(db, "users", uid, "data", "profile"), { source: 'server' }).catch(() => getDoc(doc(db, "users", uid, "data", "profile")));
+    if (profSnap && profSnap.exists()) {
       storeProfile = Object.assign({}, storeProfile, profSnap.data());
       updateHeaderUI();
     }
@@ -543,7 +551,6 @@ const invNumberDisplay = document.getElementById('inv-number-display');
 
 let nextInvNum = 1001;
 
-// ⚡ دالة ذكية لحساب وتحديث رقم الفاتورة التالي تلقائياً لعدم تكراره أبداً
 function updateNextInvoiceNumber() {
   if (invoicesDB && invoicesDB.length > 0) {
     const validIds = invoicesDB.map(i => parseInt(i.id)).filter(id => !isNaN(id));
@@ -883,7 +890,7 @@ async function saveInvoiceData() {
     editingInvoiceId = null;
   } else {
     invoicesDB.unshift(invoice);
-    updateNextInvoiceNumber(); // ⚡ تحديث الرقم التالي فوراً بعد إضافة الفاتورة الجديدة
+    updateNextInvoiceNumber(); 
   }
 
   Promise.all([
