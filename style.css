@@ -86,34 +86,44 @@ body {
   overflow-x: hidden;
 }
 
-/* تأثير الإضاءة والدخان المتحرك الخفيف جداً (مصمم خصيصاً لمنع التهنيج تماماً) */
+/* خلفية متحركة خفيفة جداً ومحسنة للأداء العالي */
 body::before {
   content: '';
   position: fixed;
-  inset: -50%;
-  width: 200%;
-  height: 200%;
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.07) 0%, transparent 40%),
-    radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.04) 0%, transparent 50%);
+  inset: 0;
+  background: linear-gradient(125deg, transparent 0%, rgba(99, 102, 241, 0.04) 50%, transparent 100%);
+  background-size: 200% 200%;
   z-index: -1;
   pointer-events: none;
-  animation: smokeAndLightMove 20s ease-in-out infinite alternate;
-  will-change: transform;
-  transform: translateZ(0);
+  animation: lightBgMove 15s ease infinite alternate;
+  will-change: background-position;
 }
 
-@keyframes smokeAndLightMove {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-3%, -2%) scale(1.05); }
-  100% { transform: translate(2%, 3%) scale(1); }
+@keyframes lightBgMove {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
 }
 
 #main-app { max-width: 1200px; margin: 0 auto; }
 
 html[dir="ltr"] body { text-align: left; }
 html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
+
+/* تأثير الوهج المتحرك الخفيف جداً للأزرار (بدون فلتر لضمان السرعة) */
+@keyframes btnMultiGlow {
+  0% {
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.25), inset 0 0 3px rgba(255, 255, 255, 0.15);
+  }
+  33% {
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3), inset 0 0 4px rgba(255, 255, 255, 0.2);
+  }
+  66% {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.3), inset 0 0 4px rgba(255, 255, 255, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.25), inset 0 0 3px rgba(255, 255, 255, 0.15);
+  }
+}
 
 /* Header & Nav Styling */
 .app-header {
@@ -122,6 +132,10 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
   border: 1px solid var(--card-border); border-radius: var(--radius);
   margin-bottom: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
   flex-wrap: wrap; gap: 10px;
+  transition: box-shadow 0.2s ease;
+}
+.app-header:hover {
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
 }
 
 .brand-container { display: flex; align-items: center; gap: 12px; }
@@ -141,9 +155,14 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 .nav-tab {
   flex: 1 0 auto; min-width: max-content; background: transparent; border: none;
   color: var(--text-muted); padding: 10px 18px; border-radius: 12px;
-  font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.25s ease;
+  font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
 }
-.nav-tab.active { background: var(--accent); color: #ffffff; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4); }
+.nav-tab:hover { color: var(--text-main); background: rgba(99, 102, 241, 0.08); }
+.nav-tab.active { 
+  background: var(--accent); 
+  color: #ffffff; 
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4); 
+}
 
 .tab-content { display: none; }
 .tab-content.active { display: block; }
@@ -153,6 +172,10 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 .stat-card {
   background: var(--card-bg); padding: 14px 16px; border-radius: var(--radius);
   border: 1px solid var(--card-border);
+  transition: border-color 0.2s ease;
+}
+.stat-card:hover {
+  border-color: var(--accent);
 }
 .stat-title { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 .stat-value { font-size: 1.2rem; color: var(--accent); margin-top: 4px; display: block; font-weight: 800; }
@@ -172,11 +195,10 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 /* Interactive Live Invoice Paper Design */
 .invoice-paper-card {
   background: var(--card-bg);
-  border: 1px solid var(--card-border);
   border-radius: 20px;
   padding: 20px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
   position: relative;
+  border: 1px solid var(--card-border);
 }
 
 .paper-header {
@@ -200,10 +222,13 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 input, select {
   width: 100%; padding: 10px 14px; background: var(--input-bg);
   border: 1px solid var(--border-color); border-radius: 10px;
-  color: var(--text-main); font-size: 0.9rem; font-weight: 600; outline: none; transition: all 0.2s ease;
+  color: var(--text-main); font-size: 0.9rem; font-weight: 600; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease;
   min-height: 42px;
 }
-input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25); }
+input:focus, select:focus { 
+  border-color: var(--accent); 
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25); 
+}
 
 /* High-End Modern Table Architecture */
 .modern-table-container {
@@ -221,6 +246,10 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px r
 .modern-items-table td {
   padding: 6px 8px; vertical-align: middle; background: var(--card-bg); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
 }
+.modern-items-table tr:hover td {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.03);
+}
 .modern-items-table td:first-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; border-right: 1px solid var(--border-color); }
 .modern-items-table td:last-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; border-left: 1px solid var(--border-color); }
 
@@ -233,9 +262,9 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px r
 .btn-add-row {
   width: 100%; margin-top: 8px; padding: 10px; background: rgba(99, 102, 241, 0.08);
   border: 1px dashed var(--accent); color: var(--accent); border-radius: 10px;
-  font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
+  font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: background 0.2s ease;
 }
-.btn-add-row:hover { background: rgba(99, 102, 241, 0.18); }
+.btn-add-row:hover { background: rgba(99, 102, 241, 0.15); }
 
 /* Mobile Adaptations for Modern Table */
 @media (max-width: 650px) {
@@ -290,31 +319,39 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px r
   margin-top: 14px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);
   border: 1px solid var(--accent); padding: 14px 18px; border-radius: 12px;
   display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
 }
+
 .grand-total-banner small { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; display: block; }
 .grand-total-banner h3 { font-size: 1.4rem; font-weight: 900; color: var(--accent); line-height: 1.2; }
 .currency-tag { font-size: 0.85rem; font-weight: 800; background: var(--accent); color: #fff; padding: 4px 10px; border-radius: 8px; }
 
-/* Buttons */
+/* Buttons with optimized glowing animation */
 button {
   padding: 10px 16px; border-radius: 10px; border: none; font-weight: 700;
-  cursor: pointer; font-size: 0.85rem; transition: all 0.2s ease;
+  cursor: pointer; font-size: 0.85rem; transition: transform 0.1s ease;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 40px;
+  animation: btnMultiGlow 5s infinite ease-in-out;
+  will-change: box-shadow;
 }
 .btn-primary { background: var(--accent); color: #ffffff; }
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-secondary { background: rgba(255,255,255,0.05); color: var(--text-main); width: 100%; border: 1px dashed var(--border-color); margin-top: 8px; }
+.btn-secondary:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
 .btn-success { background: var(--success); color: #ffffff; }
 .btn-whatsapp { background: var(--whatsapp); color: #ffffff; }
 .btn-sm { padding: 5px 10px; font-size: 0.75rem; border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--text-main); min-height: auto; }
 .btn-icon { background: rgba(255,255,255,0.08); color: var(--text-main); padding: 6px 10px; min-height: auto; }
 .btn-ghost { background: transparent; color: var(--text-muted); }
-.btn-remove { background: rgba(244, 63, 94, 0.15); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.3); padding: 4px 8px; border-radius: 8px; }
+.btn-ghost:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+.btn-remove { background: rgba(244, 63, 94, 0.15); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.3); padding: 4px 8px; border-radius: 8px; transition: background 0.2s ease; }
+.btn-remove:hover { background: rgba(244, 63, 94, 0.25); }
 
 .btn-google {
   width: 100%; background: #ffffff; color: #3c4043;
   border: 1px solid #dadce0; font-weight: 700; margin-bottom: 12px; border-radius: 10px;
+  transition: background 0.2s ease;
 }
 .btn-google:hover { background: #f8f9fa; }
 
@@ -330,21 +367,58 @@ button {
 li {
   background: var(--input-bg); padding: 12px 14px; border-radius: 12px; margin-bottom: 8px;
   display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); font-size: 0.85rem;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
-li:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
+li:hover { 
+  border-color: var(--accent); 
+  background: rgba(99, 102, 241, 0.05); 
+}
 
 .badge { padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; }
 .badge-paid { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
 .badge-unpaid { background: rgba(244, 63, 94, 0.15); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.3); }
 .badge-partial { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-.modal { position: fixed; inset: 0; background: rgba(8, 12, 20, 0.85); display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 15px; }
-.modal-content { background: var(--card-bg); padding: 22px; border-radius: 18px; width: 100%; max-width: 480px; border: 1px solid var(--card-border); max-height: 90vh; overflow-y: auto; }
+/* تحسين خرافى لأداء المودال وفتح معاينة الفاتورة بدون تهنيج */
+.modal { 
+  position: fixed; 
+  inset: 0; 
+  background: rgba(8, 12, 20, 0.85); 
+  backdrop-filter: blur(3px); /* تقليل البلور قليلاً لمنع ثقل المعالج الرسومي */
+  -webkit-backdrop-filter: blur(3px);
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  z-index: 9999; 
+  padding: 15px; 
+  will-change: opacity;
+  transform: translateZ(0); /* تسريع الهاردوير للنافذة */
+}
+
+.modal-content { 
+  background: var(--card-bg); 
+  padding: 22px; 
+  border-radius: 18px; 
+  width: 100%; 
+  max-width: 480px; 
+  border: 1px solid var(--card-border); 
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
+  max-height: 90vh; 
+  overflow-y: auto; 
+  will-change: transform, opacity;
+  animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 .preview-modal-content { max-width: 520px; }
 
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .btn-close { background: transparent; color: var(--text-muted); font-size: 1.2rem; min-height: auto; padding: 4px; }
+.btn-close:hover { color: var(--danger); }
 
 .invoice-card-preview { background: var(--preview-bg); color: var(--preview-text); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 15px; }
 .preview-header { text-align: center; margin-bottom: 12px; }
@@ -361,15 +435,13 @@ li:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
 .ledger-summary-card strong { display: block; font-size: 0.95rem; margin-top: 4px; }
 .pay-section { background: rgba(16, 185, 129, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 14px; }
 
-#lock-screen { position: fixed; inset: 0; background: rgba(8, 12, 20, 0.98); display: flex; justify-content: center; align-items: center; z-index: 99999; }
-.lock-card { background: var(--card-bg); padding: 25px; border-radius: 16px; text-align: center; border: 1px solid var(--danger); max-width: 400px; width: 90%; }
 .sub-text { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; word-break: break-all; }
 
 .login-overlay { position: fixed; inset: 0; background: var(--bg-main); display: flex; justify-content: center; align-items: center; z-index: 10000; padding: 15px; }
-.login-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 28px; width: 100%; max-width: 400px; position: relative; text-align: center; }
+.login-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 28px; width: 100%; max-width: 400px; position: relative; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
 .lang-switch-auth { position: absolute; top: 12px; left: 12px; }
 .auth-tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 18px; margin-top: 10px; }
-.auth-tab { flex: 1; background: transparent; border: none; padding: 10px; color: var(--text-muted); cursor: pointer; font-weight: 700; }
+.auth-tab { flex: 1; background: transparent; border: none; padding: 10px; color: var(--text-muted); cursor: pointer; font-weight: 700; transition: color 0.2s ease; }
 .auth-tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
 .auth-submit-btn { width: 100%; margin-top: 15px; }
 .auth-msg { padding: 10px; border-radius: 8px; font-size: 0.8rem; margin-top: 12px; text-align: center; }
@@ -435,4 +507,4 @@ li:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
 }
 
 .suggestion-item:last-child { border-bottom: none; }
-.suggestion-item:hover { background: rgba(99, 102, 241, 0.25); }
+.suggestion-item:hover { background: rgba(99, 102, 241, 0.2); }
