@@ -854,56 +854,62 @@ if (whatsappBtn) {
 
 let currentActiveInvoiceForPreview = null;
 
+// ⚡ دالة معاينة الفاتورة المحسّنة (تمنع التهنيج تماماً وتفتح فوراً)
 function openInvoicePreview(inv) {
   currentActiveInvoiceForPreview = inv;
-  const vLogo = document.getElementById('v-logo');
-  if (vLogo) {
-    if (storeProfile.logo) {
-      vLogo.src = storeProfile.logo;
-      vLogo.classList.remove('hidden');
-    } else {
-      vLogo.classList.add('hidden');
-    }
-  }
-
-  const vStoreName = document.getElementById('v-store-name');
-  if (vStoreName) vStoreName.textContent = storeProfile.name;
-  const vStorePhone = document.getElementById('v-store-phone');
-  if (vStorePhone) vStorePhone.textContent = storeProfile.phone;
-  const vStoreVat = document.getElementById('v-store-vat');
-  if (vStoreVat) vStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
-  const vStoreAddress = document.getElementById('v-store-address');
-  if (vStoreAddress) vStoreAddress.textContent = storeProfile.address;
-  const vInvId = document.getElementById('v-inv-id');
-  if (vInvId) vInvId.textContent = `رقم الفاتورة: #${inv.id}`;
-  const vDate = document.getElementById('v-date');
-  if (vDate) vDate.textContent = `التاريخ: ${inv.date}`;
-  const vClientName = document.getElementById('v-client-name');
-  if (vClientName) vClientName.textContent = inv.client;
-  const vClientPhone = document.getElementById('v-client-phone');
-  if (vClientPhone) vClientPhone.textContent = inv.phone ? inv.phone : '-';
-  const vPaymentStatus = document.getElementById('v-payment-status');
-  if (vPaymentStatus) vPaymentStatus.textContent = inv.status;
-  const vSubtotal = document.getElementById('v-subtotal');
-  if (vSubtotal) vSubtotal.textContent = `${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}`;
-  const vDiscount = document.getElementById('v-discount');
-  if (vDiscount) vDiscount.textContent = `${(inv.discount ? inv.discount : 0).toFixed(2)} ${storeProfile.currency}`;
-  const vTax = document.getElementById('v-tax');
-  if (vTax) vTax.textContent = `${inv.taxPercent ? inv.taxPercent : 0}%`;
-  const vTotal = document.getElementById('v-total');
-  if (vTotal) vTotal.textContent = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
-
-  const vItemsBody = document.getElementById('v-items-body');
-  if (vItemsBody) {
-    vItemsBody.innerHTML = (inv.items ? inv.items : []).map(item => `
-      <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
-    `).join('');
-  }
-
-  renderQrCode('preview-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
-
+  
+  // فتح النافذة المنبثقة فوراً وبدون أي تأخير لاستجابة فائقة السرعة
   const viewModal = document.getElementById('view-modal');
   if (viewModal) viewModal.classList.remove('hidden');
+
+  // تأجيل ملء البيانات ورسم الـ QR Code للإطار التالي لمنع تجميد واجهة المستخدم
+  requestAnimationFrame(() => {
+    const vLogo = document.getElementById('v-logo');
+    if (vLogo) {
+      if (storeProfile.logo) {
+        vLogo.src = storeProfile.logo;
+        vLogo.classList.remove('hidden');
+      } else {
+        vLogo.classList.add('hidden');
+      }
+    }
+
+    const vStoreName = document.getElementById('v-store-name');
+    if (vStoreName) vStoreName.textContent = storeProfile.name;
+    const vStorePhone = document.getElementById('v-store-phone');
+    if (vStorePhone) vStorePhone.textContent = storeProfile.phone;
+    const vStoreVat = document.getElementById('v-store-vat');
+    if (vStoreVat) vStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+    const vStoreAddress = document.getElementById('v-store-address');
+    if (vStoreAddress) vStoreAddress.textContent = storeProfile.address;
+    const vInvId = document.getElementById('v-inv-id');
+    if (vInvId) vInvId.textContent = `رقم الفاتورة: #${inv.id}`;
+    const vDate = document.getElementById('v-date');
+    if (vDate) vDate.textContent = `التاريخ: ${inv.date}`;
+    const vClientName = document.getElementById('v-client-name');
+    if (vClientName) vClientName.textContent = inv.client;
+    const vClientPhone = document.getElementById('v-client-phone');
+    if (vClientPhone) vClientPhone.textContent = inv.phone ? inv.phone : '-';
+    const vPaymentStatus = document.getElementById('v-payment-status');
+    if (vPaymentStatus) vPaymentStatus.textContent = inv.status;
+    const vSubtotal = document.getElementById('v-subtotal');
+    if (vSubtotal) vSubtotal.textContent = `${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}`;
+    const vDiscount = document.getElementById('v-discount');
+    if (vDiscount) vDiscount.textContent = `${(inv.discount ? inv.discount : 0).toFixed(2)} ${storeProfile.currency}`;
+    const vTax = document.getElementById('v-tax');
+    if (vTax) vTax.textContent = `${inv.taxPercent ? inv.taxPercent : 0}%`;
+    const vTotal = document.getElementById('v-total');
+    if (vTotal) vTotal.textContent = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+
+    const vItemsBody = document.getElementById('v-items-body');
+    if (vItemsBody) {
+      vItemsBody.innerHTML = (inv.items ? inv.items : []).map(item => `
+        <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
+      `).join('');
+    }
+
+    renderQrCode('preview-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
+  });
 }
 
 const closeViewBtn = document.getElementById('close-view-btn');
@@ -1201,7 +1207,6 @@ function renderClients() {
 const searchClientsInput = document.getElementById('search-clients-input');
 if (searchClientsInput) searchClientsInput.addEventListener('input', renderClients);
 
-// 🛠️ دوال تعديل وحذف العملاء الرئيسية
 window.editClient = async (index) => {
   const client = clientsDB[index];
   if (!client) return;
