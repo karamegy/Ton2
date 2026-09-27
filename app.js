@@ -819,6 +819,7 @@ function calculateTotals() {
 if (discountInput) discountInput.addEventListener('input', calculateTotals);
 if (taxInput) taxInput.addEventListener('input', calculateTotals);
 
+// ⚡ الدالة المحمية والمحدثة بنظام Smart Merge لمنع أي استبدال فوقي (Overwrite)
 async function saveInvoiceData() {
   const clientName = clientInput ? clientInput.value.trim() : '';
   const clientPhone = clientPhoneInput ? clientPhoneInput.value.trim() : '';
@@ -829,7 +830,35 @@ async function saveInvoiceData() {
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
   if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل وتحديد الكمية والسعر'); return null; }
 
-  let clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+  // جلب أحدث بيانات السحابة مباشرة قبل الحفظ لضمان الدمج السليم
+  const uid = currentUser ? currentUser.uid : null;
+  let cloudInvoices = [];
+  let cloudClients = [];
+  let cloudProducts = [];
+
+  if (uid) {
+    try {
+      const invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"));
+      if (invSnap.exists() && invSnap.data().list) cloudInvoices = invSnap.data().list;
+
+      const clientSnap = await getDoc(doc(db, "users", uid, "data", "clients"));
+      if (clientSnap.exists() && clientSnap.data().list) cloudClients = clientSnap.data().list;
+
+      const prodSnap = await getDoc(doc(db, "users", uid, "data", "products"));
+      if (prodSnap.exists() && prodSnap.data().list) cloudProducts = prodSnap.data().list;
+    } catch (e) {
+      console.warn("استخدام النسخة المحلية لعدم توفر اتصال مباشر:", e);
+      cloudInvoices = invoicesDB;
+      cloudClients = clientsDB;
+      cloudProducts = productsDB;
+    }
+  } else {
+    cloudInvoices = invoicesDB;
+    cloudClients = clientsDB;
+    cloudProducts = productsDB;
+  }
+
+  let clientObj = cloudClients.find(c => c.name.toLowerCase() === clientName.toLowerCase());
   let assignedClientId = null;
 
   if (!clientObj) {
@@ -841,11 +870,13 @@ async function saveInvoiceData() {
       openingBalance: 0, 
       payments: [] 
     };
-    clientsDB.push(clientObj);
+    cloudClients.push(clientObj);
   } else {
     if (!clientObj.id) clientObj.id = Date.now();
     assignedClientId = clientObj.id;
-    if (clientPhone) clientObj.phone = clientPhone;
+    if (clientPhone) {
+      cloudClients = cloudClients.map(c => c.id === clientObj.id ? Object.assign({}, c, { phone: clientPhone }) : c);
+    }
   }
 
   const totals = calculateTotals();
@@ -859,8 +890,9 @@ async function saveInvoiceData() {
     paidVal = paidInput ? (parseFloat(paidInput.value) ? parseFloat(paidInput.value) : 0) : 0;
   }
 
-  updateNextInvoiceNumber();
-  const currentInvId = editingInvoiceId ? editingInvoiceId : nextInvNum;
+  const validIds = cloudInvoices.map(i => parseInt(i.id)).filter(id => !isNaN(id));
+  const maxId = validIds.length > 0 ? Math.max(...validIds) : 1000;
+  const currentInvId = editingInvoiceId ? editingInvoiceId : (maxId >= 1001 ? maxId + 1 : 1001);
   const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
 
   const invoice = Object.assign({
@@ -878,22 +910,24 @@ async function saveInvoiceData() {
   }, totals);
 
   validItems.forEach(soldItem => {
-    const prod = productsDB.find(p => p.name.toLowerCase() === soldItem.name.toLowerCase());
+    const prod = cloudProducts.find(p => p.name.toLowerCase() === soldItem.name.toLowerCase());
     if (prod) {
       prod.stock = Math.max(0, (prod.stock ? prod.stock : 0) - soldItem.qty);
     }
   });
 
   if (editingInvoiceId) {
-    const idx = invoicesDB.findIndex(i => i.id === editingInvoiceId);
-    if (idx !== -1) invoicesDB[idx] = invoice;
+    cloudInvoices = cloudInvoices.map(i => i.id === editingInvoiceId ? invoice : i);
     editingInvoiceId = null;
   } else {
-    invoicesDB.unshift(invoice);
-    updateNextInvoiceNumber(); 
+    cloudInvoices.unshift(invoice);
   }
 
-  Promise.all([
+  invoicesDB = cloudInvoices;
+  clientsDB = cloudClients;
+  productsDB = cloudProducts;
+
+  await Promise.all([
     syncDocToCloud('invoices', { list: invoicesDB }),
     syncDocToCloud('clients', { list: clientsDB }),
     syncDocToCloud('products', { list: productsDB })
