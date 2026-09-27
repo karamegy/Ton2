@@ -173,7 +173,7 @@ let activeUnsubscribers = [];
 let activeItems = [];
 let activeLedgerClientName = null;
 let editingInvoiceId = null;
-let editingProductId = null; // متغير لتتبع المنتج الجاري تعديله عبر النموذج المطور
+let editingProductId = null;
 
 const privacyModal = document.getElementById('privacy-modal');
 const openPrivacyAuthBtn = document.getElementById('open-privacy-auth-btn');
@@ -244,7 +244,6 @@ getRedirectResult(auth).then(async (result) => {
   }
 });
 
-// ✅ تعديل دالة المراقبة لمنع الشاشة السوداء وضمان استقرار الإقلاع
 onAuthStateChanged(auth, async (user) => {
   const adminBtn = document.getElementById('admin-btn');
 
@@ -324,6 +323,7 @@ function attachCloudRealtimeSync(uid) {
 
   const unsubInvoices = onSnapshot(doc(db, "users", uid, "data", "invoices"), (snap) => {
     invoicesDB = snap.exists() && snap.data().list ? snap.data().list : [];
+    updateNextInvoiceNumber(); // ⚡ تحديث رقم الفاتورة التالي بناءً على الموجود بالسحابة
     renderAllModules();
   }, (err) => console.error("Invoices Sync Error:", err));
 
@@ -355,7 +355,6 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
-// ⚡ دالة جلب البيانات يدوياً من السحابة مباشرة وتجاوز الكاش المحلي
 async function fetchAllDataFromCloud() {
   if (!currentUser) {
     alert('يرجى تسجيل الدخول أولاً لجلب البيانات.');
@@ -390,6 +389,7 @@ async function fetchAllDataFromCloud() {
       updateHeaderUI();
     }
 
+    updateNextInvoiceNumber();
     renderAllModules();
     alert('✅ تم جلب وتحديث جميع الفواتير والحسابات من السحابة بنجاح!');
   } catch (err) {
@@ -541,8 +541,24 @@ const subtotalDisplay = document.getElementById('subtotal-val');
 const grandTotalDisplay = document.getElementById('grand-total-val');
 const invNumberDisplay = document.getElementById('inv-number-display');
 
-let nextInvNum = parseInt(localStorage.getItem('last_inv_num') ? localStorage.getItem('last_inv_num') : '1001');
-if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
+let nextInvNum = 1001;
+
+// ⚡ دالة ذكية لحساب وتحديث رقم الفاتورة التالي تلقائياً لعدم تكراره أبداً
+function updateNextInvoiceNumber() {
+  if (invoicesDB && invoicesDB.length > 0) {
+    const validIds = invoicesDB.map(i => parseInt(i.id)).filter(id => !isNaN(id));
+    const maxId = validIds.length > 0 ? Math.max(...validIds) : 1000;
+    nextInvNum = maxId >= 1001 ? maxId + 1 : 1001;
+  } else {
+    nextInvNum = 1001;
+  }
+  localStorage.setItem('last_inv_num', nextInvNum.toString());
+  if (invNumberDisplay && !editingInvoiceId) {
+    invNumberDisplay.textContent = `#${nextInvNum}`;
+  }
+}
+
+updateNextInvoiceNumber();
 
 const clientInput = document.getElementById('client-name');
 const clientPhoneInput = document.getElementById('client-phone');
@@ -836,6 +852,7 @@ async function saveInvoiceData() {
     paidVal = paidInput ? (parseFloat(paidInput.value) ? parseFloat(paidInput.value) : 0) : 0;
   }
 
+  updateNextInvoiceNumber();
   const currentInvId = editingInvoiceId ? editingInvoiceId : nextInvNum;
   const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
 
@@ -866,11 +883,8 @@ async function saveInvoiceData() {
     editingInvoiceId = null;
   } else {
     invoicesDB.unshift(invoice);
-    nextInvNum++;
-    localStorage.setItem('last_inv_num', nextInvNum.toString());
+    updateNextInvoiceNumber(); // ⚡ تحديث الرقم التالي فوراً بعد إضافة الفاتورة الجديدة
   }
-
-  if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
 
   Promise.all([
     syncDocToCloud('invoices', { list: invoicesDB }),
@@ -1085,7 +1099,7 @@ window.editInvoiceById = (id) => {
 
 function resetForm() {
   editingInvoiceId = null;
-  if (invNumberDisplay) invNumberDisplay.textContent = `#${nextInvNum}`;
+  updateNextInvoiceNumber();
   if (clientInput) clientInput.value = '';
   if (clientPhoneInput) clientPhoneInput.value = '';
   activeItems = [];
@@ -1151,7 +1165,9 @@ window.reprintInvoice = (id) => {
 window.deleteInvoice = async (id) => {
   if (!confirm('تأكيد حذف الفاتورة؟')) return;
   invoicesDB = invoicesDB.filter(i => i.id !== id);
+  updateNextInvoiceNumber();
   await syncDocToCloud('invoices', { list: invoicesDB });
+  renderAllModules();
 };
 
 const searchInput = document.getElementById('search-input');
@@ -1177,7 +1193,6 @@ if (productForm) {
     }
 
     if (editingProductId !== null) {
-      // تحديث المنتج الموجود حالياً
       const idx = productsDB.findIndex(p => p.id === editingProductId);
       if (idx !== -1) {
         productsDB[idx] = Object.assign({}, productsDB[idx], { name, price, cost, stock });
@@ -1190,7 +1205,6 @@ if (productForm) {
       const cancelBtn = document.getElementById('cancel-edit-prod-btn');
       if (cancelBtn) cancelBtn.remove();
     } else {
-      // إضافة منتج جديد
       productsDB.push({ id: Date.now(), name, price, cost, stock });
     }
 
@@ -1715,6 +1729,7 @@ if (importJsonInput) {
             syncDocToCloud('profile', storeProfile)
           ]);
 
+          updateNextInvoiceNumber();
           alert('✅ تم استيراد وحفظ النسخة الاحتياطية وتزامنها سحابياً بنجاح!');
           renderAllModules();
           updateHeaderUI();
