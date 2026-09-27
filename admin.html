@@ -42,105 +42,94 @@
   </div>
 
   <!-- لوحة التحكم الرئيسية للإدارة -->
-  <div id="admin-main-app" class="hidden" style="padding: 20px; max-width: 1300px; margin: 0 auto;">
+  <div id="admin-main-app" class="hidden" style="padding: 15px; max-width: 1200px; margin: 0 auto;">
     
-    <header class="app-header" style="border-radius: 12px; margin-bottom: 20px; padding: 15px 20px;">
-      <div class="brand-container">
-        <img src="logo.png" alt="GITI Logo" class="giti-header-logo">
+    <header class="app-header" style="border-radius: 12px; margin-bottom: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+      <div class="brand-container" style="display: flex; align-items: center; gap: 12px;">
+        <img src="logo.png" alt="GITI Logo" class="giti-header-logo" style="width: 45px; height: 45px; object-fit: contain;">
         <div>
-          <h1>GITI Enterprise Admin</h1>
-          <p class="subtitle">إدارة الرخص، التراخيص، وحسابات المنشآت</p>
+          <h1 style="font-size: 1.2rem; margin: 0;">GITI Enterprise Admin</h1>
+          <p class="subtitle" style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">إدارة الرخص، التراخيص، وحسابات المنشآت</p>
         </div>
       </div>
-      <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
-        <button id="admin-export-json-btn" class="btn-sm" style="background: var(--accent); color: #fff; padding: 8px 14px;" title="تصدير نسخة احتياطية لجميع الرخص بصيغة JSON">📥 تصدير رخص JSON</button>
-        <a href="index.html" class="btn-icon" title="الذهاب للتطبيق الرئيسي">🏠</a>
-        <button id="admin-logout-btn" class="btn-icon btn-logout" title="تسجيل الخروج">🚪</button>
+      <div class="header-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <button id="admin-export-json-btn" class="btn-sm" style="background: var(--accent); color: #fff; padding: 8px 12px; font-size: 0.85rem;" title="تصدير نسخة احتياطية لجميع الرخص بصيغة JSON">📥 تصدير رخص JSON</button>
+        <a href="index.html" class="btn-icon" title="الذهاب للتطبيق الرئيسي" style="padding: 8px 12px; background: var(--bg-secondary); border-radius: 8px; text-decoration: none;">🏠</a>
+        <button id="admin-logout-btn" class="btn-icon btn-logout" title="تسجيل الخروج" style="padding: 8px 12px; background: rgba(239, 68, 68, 0.15); color: var(--danger); border: none; border-radius: 8px; cursor: pointer;">🚪</button>
       </div>
     </header>
 
     <!-- إحصائيات عامة للنظام -->
-    <section class="stats-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-      <div class="stat-card">
-        <span class="stat-title">إجمالي المتاجر / الحسابات</span>
-        <strong id="stat-total-users" class="stat-value">0</strong>
+    <section class="stats-grid" style="margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+      <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+        <span class="stat-title" style="font-size: 0.8rem; color: var(--text-muted); display: block;">إجمالي الحسابات</span>
+        <strong id="stat-total-users" class="stat-value" style="font-size: 1.5rem; color: var(--text-main);">0</strong>
       </div>
-      <div class="stat-card">
-        <span class="stat-title">الحسابات المفعلة</span>
-        <strong id="stat-active-users" class="stat-value text-success">0</strong>
+      <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+        <span class="stat-title" style="font-size: 0.8rem; color: var(--text-muted); display: block;">الحسابات المفعلة</span>
+        <strong id="stat-active-users" class="stat-value text-success" style="font-size: 1.5rem;">0</strong>
       </div>
-      <div class="stat-card">
-        <span class="stat-title">الحسابات المعطلة</span>
-        <strong id="stat-disabled-users" class="stat-value text-danger">0</strong>
+      <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+        <span class="stat-title" style="font-size: 0.8rem; color: var(--text-muted); display: block;">الحسابات المعطلة</span>
+        <strong id="stat-disabled-users" class="stat-value text-danger" style="font-size: 1.5rem;">0</strong>
       </div>
-      <div class="stat-card">
-        <span class="stat-title">تحتاج لمتابعة / بانتظار التفعيل</span>
-        <strong id="stat-pending-users" class="stat-value" style="color: var(--warning);">0</strong>
+      <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+        <span class="stat-title" style="font-size: 0.8rem; color: var(--text-muted); display: block;">تحتاج لمتابعة</span>
+        <strong id="stat-pending-users" class="stat-value" style="font-size: 1.5rem; color: var(--warning);">0</strong>
       </div>
     </section>
 
     <!-- أدوات البحث والتصفية الذكية -->
-    <section class="card" style="margin-bottom: 20px; padding: 15px 20px;">
-      <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-        <div style="flex: 1; min-width: 250px;">
-          <input type="text" id="search-admin-users" placeholder="🔍 بحث سريع بالاسم أو البريد الإلكتروني..." style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);">
+    <section class="card" style="margin-bottom: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color);">
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+        <div style="flex: 1; min-width: 220px;">
+          <input type="text" id="search-admin-users" placeholder="🔍 بحث بالاسم أو البريد الإلكتروني..." style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font-size: 0.9rem;">
         </div>
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-          <button class="filter-chip active" data-filter="all" onclick="window.setAdminFilter('all')">الكل</button>
-          <button class="filter-chip" data-filter="active" onclick="window.setAdminFilter('active')">🟢 مفعلة</button>
-          <button class="filter-chip" data-filter="disabled" onclick="window.setAdminFilter('disabled')">🔴 معطلة</button>
-          <button class="filter-chip" data-filter="pending" onclick="window.setAdminFilter('pending')">🟡 للمتابعة</button>
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+          <button class="filter-chip active" data-filter="all" onclick="window.setAdminFilter('all')" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; font-size: 0.85rem; background: var(--accent); color: #fff;">الكل</button>
+          <button class="filter-chip" data-filter="active" onclick="window.setAdminFilter('active')" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; font-size: 0.85rem; background: var(--bg-input); color: var(--text-main);">🟢 مفعلة</button>
+          <button class="filter-chip" data-filter="disabled" onclick="window.setAdminFilter('disabled')" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; font-size: 0.85rem; background: var(--bg-input); color: var(--text-main);">🔴 معطلة</button>
+          <button class="filter-chip" data-filter="pending" onclick="window.setAdminFilter('pending')" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; font-size: 0.85rem; background: var(--bg-input); color: var(--text-main);">🟡 للمتابعة</button>
         </div>
       </div>
     </section>
 
-    <!-- إدارة الحسابات والتراخيص -->
-    <section class="card" style="margin-bottom: 20px;">
-      <div class="card-header">
-        <h3>👥 إدارة حسابات المنشآت والنشاطات التجارية</h3>
-        <span id="admin-count-display" style="color: var(--text-muted); font-size: 0.9rem;">عرض 0 حساب</span>
+    <!-- إدارة الحسابات والتراخيص (تصميم بطاقات متجاوبة ومنظمة بدلاً من الجداول المعقدة) -->
+    <section class="card" style="background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color); padding: 15px;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+        <h3 style="font-size: 1.05rem; margin: 0;">👥 إدارة حسابات المنشآت والنشاطات التجارية</h3>
+        <span id="admin-count-display" style="color: var(--text-muted); font-size: 0.85rem;">عرض 0 حساب</span>
       </div>
-      <div class="list-container" style="max-height: 480px; overflow-y: auto;">
-        <table class="modern-items-table" style="width: 100%; text-align: right;">
-          <thead>
-            <tr>
-              <th>اسم النشاط / المستخدم</th>
-              <th>البريد الإلكتروني</th>
-              <th>انتهاء الاشتراك والملاحظات</th>
-              <th>حالة الحساب</th>
-              <th>الإجراءات المتقدمة</th>
-            </tr>
-          </thead>
-          <tbody id="admin-users-tbody">
-            <!-- سيتم تعبئة البيانات برمجياً -->
-          </tbody>
-        </table>
+
+      <!-- حاوية البطاقات المنظمة -->
+      <div id="admin-users-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 520px; overflow-y: auto; padding-left: 4px;">
+        <!-- سيتم تعبئة البطاقات برمجياً هنا -->
       </div>
     </section>
 
   </div>
 
   <!-- نافذة تعديل بيانات الرخصة والملاحظات -->
-  <div id="edit-license-modal" class="login-overlay hidden">
-    <div class="login-card" style="max-width: 450px; text-align: right;">
-      <h3 style="margin-bottom: 15px;">✏️ تعديل بيانات الرخصة والاشتراك</h3>
+  <div id="edit-license-modal" class="login-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 15px;">
+    <div class="login-card" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; width: 100%; max-width: 420px; text-align: right;">
+      <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem;">✏️ تعديل بيانات الرخصة والاشتراك</h3>
       <form id="edit-license-form">
         <input type="hidden" id="edit-license-id">
         <div class="form-group" style="margin-bottom: 12px;">
-          <label>اسم النشاط التجاري</label>
-          <input type="text" id="edit-store-name" required style="width: 100%; padding: 8px 12px;">
+          <label style="display: block; margin-bottom: 5px; font-size: 0.85rem;">اسم النشاط التجاري</label>
+          <input type="text" id="edit-store-name" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);">
         </div>
         <div class="form-group" style="margin-bottom: 12px;">
-          <label>تاريخ انتهاء الاشتراك</label>
-          <input type="date" id="edit-expiry-date" style="width: 100%; padding: 8px 12px;">
+          <label style="display: block; margin-bottom: 5px; font-size: 0.85rem;">تاريخ انتهاء الاشتراك</label>
+          <input type="date" id="edit-expiry-date" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);">
         </div>
         <div class="form-group" style="margin-bottom: 15px;">
-          <label>ملاحظات إدارية خاصة بالعميل</label>
-          <textarea id="edit-admin-notes" rows="3" placeholder="ملاحظات الدعم أو الترتيبات المالية..." style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main);"></textarea>
+          <label style="display: block; margin-bottom: 5px; font-size: 0.85rem;">ملاحظات إدارية خاصة بالعميل</label>
+          <textarea id="edit-admin-notes" rows="3" placeholder="ملاحظات الدعم أو الترتيبات المالية..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); font-family: inherit;"></textarea>
         </div>
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button type="button" class="btn-sm" style="background: var(--bg-secondary); color: var(--text-main);" onclick="window.closeEditModal()">إلغاء</button>
-          <button type="submit" class="btn-sm" style="background: var(--accent); color: #fff;">حفظ التغييرات</button>
+          <button type="button" class="btn-sm" style="background: var(--bg-input); color: var(--text-main); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer;" onclick="window.closeEditModal()">إلغاء</button>
+          <button type="submit" class="btn-sm" style="background: var(--accent); color: #fff; padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer;">حفظ التغييرات</button>
         </div>
       </form>
     </div>
@@ -209,8 +198,8 @@
     });
 
     async function loadSystemUsers() {
-      const tbody = document.getElementById('admin-users-tbody');
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">جاري تحميل البيانات وسحب التراخيص من السحابة...</td></tr>';
+      const container = document.getElementById('admin-users-container');
+      container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);">جاري تحميل البيانات وسحب التراخيص من السحابة...</div>';
       
       try {
         const querySnapshot = await getDocs(collection(db, "licenses"));
@@ -223,7 +212,7 @@
         renderFilteredUsers();
 
       } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-danger);">فشل جلب الحسابات: تأكد من صلاحيات قاعدة البيانات (Firestore Rules). (${error.message})</td></tr>`;
+        container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--danger);">فشل جلب الحسابات: تأكد من صلاحيات قاعدة البيانات. (${error.message})</div>`;
       }
     }
 
@@ -236,7 +225,7 @@
           btn.style.color = '#fff';
         } else {
           btn.classList.remove('active');
-          btn.style.background = 'var(--bg-secondary)';
+          btn.style.background = 'var(--bg-input)';
           btn.style.color = 'var(--text-main)';
         }
       });
@@ -252,7 +241,7 @@
     }
 
     function renderFilteredUsers() {
-      const tbody = document.getElementById('admin-users-tbody');
+      const container = document.getElementById('admin-users-container');
       
       let total = allLicensesData.length;
       let active = 0;
@@ -289,34 +278,41 @@
       if (countDisplay) countDisplay.textContent = `عرض ${filtered.length} من أصل ${total} حساب`;
 
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد نتائج مطابقة للبحث أو التصفية</td></tr>';
+        container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);">لا توجد نتائج مطابقة للبحث أو التصفية</div>';
         return;
       }
 
-      tbody.innerHTML = filtered.map(data => {
+      container.innerHTML = filtered.map(data => {
         const isActive = data.isActive === true;
-        const expiryText = data.expiryDate ? `انتهاء: ${data.expiryDate}` : 'غير محدد';
-        const notesText = data.adminNotes ? `<br><small style="color:var(--warning);">ملاحظة: ${data.adminNotes}</small>` : '';
+        const expiryText = data.expiryDate ? `📅 انتهاء الاشتراك: ${data.expiryDate}` : '📅 تاريخ الانتهاء: غير محدد';
+        const notesText = data.adminNotes ? `<div style="color: var(--warning); font-size: 0.8rem; margin-top: 4px;">📌 ملاحظة: ${data.adminNotes}</div>` : '';
 
         return `
-          <tr>
-            <td><strong>${data.storeName || 'غير محدد'}</strong></td>
-            <td>${data.email || 'غير متوفر'}</td>
-            <td>
-              <span style="font-size: 0.85rem; color: var(--text-muted);">${expiryText}</span>
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+              <h4 style="margin: 0; font-size: 1rem; color: var(--text-main); font-weight: 700;">🏢 ${data.storeName || 'غير محدد'}</h4>
+              <span style="font-size: 0.8rem; font-weight: 600; padding: 3px 10px; border-radius: 20px; background: rgba(0,0,0,0.25);" class="${isActive ? 'text-success' : 'text-danger'}">
+                ${isActive ? '🟢 مفعل' : '🔴 معطل'}
+              </span>
+            </div>
+            
+            <div style="font-size: 0.85rem; color: var(--text-muted);">
+              📧 ${data.email || 'غير متوفر'}
+            </div>
+
+            <div style="font-size: 0.82rem; background: rgba(0,0,0,0.12); padding: 8px 10px; border-radius: 6px; color: var(--text-muted);">
+              ${expiryText}
               ${notesText}
-            </td>
-            <td><span class="${isActive ? 'text-success' : 'text-danger'}">${isActive ? '🟢 مفعل' : '🔴 معطل'}</span></td>
-            <td>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" onclick="window.toggleUserStatus('${data.id}', ${!isActive})">
-                  ${isActive ? 'تعطيل' : 'تفعيل'}
-                </button>
-                <button class="btn-sm" style="background: var(--warning); color: #fff;" onclick="window.openEditModal('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}', '${data.expiryDate || ''}', '${(data.adminNotes || '').replace(/'/g, "\\'")}')">✏️ تعديل</button>
-                <button class="btn-sm" style="background: var(--danger); color: #fff;" onclick="window.deleteUserLicense('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}')">🗑️ حذف</button>
-              </div>
-            </td>
-          </tr>
+            </div>
+
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.04);">
+              <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer;" onclick="window.toggleUserStatus('${data.id}', ${!isActive})">
+                ${isActive ? '🔴 تعطيل الحساب' : '🟢 تفعيل الحساب'}
+              </button>
+              <button class="btn-sm" style="background: var(--warning); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer;" onclick="window.openEditModal('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}', '${data.expiryDate || ''}', '${(data.adminNotes || '').replace(/'/g, "\\'")}')">✏️ تعديل</button>
+              <button class="btn-sm" style="background: var(--danger); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer;" onclick="window.deleteUserLicense('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}')">🗑️ حذف</button>
+            </div>
+          </div>
         `;
       }).join('');
     }
