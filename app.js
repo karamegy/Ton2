@@ -173,6 +173,7 @@ let activeUnsubscribers = [];
 let activeItems = [];
 let activeLedgerClientName = null;
 let editingInvoiceId = null;
+let editingProductId = null; // متغير لتتبع المنتج الجاري تعديله عبر النموذج المطور
 
 const privacyModal = document.getElementById('privacy-modal');
 const openPrivacyAuthBtn = document.getElementById('open-privacy-auth-btn');
@@ -1175,11 +1176,28 @@ if (productForm) {
       return;
     }
 
-    productsDB.push({ id: Date.now(), name, price, cost, stock });
+    if (editingProductId !== null) {
+      // تحديث المنتج الموجود حالياً
+      const idx = productsDB.findIndex(p => p.id === editingProductId);
+      if (idx !== -1) {
+        productsDB[idx] = Object.assign({}, productsDB[idx], { name, price, cost, stock });
+      }
+      editingProductId = null;
+      
+      const submitBtn = productForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.textContent = translations[currentLang].saveProduct || 'حفظ المنتج';
+      
+      const cancelBtn = document.getElementById('cancel-edit-prod-btn');
+      if (cancelBtn) cancelBtn.remove();
+    } else {
+      // إضافة منتج جديد
+      productsDB.push({ id: Date.now(), name, price, cost, stock });
+    }
+
     await syncDocToCloud('products', { list: productsDB });
     e.target.reset();
     renderAllModules();
-    alert('✅ تم حفظ المنتج في المخزن بنجاح!');
+    alert(editingProductId !== null ? '✅ تم تحديث بيانات المنتج بنجاح!' : '✅ تم حفظ المنتج في المخزن بنجاح!');
   });
 }
 
@@ -1201,47 +1219,42 @@ function renderProducts() {
   `).join('');
 }
 
-window.editProduct = async (index) => {
+window.editProduct = (index) => {
   const p = productsDB[index];
   if (!p) return;
 
-  const newName = prompt('تعديل اسم المنتج:', p.name);
-  if (newName === null) return;
+  editingProductId = p.id;
 
-  const newPriceStr = prompt('تعديل سعر البيع:', p.price || 0);
-  if (newPriceStr === null) return;
+  const nameEl = document.getElementById('p-name');
+  const priceEl = document.getElementById('p-price');
+  const costEl = document.getElementById('p-cost');
+  const stockEl = document.getElementById('p-stock');
 
-  const newCostStr = prompt('تعديل سعر التكلفة:', p.cost || 0);
-  if (newCostStr === null) return;
+  if (nameEl) nameEl.value = p.name;
+  if (priceEl) priceEl.value = p.price;
+  if (costEl) costEl.value = p.cost;
+  if (stockEl) stockEl.value = p.stock;
 
-  const newStockStr = prompt('تعديل الكمية بالمخزن:', p.stock || 0);
-  if (newStockStr === null) return;
+  const submitBtn = productForm.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.textContent = currentLang === 'ar' ? 'تحديث بيانات المنتج' : 'Update Product';
 
-  const price = parseFloat(newPriceStr);
-  const cost = parseFloat(newCostStr);
-  const stock = parseInt(newStockStr);
-
-  if (isNaN(price) || isNaN(cost) || isNaN(stock)) {
-    alert('يرجى إدخال قيم صحيحة للأرقام.');
-    return;
+  if (!document.getElementById('cancel-edit-prod-btn')) {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.id = 'cancel-edit-prod-btn';
+    cancelBtn.className = 'btn-sm';
+    cancelBtn.style.cssText = 'background: var(--danger); color: #fff; margin-top: 8px; width: 100%; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer;';
+    cancelBtn.textContent = currentLang === 'ar' ? 'إلغاء التعديل ✕' : 'Cancel Edit ✕';
+    cancelBtn.onclick = () => {
+      editingProductId = null;
+      if (productForm) productForm.reset();
+      if (submitBtn) submitBtn.textContent = translations[currentLang].saveProduct || 'حفظ المنتج';
+      cancelBtn.remove();
+    };
+    productForm.appendChild(cancelBtn);
   }
 
-  const trimmedName = newName.trim();
-  if (!trimmedName) {
-    alert('اسم المنتج لا يمكن أن يكون فارغاً.');
-    return;
-  }
-
-  productsDB[index] = Object.assign({}, p, {
-    name: trimmedName,
-    price: price,
-    cost: cost,
-    stock: stock
-  });
-
-  await syncDocToCloud('products', { list: productsDB });
-  renderAllModules();
-  alert('✅ تم تعديل بيانات المنتج وتحديث المخزن بنجاح!');
+  productForm.scrollIntoView({ behavior: 'smooth' });
 };
 
 window.deleteProduct = async (idx) => {
