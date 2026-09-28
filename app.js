@@ -6,7 +6,7 @@ import {
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
   GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, 
-  signOut, onAuthStateChanged 
+  signOut, onAuthStateChanged, setPersistence, browserLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -20,7 +20,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// ⚡ تفعيل كاش Firestore الدائم والعمل بدون إنترنت باحترافية عالية
+// ⚡ تفعيل كاش Firestore الدائم والعمل بدون إنترنت وتوفير القراءات
 const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
@@ -28,6 +28,12 @@ const db = initializeFirestore(app, {
 });
 
 const auth = getAuth(app);
+
+// ⚡ تثبيت جلسة المستخدم محلياً لضمان عدم ضياع الحساب عند انقطاع الإنترنت
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Auth Persistence Error:", error);
+});
+
 const googleProvider = new GoogleAuthProvider();
 
 // دالة تفعيل الإعلانات المحسّنة والمؤمنة
@@ -250,7 +256,7 @@ getRedirectResult(auth).then(async (result) => {
   }
 });
 
-// ⚡ مراقب جلسة المستخدم المحسّن
+// ⚡ مراقب جلسة المستخدم المحسّن للعمل أوفلاين بدون اختفاء الحساب
 onAuthStateChanged(auth, async (user) => {
   const adminBtn = document.getElementById('admin-btn');
 
@@ -279,7 +285,14 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     licenseUnsubscriber = onSnapshot(userRef, async (snapshot) => {
+      // في حالة انقطاع الإنترنت وعدم وجود مستند في الكاش، نتجاوز القفل لمنع إخراج المستخدم
       if (!snapshot.exists()) {
+        if (!navigator.onLine) {
+          if (lockScreen) lockScreen.classList.add('hidden');
+          if (mainApp) mainApp.classList.remove('hidden');
+          attachCloudRealtimeSync(user.uid);
+          return;
+        }
         try {
           await setDoc(userRef, {
             email: user.email,
@@ -305,10 +318,13 @@ onAuthStateChanged(auth, async (user) => {
         detachCloudSync();
       }
     }, (err) => {
-      console.error("License Snapshot Error:", err);
-      if (mainApp) mainApp.classList.remove('hidden');
-      if (lockScreen) lockScreen.classList.add('hidden');
-      attachCloudRealtimeSync(user.uid);
+      console.warn("License Snapshot Offline Fallback Error:", err);
+      // عند خطأ الشبكة أو انقطاع الإنترنت، نبقي التطبيق يعمل اعتماداً على الجلسة الحالية والكاش
+      if (currentUser) {
+        if (mainApp) mainApp.classList.remove('hidden');
+        if (lockScreen) lockScreen.classList.add('hidden');
+        attachCloudRealtimeSync(currentUser.uid);
+      }
     });
 
   } else {
@@ -372,7 +388,7 @@ async function attachCloudRealtimeSync(uid) {
       storeProfile = Object.assign({}, storeProfile, snap.data());
       updateHeaderUI();
     }
-  }, (err) => console.error("Profile Sync Error:", err));
+  }, (err) => console.warn("Profile Sync Offline Notice:", err));
 
   const unsubInvoices = onSnapshot(collection(db, "users", uid, "invoices"), (snapshot) => {
     invoicesDB = [];
@@ -382,7 +398,7 @@ async function attachCloudRealtimeSync(uid) {
     invoicesDB.sort((a, b) => b.id - a.id);
     updateNextInvoiceNumber(); 
     renderAllModules();
-  }, (err) => console.error("Invoices Sync Error:", err));
+  }, (err) => console.warn("Invoices Sync Offline Notice:", err));
 
   const unsubClients = onSnapshot(collection(db, "users", uid, "clients"), (snapshot) => {
     clientsDB = [];
@@ -390,7 +406,7 @@ async function attachCloudRealtimeSync(uid) {
       clientsDB.push(docSnap.data());
     });
     renderAllModules();
-  }, (err) => console.error("Clients Sync Error:", err));
+  }, (err) => console.warn("Clients Sync Offline Notice:", err));
 
   const unsubProducts = onSnapshot(collection(db, "users", uid, "products"), (snapshot) => {
     productsDB = [];
@@ -398,7 +414,7 @@ async function attachCloudRealtimeSync(uid) {
       productsDB.push(docSnap.data());
     });
     renderAllModules();
-  }, (err) => console.error("Products Sync Error:", err));
+  }, (err) => console.warn("Products Sync Offline Notice:", err));
 
   const unsubExpenses = onSnapshot(collection(db, "users", uid, "expenses"), (snapshot) => {
     expensesDB = [];
@@ -406,7 +422,7 @@ async function attachCloudRealtimeSync(uid) {
       expensesDB.push(docSnap.data());
     });
     renderAllModules();
-  }, (err) => console.error("Expenses Sync Error:", err));
+  }, (err) => console.warn("Expenses Sync Offline Notice:", err));
 
   activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubProducts, unsubExpenses];
 }
