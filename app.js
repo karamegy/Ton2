@@ -170,6 +170,7 @@ let productsDB = [];
 let expensesDB = [];
 let storeProfile = { name: "GITI Enterprise ERP", phone: "01000000000", address: "", currency: "ج.م", vatNo: "", logo: "" };
 let activeUnsubscribers = [];
+let licenseUnsubscriber = null;
 let activeItems = [];
 let activeLedgerClientName = null;
 let editingInvoiceId = null;
@@ -221,19 +222,24 @@ function clearAuthMsgs() {
   if (authSuccess) authSuccess.classList.add('hidden');
 }
 
+// ⚡ معالجة نتيجة إعادة التوجيه للتوثيق المباشر المحمي
 getRedirectResult(auth).then(async (result) => {
   if (result && result.user) {
     const u = result.user;
     const userRef = doc(db, "licenses", u.uid);
-    const docSnap = await getDoc(userRef);
-    if (!docSnap.exists()) {
-      await setDoc(userRef, {
-        email: u.email,
-        storeName: u.displayName ? u.displayName : "نشاط جديد",
-        isActive: true,
-        role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
-        createdAt: new Date().toISOString()
-      });
+    try {
+      const docSnap = await getDoc(userRef);
+      if (!docSnap.exists()) {
+        await setDoc(userRef, {
+          email: u.email,
+          storeName: u.displayName ? u.displayName : "نشاط جديد",
+          isActive: true,
+          role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
+          createdAt: new Date().toISOString()
+        });
+      }
+    } catch (e) {
+      console.warn("Redirect License Check Error:", e);
     }
   }
 }).catch((err) => {
@@ -244,6 +250,7 @@ getRedirectResult(auth).then(async (result) => {
   }
 });
 
+// ⚡ مراقب جلسة المستخدم المحسّن
 onAuthStateChanged(auth, async (user) => {
   const adminBtn = document.getElementById('admin-btn');
 
@@ -265,23 +272,31 @@ onAuthStateChanged(auth, async (user) => {
     if (userUidTag) userUidTag.textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
     
     const userRef = doc(db, "licenses", user.uid);
-    try {
-      const docSnap = await getDoc(userRef);
-      if (!docSnap.exists()) {
-        await setDoc(userRef, {
-          email: user.email,
-          storeName: user.displayName ? user.displayName : "نشاط تجاري جديد",
-          isActive: true,
-          role: isAdmin ? "admin_master" : "user",
-          createdAt: new Date().toISOString()
-        });
-      }
-    } catch (e) {
-      console.warn("License check warning:", e);
+
+    // إلغاء أي مستمع ترخيص سابق لمنع التكرار
+    if (licenseUnsubscriber) {
+      licenseUnsubscriber();
+      licenseUnsubscriber = null;
     }
 
-    onSnapshot(userRef, (snapshot) => {
-      if (!snapshot.exists() || snapshot.data().isActive !== false) {
+    // الربط مع مستمع الترخيص السحابي المباشر
+    licenseUnsubscriber = onSnapshot(userRef, async (snapshot) => {
+      if (!snapshot.exists()) {
+        try {
+          await setDoc(userRef, {
+            email: user.email,
+            storeName: user.displayName ? user.displayName : "نشاط تجاري جديد",
+            isActive: true,
+            role: isAdmin ? "admin_master" : "user",
+            createdAt: new Date().toISOString()
+          });
+        } catch (e) {
+          console.warn("License creation warning:", e);
+        }
+        return;
+      }
+
+      if (snapshot.data().isActive !== false) {
         if (lockScreen) lockScreen.classList.add('hidden');
         if (mainApp) mainApp.classList.remove('hidden');
         attachCloudRealtimeSync(user.uid);
@@ -297,11 +312,17 @@ onAuthStateChanged(auth, async (user) => {
       if (lockScreen) lockScreen.classList.add('hidden');
       attachCloudRealtimeSync(user.uid);
     });
+
   } else {
     currentUser = null;
     
     if (adminBtn) {
       adminBtn.classList.add('hidden');
+    }
+
+    if (licenseUnsubscriber) {
+      licenseUnsubscriber();
+      licenseUnsubscriber = null;
     }
 
     detachCloudSync();
@@ -355,7 +376,7 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
-// ⚡ دالة جلب السحابة المحسّنة والمحمية ضد أي أخطاء انقطاع شبكة أثناء مراجعة التطبيق
+// ⚡ دالة جلب السحابة المحسّنة والمحمية
 async function fetchAllDataFromCloud() {
   if (!currentUser) {
     alert('يرجى تسجيل الدخول أولاً لجلب البيانات.');
@@ -819,7 +840,7 @@ function calculateTotals() {
 if (discountInput) discountInput.addEventListener('input', calculateTotals);
 if (taxInput) taxInput.addEventListener('input', calculateTotals);
 
-// ⚡ الدالة المحمية والمحدثة بنظام Smart Merge لمنع أي استبدال فوقي (Overwrite)
+// ⚡ دالة حفظ الفاتورة بنظام Smart Merge
 async function saveInvoiceData() {
   const clientName = clientInput ? clientInput.value.trim() : '';
   const clientPhone = clientPhoneInput ? clientPhoneInput.value.trim() : '';
@@ -830,7 +851,6 @@ async function saveInvoiceData() {
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
   if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل وتحديد الكمية والسعر'); return null; }
 
-  // جلب أحدث بيانات السحابة مباشرة قبل الحفظ لضمان الدمج السليم
   const uid = currentUser ? currentUser.uid : null;
   let cloudInvoices = [];
   let cloudClients = [];
