@@ -330,9 +330,42 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// ⚡ نظام المزامنة الحية عبر المجموعات الفرعية (Subcollections) الموفرة جداً
-function attachCloudRealtimeSync(uid) {
+// ⚡ نظام المزامنة والترحيل التلقائي الذكي للبيانات القديمة إلى النظام الجديد
+async function attachCloudRealtimeSync(uid) {
   detachCloudSync();
+
+  try {
+    const oldInvDoc = await getDoc(doc(db, "users", uid, "data", "invoices"));
+    if (oldInvDoc.exists() && oldInvDoc.data().list && oldInvDoc.data().list.length > 0) {
+      console.log("🔄 جاري ترحيل الفواتير القديمة للنظام الجديد والموفر...");
+      for (const inv of oldInvDoc.data().list) {
+        await setDoc(doc(db, "users", uid, "invoices", String(inv.id)), inv);
+      }
+    }
+
+    const oldClientDoc = await getDoc(doc(db, "users", uid, "data", "clients"));
+    if (oldClientDoc.exists() && oldClientDoc.data().list && oldClientDoc.data().list.length > 0) {
+      for (const c of oldClientDoc.data().list) {
+        await setDoc(doc(db, "users", uid, "clients", String(c.id)), c);
+      }
+    }
+
+    const oldProdDoc = await getDoc(doc(db, "users", uid, "data", "products"));
+    if (oldProdDoc.exists() && oldProdDoc.data().list && oldProdDoc.data().list.length > 0) {
+      for (const p of oldProdDoc.data().list) {
+        await setDoc(doc(db, "users", uid, "products", String(p.id)), p);
+      }
+    }
+
+    const oldExpDoc = await getDoc(doc(db, "users", uid, "data", "expenses"));
+    if (oldExpDoc.exists() && oldExpDoc.data().list && oldExpDoc.data().list.length > 0) {
+      for (const exp of oldExpDoc.data().list) {
+        await setDoc(doc(db, "users", uid, "expenses", String(exp.id)), exp);
+      }
+    }
+  } catch (err) {
+    console.warn("Migration warning:", err);
+  }
 
   const unsubProfile = onSnapshot(doc(db, "users", uid, "data", "profile"), (snap) => {
     if (snap.exists()) {
