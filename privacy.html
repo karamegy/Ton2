@@ -4,7 +4,7 @@
   <meta name="google-adsense-account" content="ca-pub-6651309355082807">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>سياسة الخصوصية - GITI Enterprise ERP</title>
+  <title>سياسة الخصوصية - GITI Enterprise ERP & Tech</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
@@ -45,7 +45,17 @@
       max-width: 800px;
       margin: 10px auto 0;
       display: flex;
-      justify-content: flex-start;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .nav-buttons-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .back-btn {
@@ -62,6 +72,14 @@
       align-items: center;
       gap: 6px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    
+    .back-btn:hover {
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--accent);
+      text-decoration: none;
     }
 
     .container {
@@ -122,13 +140,18 @@
 
   <div class="nav-bar">
     <button class="back-btn" onclick="goToApp()">➔ العودة للتطبيق</button>
+    
+    <div class="nav-buttons-group">
+      <!-- زر الانتقال إلى مشروع المدونة الرئيسي -->
+      <a href="https://karamegy.github.io/" class="back-btn" target="_blank">🌐 زيارة المدونة التقنية</a>
+    </div>
   </div>
 
   <div class="container">
     <h1>🔒 سياسة الخصوصية (Privacy Policy)</h1>
     <p>تاريخ آخر تحديث: 17 سبتمبر 2026</p>
 
-    <p>مرحباً بك في تطبيق <strong>GITI Enterprise ERP</strong>. نحن نلتزم بحماية خصوصية بياناتك التجارية والشخصية والتأكد من أمانها التام وفقاً لأعلى معايير الحماية والأمان الرقمي.</p>
+    <p>مرحباً بك في منصة <strong>GITI Tech & ERP</strong>. نحن نلتزم بحماية خصوصية بياناتك التجارية والشخصية والتأكد من أمانها التام وفقاً لأعلى معايير الحماية والأمان الرقمي.</p>
 
     <h2>1. البيانات التي نجمعها وكيفية استخدامها</h2>
     <ul>
@@ -137,7 +160,7 @@
     </ul>
 
     <h2>2. خدمات الطرف الثالث (Third-Party Services)</h2>
-    <p>يستخدم التطبيق خدمات موثوقة من شركة Google لتشغيل النظام والإعلانات:</p>
+    <p>يستخدم الموقع والتطبيقات خدمات موثوقة من شركة Google لتشغيل النظام والإعلانات:</p>
     <ul>
       <li><strong>Google Firebase:</strong> لتأمين الحسابات وقواعد البيانات السحابية.</li>
       <li><strong>Google AdSense / AdMob:</strong> لعرض الإعلانات التجارية المخصصة وفقاً لإرشادات حماية الخصوصية الرقمية.</li>
@@ -148,13 +171,13 @@
 
     <h2>4. طلب حذف الحساب والبيانات (Data Deletion)</h2>
     <p>يحق لك طلب حذف حسابك وكافة البيانات الخاصة بنشاطك التجاري المخزنة على خوادمنا في أي وقت. للقيام بذلك، يرجى التواصل المباشر مع مدير النظام عبر البريد الإلكتروني:</p>
-    <p><a href="mailto:haretg@gmail.com">haretg@gmail.com</a></p>
+    <p><a href="mailto:eelkady188@gmail.com">eelkady188@gmail.com</a></p>
 
     <h2>5. التواصل والدعم الفني</h2>
-    <p>لأي استفسارات أو ملاحظات بخصوص سياسة الخصوصية أو حماية البيانات، يمكنك التواصل معنا مباشرة عبر البريد الإلكتروني: <strong>haretg@gmail.com</strong></p>
+    <p>لأي استفسارات أو ملاحظات بخصوص سياسة الخصوصية أو حماية البيانات، يمكنك التواصل معنا مباشرة عبر البريد الإلكتروني: <strong>eelkady188@gmail.com</strong> أو عبر الهاتف/واتساب: <strong>+201114099799</strong></p>
 
     <div class="footer">
-      &copy; 2026 GITI Enterprise ERP. جميع الحقوق محفوظة.
+      &copy; 2026 GITI Enterprise ERP & Tech. جميع الحقوق محفوظة.
     </div>
   </div>
 
@@ -179,7 +202,7 @@
       if (window.history.length > 1 && document.referrer) {
         window.history.back();
       } else {
-        window.location.href = 'index.html'; // غير هذا المسار إلى اسم صفحة الدخول أو الواجهة الرئيسية لديك
+        window.location.href = 'index.html'; 
       }
     }
 
