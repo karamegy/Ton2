@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
-  getFirestore, doc, setDoc, getDoc, onSnapshot, 
+  getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc, getDocs,
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
@@ -273,13 +273,11 @@ onAuthStateChanged(auth, async (user) => {
     
     const userRef = doc(db, "licenses", user.uid);
 
-    // إلغاء أي مستمع ترخيص سابق لمنع التكرار
     if (licenseUnsubscriber) {
       licenseUnsubscriber();
       licenseUnsubscriber = null;
     }
 
-    // الربط مع مستمع الترخيص السحابي المباشر
     licenseUnsubscriber = onSnapshot(userRef, async (snapshot) => {
       if (!snapshot.exists()) {
         try {
@@ -332,6 +330,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+// ⚡ نظام المزامنة الحية عبر المجموعات الفرعية (Subcollections) الموفرة جداً
 function attachCloudRealtimeSync(uid) {
   detachCloudSync();
 
@@ -342,24 +341,37 @@ function attachCloudRealtimeSync(uid) {
     }
   }, (err) => console.error("Profile Sync Error:", err));
 
-  const unsubInvoices = onSnapshot(doc(db, "users", uid, "data", "invoices"), (snap) => {
-    invoicesDB = snap.exists() && snap.data().list ? snap.data().list : [];
+  const unsubInvoices = onSnapshot(collection(db, "users", uid, "invoices"), (snapshot) => {
+    invoicesDB = [];
+    snapshot.forEach((docSnap) => {
+      invoicesDB.push(docSnap.data());
+    });
+    invoicesDB.sort((a, b) => b.id - a.id);
     updateNextInvoiceNumber(); 
     renderAllModules();
   }, (err) => console.error("Invoices Sync Error:", err));
 
-  const unsubClients = onSnapshot(doc(db, "users", uid, "data", "clients"), (snap) => {
-    clientsDB = snap.exists() && snap.data().list ? snap.data().list : [];
+  const unsubClients = onSnapshot(collection(db, "users", uid, "clients"), (snapshot) => {
+    clientsDB = [];
+    snapshot.forEach((docSnap) => {
+      clientsDB.push(docSnap.data());
+    });
     renderAllModules();
   }, (err) => console.error("Clients Sync Error:", err));
 
-  const unsubProducts = onSnapshot(doc(db, "users", uid, "data", "products"), (snap) => {
-    productsDB = snap.exists() && snap.data().list ? snap.data().list : [];
+  const unsubProducts = onSnapshot(collection(db, "users", uid, "products"), (snapshot) => {
+    productsDB = [];
+    snapshot.forEach((docSnap) => {
+      productsDB.push(docSnap.data());
+    });
     renderAllModules();
   }, (err) => console.error("Products Sync Error:", err));
 
-  const unsubExpenses = onSnapshot(doc(db, "users", uid, "data", "expenses"), (snap) => {
-    expensesDB = snap.exists() && snap.data().list ? snap.data().list : [];
+  const unsubExpenses = onSnapshot(collection(db, "users", uid, "expenses"), (snapshot) => {
+    expensesDB = [];
+    snapshot.forEach((docSnap) => {
+      expensesDB.push(docSnap.data());
+    });
     renderAllModules();
   }, (err) => console.error("Expenses Sync Error:", err));
 
@@ -376,7 +388,7 @@ async function syncDocToCloud(docName, payload) {
   await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload);
 }
 
-// ⚡ دالة جلب السحابة المحسّنة والمحمية
+// ⚡ دالة جلب السحابة المحسّنة والمحمية عبر Subcollections
 async function fetchAllDataFromCloud() {
   if (!currentUser) {
     alert('يرجى تسجيل الدخول أولاً لجلب البيانات.');
@@ -387,32 +399,24 @@ async function fetchAllDataFromCloud() {
     const uid = currentUser.uid;
     console.log("🔄 جاري جلب البيانات من السحابة للـ UID الحالي:", uid);
     
-    let invSnap;
-    try {
-      invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"), { source: 'server' });
-    } catch (serverErr) {
-      console.warn("⚠️ تعذر الجلب المباشر من الخادم، يتم الجلب من الكاش المحلي:", serverErr);
-      invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"));
-    }
+    const invSnap = await getDocs(collection(db, "users", uid, "invoices"));
+    invoicesDB = [];
+    invSnap.forEach(d => invoicesDB.push(d.data()));
+    invoicesDB.sort((a, b) => b.id - a.id);
 
-    if (invSnap.exists()) {
-      invoicesDB = invSnap.data().list || [];
-      console.log("✅ تم العثور على الفواتير:", invoicesDB.length);
-    } else {
-      console.log("⚠️ لا توجد وثيقة فواتير مسجلة لهذا الـ UID في السحابة.");
-      invoicesDB = [];
-    }
+    const clientSnap = await getDocs(collection(db, "users", uid, "clients"));
+    clientsDB = [];
+    clientSnap.forEach(d => clientsDB.push(d.data()));
 
-    const clientSnap = await getDoc(doc(db, "users", uid, "data", "clients"), { source: 'server' }).catch(() => getDoc(doc(db, "users", uid, "data", "clients")));
-    clientsDB = clientSnap && clientSnap.exists() ? (clientSnap.data().list || []) : [];
+    const prodSnap = await getDocs(collection(db, "users", uid, "products"));
+    productsDB = [];
+    prodSnap.forEach(d => productsDB.push(d.data()));
 
-    const prodSnap = await getDoc(doc(db, "users", uid, "data", "products"), { source: 'server' }).catch(() => getDoc(doc(db, "users", uid, "data", "products")));
-    productsDB = prodSnap && prodSnap.exists() ? (prodSnap.data().list || []) : [];
+    const expSnap = await getDocs(collection(db, "users", uid, "expenses"));
+    expensesDB = [];
+    expSnap.forEach(d => expensesDB.push(d.data()));
 
-    const expSnap = await getDoc(doc(db, "users", uid, "data", "expenses"), { source: 'server' }).catch(() => getDoc(doc(db, "users", uid, "data", "expenses")));
-    expensesDB = expSnap && expSnap.exists() ? (expSnap.data().list || []) : [];
-
-    const profSnap = await getDoc(doc(db, "users", uid, "data", "profile"), { source: 'server' }).catch(() => getDoc(doc(db, "users", uid, "data", "profile")));
+    const profSnap = await getDoc(doc(db, "users", uid, "data", "profile"));
     if (profSnap && profSnap.exists()) {
       storeProfile = Object.assign({}, storeProfile, profSnap.data());
       updateHeaderUI();
@@ -840,7 +844,7 @@ function calculateTotals() {
 if (discountInput) discountInput.addEventListener('input', calculateTotals);
 if (taxInput) taxInput.addEventListener('input', calculateTotals);
 
-// ⚡ دالة حفظ الفاتورة بنظام Smart Merge
+// ⚡ حفظ الفاتورة بنظام Subcollections الموفر جداً للموارد
 async function saveInvoiceData() {
   const clientName = clientInput ? clientInput.value.trim() : '';
   const clientPhone = clientPhoneInput ? clientPhoneInput.value.trim() : '';
@@ -852,33 +856,9 @@ async function saveInvoiceData() {
   if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل وتحديد الكمية والسعر'); return null; }
 
   const uid = currentUser ? currentUser.uid : null;
-  let cloudInvoices = [];
-  let cloudClients = [];
-  let cloudProducts = [];
+  if (!uid) { alert('يرجى تسجيل الدخول أولاً'); return null; }
 
-  if (uid) {
-    try {
-      const invSnap = await getDoc(doc(db, "users", uid, "data", "invoices"));
-      if (invSnap.exists() && invSnap.data().list) cloudInvoices = invSnap.data().list;
-
-      const clientSnap = await getDoc(doc(db, "users", uid, "data", "clients"));
-      if (clientSnap.exists() && clientSnap.data().list) cloudClients = clientSnap.data().list;
-
-      const prodSnap = await getDoc(doc(db, "users", uid, "data", "products"));
-      if (prodSnap.exists() && prodSnap.data().list) cloudProducts = prodSnap.data().list;
-    } catch (e) {
-      console.warn("استخدام النسخة المحلية لعدم توفر اتصال مباشر:", e);
-      cloudInvoices = invoicesDB;
-      cloudClients = clientsDB;
-      cloudProducts = productsDB;
-    }
-  } else {
-    cloudInvoices = invoicesDB;
-    cloudClients = clientsDB;
-    cloudProducts = productsDB;
-  }
-
-  let clientObj = cloudClients.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+  let clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase());
   let assignedClientId = null;
 
   if (!clientObj) {
@@ -890,12 +870,12 @@ async function saveInvoiceData() {
       openingBalance: 0, 
       payments: [] 
     };
-    cloudClients.push(clientObj);
+    clientsDB.push(clientObj);
   } else {
     if (!clientObj.id) clientObj.id = Date.now();
     assignedClientId = clientObj.id;
     if (clientPhone) {
-      cloudClients = cloudClients.map(c => c.id === clientObj.id ? Object.assign({}, c, { phone: clientPhone }) : c);
+      clientObj.phone = clientPhone;
     }
   }
 
@@ -910,7 +890,7 @@ async function saveInvoiceData() {
     paidVal = paidInput ? (parseFloat(paidInput.value) ? parseFloat(paidInput.value) : 0) : 0;
   }
 
-  const validIds = cloudInvoices.map(i => parseInt(i.id)).filter(id => !isNaN(id));
+  const validIds = invoicesDB.map(i => parseInt(i.id)).filter(id => !isNaN(id));
   const maxId = validIds.length > 0 ? Math.max(...validIds) : 1000;
   const currentInvId = editingInvoiceId ? editingInvoiceId : (maxId >= 1001 ? maxId + 1 : 1001);
   const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
@@ -929,29 +909,32 @@ async function saveInvoiceData() {
     zatcaQr: zatcaBase64
   }, totals);
 
+  // تحديث المخزن للأصناف المباعة
   validItems.forEach(soldItem => {
-    const prod = cloudProducts.find(p => p.name.toLowerCase() === soldItem.name.toLowerCase());
+    const prod = productsDB.find(p => p.name.toLowerCase() === soldItem.name.toLowerCase());
     if (prod) {
       prod.stock = Math.max(0, (prod.stock ? prod.stock : 0) - soldItem.qty);
     }
   });
 
   if (editingInvoiceId) {
-    cloudInvoices = cloudInvoices.map(i => i.id === editingInvoiceId ? invoice : i);
+    invoicesDB = invoicesDB.map(i => i.id === editingInvoiceId ? invoice : i);
     editingInvoiceId = null;
   } else {
-    cloudInvoices.unshift(invoice);
+    invoicesDB.unshift(invoice);
   }
 
-  invoicesDB = cloudInvoices;
-  clientsDB = cloudClients;
-  productsDB = cloudProducts;
+  // ⚡ الحفظ المباشر للمستندات المستقلة (Subcollections) لتوفير التكاليف وحجم البيانات
+  const promises = [
+    setDoc(doc(db, "users", uid, "invoices", String(invoice.id)), invoice),
+    setDoc(doc(db, "users", uid, "clients", String(clientObj.id)), clientObj)
+  ];
 
-  await Promise.all([
-    syncDocToCloud('invoices', { list: invoicesDB }),
-    syncDocToCloud('clients', { list: clientsDB }),
-    syncDocToCloud('products', { list: productsDB })
-  ]).catch(err => console.error("Cloud Sync Error:", err));
+  productsDB.forEach(prod => {
+    promises.push(setDoc(doc(db, "users", uid, "products", String(prod.id)), prod));
+  });
+
+  await Promise.all(promises).catch(err => console.error("Cloud Sync Error:", err));
 
   resetForm();
   renderAllModules();
@@ -1225,10 +1208,14 @@ window.reprintInvoice = (id) => {
 
 window.deleteInvoice = async (id) => {
   if (!confirm('تأكيد حذف الفاتورة؟')) return;
-  invoicesDB = invoicesDB.filter(i => i.id !== id);
-  updateNextInvoiceNumber();
-  await syncDocToCloud('invoices', { list: invoicesDB });
-  renderAllModules();
+  try {
+    await deleteDoc(doc(db, "users", currentUser.uid, "invoices", String(id)));
+    invoicesDB = invoicesDB.filter(i => i.id !== id);
+    updateNextInvoiceNumber();
+    renderAllModules();
+  } catch (err) {
+    console.error("Delete Invoice Error:", err);
+  }
 };
 
 const searchInput = document.getElementById('search-input');
@@ -1253,10 +1240,12 @@ if (productForm) {
       return;
     }
 
+    let prodToSave;
     if (editingProductId !== null) {
       const idx = productsDB.findIndex(p => p.id === editingProductId);
       if (idx !== -1) {
         productsDB[idx] = Object.assign({}, productsDB[idx], { name, price, cost, stock });
+        prodToSave = productsDB[idx];
       }
       editingProductId = null;
       
@@ -1266,10 +1255,13 @@ if (productForm) {
       const cancelBtn = document.getElementById('cancel-edit-prod-btn');
       if (cancelBtn) cancelBtn.remove();
     } else {
-      productsDB.push({ id: Date.now(), name, price, cost, stock });
+      prodToSave = { id: Date.now(), name, price, cost, stock };
+      productsDB.push(prodToSave);
     }
 
-    await syncDocToCloud('products', { list: productsDB });
+    if (currentUser) {
+      await setDoc(doc(db, "users", currentUser.uid, "products", String(prodToSave.id)), prodToSave);
+    }
     e.target.reset();
     renderAllModules();
     alert(editingProductId !== null ? '✅ تم تحديث بيانات المنتج بنجاح!' : '✅ تم حفظ المنتج في المخزن بنجاح!');
@@ -1333,10 +1325,15 @@ window.editProduct = (index) => {
 };
 
 window.deleteProduct = async (idx) => {
-  if (!confirm('⚠️ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
-  productsDB.splice(idx, 1);
-  await syncDocToCloud('products', { list: productsDB });
-  renderAllModules();
+  const p = productsDB[idx];
+  if (!p || !confirm('⚠️ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
+  try {
+    await deleteDoc(doc(db, "users", currentUser.uid, "products", String(p.id)));
+    productsDB.splice(idx, 1);
+    renderAllModules();
+  } catch (err) {
+    console.error("Delete Product Error:", err);
+  }
 };
 
 const clientForm = document.getElementById('client-form');
@@ -1356,9 +1353,13 @@ if (clientForm) {
       return;
     }
 
-    clientsDB.push({ id: Date.now(), name, phone, openingBalance, payments: [] });
-    await syncDocToCloud('clients', { list: clientsDB });
+    const newClient = { id: Date.now(), name, phone, openingBalance, payments: [] };
+    clientsDB.push(newClient);
+    if (currentUser) {
+      await setDoc(doc(db, "users", currentUser.uid, "clients", String(newClient.id)), newClient);
+    }
     e.target.reset();
+    renderAllModules();
   });
 }
 
@@ -1463,7 +1464,9 @@ window.editClient = async (index) => {
     openingBalance: newBalance
   });
 
-  await syncDocToCloud('clients', { list: clientsDB });
+  if (currentUser) {
+    await setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[index].id)), clientsDB[index]);
+  }
   renderAllModules();
   alert('✅ تم تعديل بيانات العميل بنجاح!');
 };
@@ -1474,9 +1477,13 @@ window.deleteClient = async (index) => {
 
   if (!confirm(`⚠️ هل أنت متأكد من حذف العميل "${client.name}"؟ سيتم إزالته من الدفتر السحابي.`)) return;
 
-  clientsDB.splice(index, 1);
-  await syncDocToCloud('clients', { list: clientsDB });
-  renderAllModules();
+  try {
+    await deleteDoc(doc(db, "users", currentUser.uid, "clients", String(client.id)));
+    clientsDB.splice(index, 1);
+    renderAllModules();
+  } catch (err) {
+    console.error("Delete Client Error:", err);
+  }
 };
 
 window.openClientLedger = (clientName) => {
@@ -1533,7 +1540,9 @@ window.deleteClientPayment = async (clientName, paymentIndex) => {
   const idx = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
   if (idx !== -1 && clientsDB[idx].payments) {
     clientsDB[idx].payments.splice(paymentIndex, 1);
-    await syncDocToCloud('clients', { list: clientsDB });
+    if (currentUser) {
+      await setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]);
+    }
     window.openClientLedger(clientName);
     renderAllModules();
   }
@@ -1548,7 +1557,9 @@ window.editClientPayment = async (clientName, paymentIndex) => {
       const newAmount = parseFloat(newAmountStr);
       if (!isNaN(newAmount) && newAmount > 0) {
         clientsDB[idx].payments[paymentIndex].amount = newAmount;
-        await syncDocToCloud('clients', { list: clientsDB });
+        if (currentUser) {
+          await setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]);
+        }
         window.openClientLedger(clientName);
         renderAllModules();
       }
@@ -1680,9 +1691,11 @@ if (submitPaymentBtn) {
       window.openClientLedger(activeLedgerClientName);
       renderAllModules();
 
-      syncDocToCloud('clients', { list: clientsDB }).catch(err => {
-        console.error("Cloud Sync Error:", err);
-      });
+      if (currentUser) {
+        await setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(err => {
+          console.error("Cloud Sync Error:", err);
+        });
+      }
     }
   });
 }
@@ -1696,9 +1709,13 @@ if (expenseForm) {
     const title = expTitleEl ? expTitleEl.value : '';
     const amount = expAmountEl ? (parseFloat(expAmountEl.value) ? parseFloat(expAmountEl.value) : 0) : 0;
 
-    expensesDB.push({ id: Date.now(), title, amount, date: new Date().toLocaleDateString('ar-EG') });
-    await syncDocToCloud('expenses', { list: expensesDB });
+    const newExp = { id: Date.now(), title, amount, date: new Date().toLocaleDateString('ar-EG') };
+    expensesDB.push(newExp);
+    if (currentUser) {
+      await setDoc(doc(db, "users", currentUser.uid, "expenses", String(newExp.id)), newExp);
+    }
     e.target.reset();
+    renderAllModules();
   });
 }
 
@@ -1720,8 +1737,15 @@ function renderExpenses() {
 }
 
 window.deleteExpense = async (idx) => {
-  expensesDB.splice(idx, 1);
-  await syncDocToCloud('expenses', { list: expensesDB });
+  const exp = expensesDB[idx];
+  if (!exp) return;
+  try {
+    await deleteDoc(doc(db, "users", currentUser.uid, "expenses", String(exp.id)));
+    expensesDB.splice(idx, 1);
+    renderAllModules();
+  } catch (err) {
+    console.error("Delete Expense Error:", err);
+  }
 };
 
 function updateDashboardStats() {
@@ -1773,22 +1797,39 @@ if (importJsonInput) {
         }
 
         if (confirm('⚠️ هل أنت متأكد من استيراد هذه النسخة الاحتياطية؟ سيتم دمج البيانات وتحديثها في سحابة حسابك فوراً.')) {
-          
-          if (Array.isArray(importedData.invoices)) invoicesDB = importedData.invoices;
-          if (Array.isArray(importedData.clients)) clientsDB = importedData.clients;
-          if (Array.isArray(importedData.products)) productsDB = importedData.products;
-          if (Array.isArray(importedData.expenses)) expensesDB = importedData.expenses;
+          const uid = currentUser.uid;
+          const promises = [];
+
+          if (Array.isArray(importedData.invoices)) {
+            invoicesDB = importedData.invoices;
+            invoicesDB.forEach(inv => {
+              promises.push(setDoc(doc(db, "users", uid, "invoices", String(inv.id)), inv));
+            });
+          }
+          if (Array.isArray(importedData.clients)) {
+            clientsDB = importedData.clients;
+            clientsDB.forEach(c => {
+              promises.push(setDoc(doc(db, "users", uid, "clients", String(c.id)), c));
+            });
+          }
+          if (Array.isArray(importedData.products)) {
+            productsDB = importedData.products;
+            productsDB.forEach(p => {
+              promises.push(setDoc(doc(db, "users", uid, "products", String(p.id)), p));
+            });
+          }
+          if (Array.isArray(importedData.expenses)) {
+            expensesDB = importedData.expenses;
+            expensesDB.forEach(exp => {
+              promises.push(setDoc(doc(db, "users", uid, "expenses", String(exp.id)), exp));
+            });
+          }
           if (importedData.storeProfile) {
             storeProfile = Object.assign({}, storeProfile, importedData.storeProfile);
+            promises.push(setDoc(doc(db, "users", uid, "data", "profile"), storeProfile));
           }
 
-          await Promise.all([
-            syncDocToCloud('invoices', { list: invoicesDB }),
-            syncDocToCloud('clients', { list: clientsDB }),
-            syncDocToCloud('products', { list: productsDB }),
-            syncDocToCloud('expenses', { list: expensesDB }),
-            syncDocToCloud('profile', storeProfile)
-          ]);
+          await Promise.all(promises);
 
           updateNextInvoiceNumber();
           alert('✅ تم استيراد وحفظ النسخة الاحتياطية وتزامنها سحابياً بنجاح!');
