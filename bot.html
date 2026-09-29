@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#090d16">
-  <title>GITI - مساعد الذكاء الاصطناعي الصوتي</title>
+  <title>GITI - مساعد الذكاء الاصطناعي الذكي</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,20 +27,29 @@
       overflow: hidden;
     }
     .bot-header {
-      padding: 15px 20px;
-      background: rgba(17, 24, 39, 0.85);
+      padding: 12px 16px;
+      background: rgba(17, 24, 39, 0.9);
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       justify-content: space-between;
       align-items: center;
       backdrop-filter: blur(10px);
+      gap: 8px;
     }
     .bot-header h1 {
-      font-size: 1.1rem;
+      font-size: 0.95rem;
       margin: 0;
       background: linear-gradient(135deg, #3b82f6, #10b981);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .header-tools {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .chat-container {
       flex: 1;
@@ -49,7 +58,7 @@
       max-width: 800px;
       width: 100%;
       margin: 0 auto;
-      padding: 15px;
+      padding: 12px;
       overflow: hidden;
     }
     .chat-messages {
@@ -61,10 +70,10 @@
       gap: 12px;
     }
     .message {
-      max-width: 85%;
+      max-width: 88%;
       padding: 12px 16px;
       border-radius: 14px;
-      font-size: 0.92rem;
+      font-size: 0.9rem;
       line-height: 1.5;
       word-wrap: break-word;
     }
@@ -81,23 +90,50 @@
       align-self: flex-start;
       border-bottom-right-radius: 4px;
     }
+    /* الأزرار المقترحة السريعة */
+    .quick-chips {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 6px 4px;
+      margin-bottom: 8px;
+      scrollbar-width: none;
+    }
+    .quick-chips::-webkit-scrollbar { display: none; }
+    .chip {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .chip:hover {
+      background: #3b82f6;
+      color: #fff;
+    }
     .chat-input-area {
-      padding: 12px;
-      background: rgba(17, 24, 39, 0.9);
+      padding: 10px;
+      background: rgba(17, 24, 39, 0.95);
       border-top: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
     }
     .chat-input-area input {
       flex: 1;
-      padding: 12px 16px;
+      padding: 10px 14px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 10px;
       color: #fff;
       font-family: 'Cairo', sans-serif;
       outline: none;
+      font-size: 0.88rem;
     }
     .chat-input-area input:focus {
       border-color: #3b82f6;
@@ -106,50 +142,63 @@
       background: #3b82f6;
       color: white;
       border: none;
-      padding: 12px 18px;
+      padding: 10px 14px;
       border-radius: 10px;
       font-weight: 700;
       cursor: pointer;
       font-family: 'Cairo', sans-serif;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
+      font-size: 0.85rem;
     }
     .btn-mic {
       background: #ef4444;
     }
-    .btn-back {
-      background: transparent;
+    .btn-tool {
+      background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15);
       color: #fff;
-      padding: 6px 12px;
+      padding: 5px 10px;
       border-radius: 8px;
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.75rem;
     }
+    .btn-tool:hover { background: rgba(255,255,255,0.15); }
   </style>
 </head>
 <body>
 
   <header class="bot-header">
-    <button class="btn-back" onclick="window.location.href='index.html'">← العودة للنظام</button>
-    <h1>🤖 مساعد GITI الذكي المنعزل</h1>
-    <span id="user-status-badge" style="font-size: 0.75rem; color: #10b981;">● متصل</span>
+    <button class="btn-tool" onclick="window.location.href='index.html'">← النظام</button>
+    <h1>🤖 مساعد GITI الذكي</h1>
+    <div class="header-tools">
+      <button id="voice-toggle-btn" class="btn-tool" title="كتم/تفعيل الصوت">🔊</button>
+      <button id="clear-chat-btn" class="btn-tool" title="مسح المحادثة">🗑️</button>
+    </div>
   </header>
 
   <div class="chat-container">
     <div id="chat-messages" class="chat-messages">
       <div class="message bot">
-        أهلاً بك يا فندم! أنا مساعدك الذكي المرتبط بحسابك فقط. يمكنك سؤالي صوتياً أو كتابةً مثل:<br>
+        أهلاً بك يا فندم! أنا مساعدك الذكي المرتبط بحسابك. يمكنك استخدام الأزرار السريعة بالأسفل أو سؤالي مباشرة مثل:<br>
         • "كشف حساب [اسم العميل]"<br>
         • "فاتورة رقم [1001]"<br>
-        • "إجمالي المبيعات"
+        • "إجمالي المبيعات" | "المخزن" | "المصروفات"
       </div>
     </div>
 
+    <!-- الأزرار المقترحة السريعة -->
+    <div class="quick-chips">
+      <button class="chip" onclick="sendPresetCommand('إجمالي المبيعات')">💰 إجمالي المبيعات</button>
+      <button class="chip" onclick="sendPresetCommand('قائمة المخزن')">📦 المخزن والمنتجات</button>
+      <button class="chip" onclick="sendPresetCommand('سجل المصروفات')">💸 المصروفات</button>
+      <button class="chip" onclick="sendPresetCommand('قائمة العملاء')">👥 العملاء</button>
+    </div>
+
     <div class="chat-input-area">
-      <button type="button" id="mic-btn" class="btn-action btn-mic" title="تحدث صوتياً">🎙️ تكلّم</button>
-      <input type="text" id="user-input" placeholder="اكتب أمرك هنا أو اضغط تكلم..." autocomplete="off">
+      <button type="button" id="mic-btn" class="btn-action btn-mic" title="تحدث صوتياً">🎙️</button>
+      <input type="text" id="user-input" placeholder="اكتب أمرك هنا..." autocomplete="off">
       <button type="button" id="send-btn" class="btn-action">إرسال ➔</button>
     </div>
   </div>
@@ -175,9 +224,11 @@
     let currentUser = null;
     let invoicesDB = [];
     let clientsDB = [];
+    let productsDB = [];
+    let expensesDB = [];
     let storeProfile = { currency: 'ج.م', name: 'GITI ERP' };
+    let isVoiceMuted = false;
 
-    // جلب البيانات محلياً أو سحابياً مع العزل التام حسب الـ UID للمستخدم الحالي
     function getLocalData(uid, key, fallback = []) {
       try {
         const data = localStorage.getItem(`giti_${uid}_${key}`);
@@ -190,24 +241,22 @@
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
-        // عزل تام للبيانات بناءً على حساب المستخدم المسجل دخولاً حالياً
         invoicesDB = getLocalData(user.uid, 'invoices', []);
         clientsDB = getLocalData(user.uid, 'clients', []);
+        productsDB = getLocalData(user.uid, 'products', []);
+        expensesDB = getLocalData(user.uid, 'expenses', []);
         const prof = getLocalData(user.uid, 'profile', null);
         if (prof) storeProfile = Object.assign({}, storeProfile, prof);
 
-        // محاولة جلب التحديثات من فايبربيس لنفس الـ UID لضمان التزامن
         try {
           const invSnap = await getDocs(collection(db, "users", user.uid, "invoices"));
-          if (!invSnap.empty) {
-            invoicesDB = [];
-            invSnap.forEach(d => invoicesDB.push(d.data()));
-          }
+          if (!invSnap.empty) { invoicesDB = []; invSnap.forEach(d => invoicesDB.push(d.data())); }
           const clientSnap = await getDocs(collection(db, "users", user.uid, "clients"));
-          if (!clientSnap.empty) {
-            clientsDB = [];
-            clientSnap.forEach(d => clientsDB.push(d.data()));
-          }
+          if (!clientSnap.empty) { clientsDB = []; clientSnap.forEach(d => clientsDB.push(d.data())); }
+          const prodSnap = await getDocs(collection(db, "users", user.uid, "products"));
+          if (!prodSnap.empty) { productsDB = []; prodSnap.forEach(d => productsDB.push(d.data())); }
+          const expSnap = await getDocs(collection(db, "users", user.uid, "expenses"));
+          if (!expSnap.empty) { expensesDB = []; expSnap.forEach(d => expensesDB.push(d.data())); }
         } catch (e) {
           console.warn("Offline fallback mode active for bot.");
         }
@@ -221,6 +270,24 @@
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
     const micBtn = document.getElementById('mic-btn');
+    const voiceToggleBtn = document.getElementById('voice-toggle-btn');
+    const clearChatBtn = document.getElementById('clear-chat-btn');
+
+    voiceToggleBtn.addEventListener('click', () => {
+      isVoiceMuted = !isVoiceMuted;
+      voiceToggleBtn.textContent = isVoiceMuted ? '🔇' : '🔊';
+      voiceToggleBtn.style.opacity = isVoiceMuted ? '0.5' : '1';
+    });
+
+    clearChatBtn.addEventListener('click', () => {
+      chatMessages.innerHTML = `
+        <div class="message bot">تم مسح المحادثة. كيف يمكنني مساعدتك الآن؟</div>
+      `;
+    });
+
+    window.sendPresetCommand = (cmdText) => {
+      processCommand(cmdText);
+    };
 
     function appendMessage(text, sender) {
       const div = document.createElement('div');
@@ -231,6 +298,7 @@
     }
 
     function speakText(text) {
+      if (isVoiceMuted) return;
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
@@ -244,9 +312,9 @@
       appendMessage(rawText, 'user');
       userInput.value = '';
 
-      let reply = "عذراً، لم أفهم طلبك بدقة. يمكنك طلب كشف حساب عميل أو فاتورة برقمها.";
+      let reply = "عذراً، لم أفهم طلبك بدقة. يمكنك طلب كشف حساب عميل، أو رقم فاتورة، أو حالة المخزن والمصروفات.";
 
-      // 1. البحث عن فاتورة
+      // 1. الفواتير
       if (text.includes('فاتورة') || text.includes('رقم')) {
         const matches = text.match(/\d+/);
         if (matches) {
@@ -288,6 +356,29 @@
         const total = invoicesDB.reduce((acc, i) => acc + (i.grandTotal || 0), 0);
         reply = `💰 إجمالي مبيعاتك المسجلة: ${total.toFixed(2)} ${storeProfile.currency} (${invoicesDB.length} فاتورة).`;
       }
+      // 4. المخزن والمنتجات
+      else if (text.includes('مخزن') || text.includes('منتجات')) {
+        if (productsDB.length === 0) {
+          reply = `📦 المخزن لديك فارغ حالياً ولا توجد منتجات مسجلة.`;
+        } else {
+          let prodList = productsDB.map(p => `• ${p.name} (السعر: ${p.price} ${storeProfile.currency} - المخزون: ${p.stock})`).join('\n');
+          reply = `📦 قائمة المنتجات بالمخزن (${productsDB.length} أصناف):\n${prodList}`;
+        }
+      }
+      // 5. المصروفات
+      else if (text.includes('مصروفات') || text.includes('مصروف')) {
+        const totalExp = expensesDB.reduce((acc, e) => acc + (e.amount || 0), 0);
+        reply = `💸 إجمالي المصروفات المسجلة: ${totalExp.toFixed(2)} ${storeProfile.currency} (${expensesDB.length} بند مصروف).`;
+      }
+      // 6. قائمة العملاء
+      else if (text.includes('العملاء') || text.includes('عملاء')) {
+        if (clientsDB.length === 0) {
+          reply = `👥 لا توجد عملاء مسجلون لديك حتى الآن.`;
+        } else {
+          let clientNames = clientsDB.map(c => `• ${c.name} (${c.phone || 'بدون هاتف'})`).join('\n');
+          reply = `👥 قائمة العملاء المسجلين (${clientsDB.length} عميل):\n${clientNames}`;
+        }
+      }
 
       setTimeout(() => {
         appendMessage(reply, 'bot');
@@ -303,7 +394,7 @@
       if (e.key === 'Enter' && userInput.value.trim()) processCommand(userInput.value);
     });
 
-    // التعرف الصوتي (Speech Recognition)
+    // التعرف الصوتي
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
@@ -314,7 +405,7 @@
         try {
           recognition.start();
           micBtn.style.background = '#10b981';
-          micBtn.textContent = '🎙️ جاري الاستماع...';
+          micBtn.textContent = '👂';
         } catch(e) {
           console.error(e);
         }
@@ -323,18 +414,18 @@
       recognition.onresult = (event) => {
         const speechResult = event.results[0][0].transcript;
         micBtn.style.background = '#ef4444';
-        micBtn.textContent = '🎙️ تكلّم';
+        micBtn.textContent = '🎙️';
         processCommand(speechResult);
       };
 
       recognition.onerror = () => {
         micBtn.style.background = '#ef4444';
-        micBtn.textContent = '🎙️️ تكلّم';
+        micBtn.textContent = '🎙️';
       };
 
       recognition.onend = () => {
         micBtn.style.background = '#ef4444';
-        micBtn.textContent = '🎙️ تكلّم';
+        micBtn.textContent = '🎙️';
       };
     } else {
       micBtn.style.display = 'none';
