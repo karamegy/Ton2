@@ -241,6 +241,8 @@
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
+        
+        // 1. تحميل البيانات من الذاكرة المحلية فوراً (لكي يعمل البوت بدون إنترنت وبسرعة فائقة دون تجمد)
         invoicesDB = getLocalData(user.uid, 'invoices', []);
         clientsDB = getLocalData(user.uid, 'clients', []);
         productsDB = getLocalData(user.uid, 'products', []);
@@ -248,17 +250,21 @@
         const prof = getLocalData(user.uid, 'profile', null);
         if (prof) storeProfile = Object.assign({}, storeProfile, prof);
 
+        // 2. محاولة التحديث من فايبربيس في الخلفية بصمت (إن وجد إنترنت)
         try {
           const invSnap = await getDocs(collection(db, "users", user.uid, "invoices"));
           if (!invSnap.empty) { invoicesDB = []; invSnap.forEach(d => invoicesDB.push(d.data())); }
+          
           const clientSnap = await getDocs(collection(db, "users", user.uid, "clients"));
           if (!clientSnap.empty) { clientsDB = []; clientSnap.forEach(d => clientsDB.push(d.data())); }
+          
           const prodSnap = await getDocs(collection(db, "users", user.uid, "products"));
           if (!prodSnap.empty) { productsDB = []; prodSnap.forEach(d => productsDB.push(d.data())); }
+          
           const expSnap = await getDocs(collection(db, "users", user.uid, "expenses"));
           if (!expSnap.empty) { expensesDB = []; expSnap.forEach(d => expensesDB.push(d.data())); }
         } catch (e) {
-          console.warn("Offline fallback mode active for bot.");
+          console.log("وضع العمل بدون إنترنت (Offline Mode) نشط، يتم الاعتماد على البيانات المحلية.");
         }
       } else {
         alert('يرجى تسجيل الدخول من التطبيق الرئيسي أولاً.');
