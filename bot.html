@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090d16">
+  <title>GITI - مساعد الذكاء الاصطناعي الصوتي</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #090d16;
+      color: #fff;
+      font-family: 'Cairo', sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .bot-header {
+      padding: 15px 20px;
+      background: rgba(17, 24, 39, 0.85);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(10px);
+    }
+    .bot-header h1 {
+      font-size: 1.1rem;
+      margin: 0;
+      background: linear-gradient(135deg, #3b82f6, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 15px;
+      overflow: hidden;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .message {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+    .message.user {
+      background: #3b82f6;
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-left-radius: 4px;
+    }
+    .message.bot {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #f3f4f6;
+      align-self: flex-start;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-input-area {
+      padding: 12px;
+      background: rgba(17, 24, 39, 0.9);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .chat-input-area input {
+      flex: 1;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'Cairo', sans-serif;
+      outline: none;
+    }
+    .chat-input-area input:focus {
+      border-color: #3b82f6;
+    }
+    .btn-action {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Cairo', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-mic {
+      background: #ef4444;
+    }
+    .btn-back {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="bot-header">
+    <button class="btn-back" onclick="window.location.href='index.html'">← العودة للنظام</button>
+    <h1>🤖 مساعد GITI الذكي المنعزل</h1>
+    <span id="user-status-badge" style="font-size: 0.75rem; color: #10b981;">● متصل</span>
+  </header>
+
+  <div class="chat-container">
+    <div id="chat-messages" class="chat-messages">
+      <div class="message bot">
+        أهلاً بك يا فندم! أنا مساعدك الذكي المرتبط بحسابك فقط. يمكنك سؤالي صوتياً أو كتابةً مثل:<br>
+        • "كشف حساب [اسم العميل]"<br>
+        • "فاتورة رقم [1001]"<br>
+        • "إجمالي المبيعات"
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <button type="button" id="mic-btn" class="btn-action btn-mic" title="تحدث صوتياً">🎙️ تكلّم</button>
+      <input type="text" id="user-input" placeholder="اكتب أمرك هنا أو اضغط تكلم..." autocomplete="off">
+      <button type="button" id="send-btn" class="btn-action">إرسال ➔</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
+      authDomain: "giti-68750.firebaseapp.com",
+      projectId: "giti-68750",
+      storageBucket: "giti-68750.firebasestorage.app",
+      messagingSenderId: "753885709520",
+      appId: "1:753885709520:web:eda57cd4efdb5c4ef48ad5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let invoicesDB = [];
+    let clientsDB = [];
+    let storeProfile = { currency: 'ج.م', name: 'GITI ERP' };
+
+    // جلب البيانات محلياً أو سحابياً مع العزل التام حسب الـ UID للمستخدم الحالي
+    function getLocalData(uid, key, fallback = []) {
+      try {
+        const data = localStorage.getItem(`giti_${uid}_${key}`);
+        return data ? JSON.parse(data) : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        // عزل تام للبيانات بناءً على حساب المستخدم المسجل دخولاً حالياً
+        invoicesDB = getLocalData(user.uid, 'invoices', []);
+        clientsDB = getLocalData(user.uid, 'clients', []);
+        const prof = getLocalData(user.uid, 'profile', null);
+        if (prof) storeProfile = Object.assign({}, storeProfile, prof);
+
+        // محاولة جلب التحديثات من فايبربيس لنفس الـ UID لضمان التزامن
+        try {
+          const invSnap = await getDocs(collection(db, "users", user.uid, "invoices"));
+          if (!invSnap.empty) {
+            invoicesDB = [];
+            invSnap.forEach(d => invoicesDB.push(d.data()));
+          }
+          const clientSnap = await getDocs(collection(db, "users", user.uid, "clients"));
+          if (!clientSnap.empty) {
+            clientsDB = [];
+            clientSnap.forEach(d => clientsDB.push(d.data()));
+          }
+        } catch (e) {
+          console.warn("Offline fallback mode active for bot.");
+        }
+      } else {
+        alert('يرجى تسجيل الدخول من التطبيق الرئيسي أولاً.');
+        window.location.replace('index.html');
+      }
+    });
+
+    const chatMessages = document.getElementById('chat-messages');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const micBtn = document.getElementById('mic-btn');
+
+    function appendMessage(text, sender) {
+      const div = document.createElement('div');
+      div.className = `message ${sender}`;
+      div.innerHTML = text.replace(/\n/g, '<br>');
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ar-SA';
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function processCommand(rawText) {
+      const text = rawText.trim().toLowerCase();
+      appendMessage(rawText, 'user');
+      userInput.value = '';
+
+      let reply = "عذراً، لم أفهم طلبك بدقة. يمكنك طلب كشف حساب عميل أو فاتورة برقمها.";
+
+      // 1. البحث عن فاتورة
+      if (text.includes('فاتورة') || text.includes('رقم')) {
+        const matches = text.match(/\d+/);
+        if (matches) {
+          const invId = parseInt(matches[0]);
+          const inv = invoicesDB.find(i => i.id === invId);
+          if (inv) {
+            reply = `🧾 تفاصيل الفاتورة #${inv.id}:\n• العميل: ${inv.client}\n• التاريخ: ${inv.date}\n• الحالة: ${inv.status}\n• الإجمالي: ${inv.grandTotal.toFixed(2)} ${storeProfile.currency}`;
+          } else {
+            reply = `❌ لم يتم العثور على فاتورة برقم ${invId} في حسابك.`;
+          }
+        }
+      } 
+      // 2. كشف حساب عميل
+      else if (text.includes('حساب') || text.includes('كشف')) {
+        let query = text.replace('كشف حساب', '').replace('حساب', '').trim();
+        if (query) {
+          const client = clientsDB.find(c => c.name.toLowerCase().includes(query));
+          if (client) {
+            const clientInvoices = invoicesDB.filter(i => (i.clientId === client.id) || (i.client && i.client.toLowerCase() === client.name.toLowerCase()));
+            let totalPurchases = client.openingBalance || 0;
+            let totalPaid = 0;
+            clientInvoices.forEach(inv => {
+              totalPurchases += (inv.grandTotal || 0);
+              totalPaid += (inv.paidAmount || 0);
+            });
+            (client.payments || []).forEach(p => totalPaid += (p.amount || 0));
+            const balance = Math.max(0, totalPurchases - totalPaid);
+
+            reply = `👤 كشف حساب العميل: ${client.name}\n• إجمالي التعاملات: ${totalPurchases.toFixed(2)} ${storeProfile.currency}\n• المدفوع: ${totalPaid.toFixed(2)} ${storeProfile.currency}\n• المديونية المستحقة: ${balance.toFixed(2)} ${storeProfile.currency}`;
+          } else {
+            reply = `❌ لم أجد عميلاً بهذا الاسم في دفاترك.`;
+          }
+        } else {
+          reply = `يرجى تحديد اسم العميل بجانب كلمة كشف حساب.`;
+        }
+      } 
+      // 3. إجمالي المبيعات
+      else if (text.includes('مبيعات') || text.includes('إجمالي')) {
+        const total = invoicesDB.reduce((acc, i) => acc + (i.grandTotal || 0), 0);
+        reply = `💰 إجمالي مبيعاتك المسجلة: ${total.toFixed(2)} ${storeProfile.currency} (${invoicesDB.length} فاتورة).`;
+      }
+
+      setTimeout(() => {
+        appendMessage(reply, 'bot');
+        speakText(reply);
+      }, 300);
+    }
+
+    sendBtn.addEventListener('click', () => {
+      if (userInput.value.trim()) processCommand(userInput.value);
+    });
+
+    userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && userInput.value.trim()) processCommand(userInput.value);
+    });
+
+    // التعرف الصوتي (Speech Recognition)
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ar-EG';
+      recognition.continuous = false;
+
+      micBtn.addEventListener('click', () => {
+        try {
+          recognition.start();
+          micBtn.style.background = '#10b981';
+          micBtn.textContent = '🎙️ جاري الاستماع...';
+        } catch(e) {
+          console.error(e);
+        }
+      });
+
+      recognition.onresult = (event) => {
+        const speechResult = event.results[0][0].transcript;
+        micBtn.style.background = '#ef4444';
+        micBtn.textContent = '🎙️ تكلّم';
+        processCommand(speechResult);
+      };
+
+      recognition.onerror = () => {
+        micBtn.style.background = '#ef4444';
+        micBtn.textContent = '🎙️️ تكلّم';
+      };
+
+      recognition.onend = () => {
+        micBtn.style.background = '#ef4444';
+        micBtn.textContent = '🎙️ تكلّم';
+      };
+    } else {
+      micBtn.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
