@@ -182,9 +182,8 @@ let activeLedgerClientName = null;
 let activeLedgerSupplierName = null;
 let editingInvoiceId = null;
 let editingProductId = null;
-let editingSupplierId = null; // متجول تعديل الموردين
+let editingSupplierId = null;
 
-// دوال التخزين المحلي المزدوج لمنع اختفاء البيانات أوفلاين
 function saveLocalData(uid, key, data) {
   try {
     localStorage.setItem(`giti_${uid}_${key}`, JSON.stringify(data));
@@ -202,23 +201,6 @@ function getLocalData(uid, key, fallback = []) {
     return fallback;
   }
 }
-
-const privacyModal = document.getElementById('privacy-modal');
-const openPrivacyAuthBtn = document.getElementById('open-privacy-auth-btn');
-if (openPrivacyAuthBtn) openPrivacyAuthBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.remove('hidden'); });
-
-const openPrivacySettingsBtn = document.getElementById('open-privacy-settings-btn');
-if (openPrivacySettingsBtn) openPrivacySettingsBtn.addEventListener('click', () => {
-  const settingsModalEl = document.getElementById('settings-modal');
-  if (settingsModalEl) settingsModalEl.classList.add('hidden');
-  if (privacyModal) privacyModal.classList.remove('hidden');
-});
-
-const closePrivacyBtn = document.getElementById('close-privacy-btn');
-if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.add('hidden'); });
-
-const acceptPrivacyBtn = document.getElementById('accept-privacy-btn');
-if (acceptPrivacyBtn) acceptPrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.add('hidden'); });
 
 const tabLoginBtn = document.getElementById('tab-login-btn');
 if (tabLoginBtn) {
@@ -347,9 +329,7 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     currentUser = null;
     
-    if (adminBtn) {
-      adminBtn.classList.add('hidden');
-    }
+    if (adminBtn) adminBtn.classList.add('hidden');
 
     if (licenseUnsubscriber) {
       licenseUnsubscriber();
@@ -363,7 +343,6 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// تحميل البيانات فوراً من التخزين المحلي (LocalStorage) كاستجابة فورية أوفلاين، ثم مزامنتها مع السحابة
 async function attachCloudRealtimeSync(uid) {
   detachCloudSync();
 
@@ -392,72 +371,48 @@ async function attachCloudRealtimeSync(uid) {
   }, (err) => console.warn("Profile Sync Offline Notice:", err));
 
   const unsubInvoices = onSnapshot(collection(db, "users", uid, "invoices"), (snapshot) => {
-    if (!snapshot.empty) {
-      invoicesDB = [];
-      snapshot.forEach((docSnap) => {
-        invoicesDB.push(docSnap.data());
-      });
-      invoicesDB.sort((a, b) => b.id - a.id);
-      saveLocalData(uid, 'invoices', invoicesDB);
-      updateNextInvoiceNumber(); 
-      renderAllModules();
-    }
+    invoicesDB = [];
+    snapshot.forEach((docSnap) => invoicesDB.push(docSnap.data()));
+    invoicesDB.sort((a, b) => b.id - a.id);
+    saveLocalData(uid, 'invoices', invoicesDB);
+    updateNextInvoiceNumber(); 
+    renderAllModules();
   }, (err) => console.warn("Invoices Sync Offline Notice:", err));
 
   const unsubClients = onSnapshot(collection(db, "users", uid, "clients"), (snapshot) => {
-    if (!snapshot.empty) {
-      clientsDB = [];
-      snapshot.forEach((docSnap) => {
-        clientsDB.push(docSnap.data());
-      });
-      saveLocalData(uid, 'clients', clientsDB);
-      renderAllModules();
-    }
+    clientsDB = [];
+    snapshot.forEach((docSnap) => clientsDB.push(docSnap.data()));
+    saveLocalData(uid, 'clients', clientsDB);
+    renderAllModules();
   }, (err) => console.warn("Clients Sync Offline Notice:", err));
 
   const unsubSuppliers = onSnapshot(collection(db, "users", uid, "suppliers"), (snapshot) => {
-    if (!snapshot.empty) {
-      suppliersDB = [];
-      snapshot.forEach((docSnap) => {
-        suppliersDB.push(docSnap.data());
-      });
-      saveLocalData(uid, 'suppliers', suppliersDB);
-      renderAllModules();
-    }
+    suppliersDB = [];
+    snapshot.forEach((docSnap) => suppliersDB.push(docSnap.data()));
+    saveLocalData(uid, 'suppliers', suppliersDB);
+    renderAllModules();
   }, (err) => console.warn("Suppliers Sync Offline Notice:", err));
 
   const unsubPurchases = onSnapshot(collection(db, "users", uid, "purchases"), (snapshot) => {
-    if (!snapshot.empty) {
-      purchasesDB = [];
-      snapshot.forEach((docSnap) => {
-        purchasesDB.push(docSnap.data());
-      });
-      purchasesDB.sort((a, b) => b.id - a.id);
-      saveLocalData(uid, 'purchases', purchasesDB);
-      renderAllModules();
-    }
+    purchasesDB = [];
+    snapshot.forEach((docSnap) => purchasesDB.push(docSnap.data()));
+    purchasesDB.sort((a, b) => b.id - a.id);
+    saveLocalData(uid, 'purchases', purchasesDB);
+    renderAllModules();
   }, (err) => console.warn("Purchases Sync Offline Notice:", err));
 
   const unsubProducts = onSnapshot(collection(db, "users", uid, "products"), (snapshot) => {
-    if (!snapshot.empty) {
-      productsDB = [];
-      snapshot.forEach((docSnap) => {
-        productsDB.push(docSnap.data());
-      });
-      saveLocalData(uid, 'products', productsDB);
-      renderAllModules();
-    }
+    productsDB = [];
+    snapshot.forEach((docSnap) => productsDB.push(docSnap.data()));
+    saveLocalData(uid, 'products', productsDB);
+    renderAllModules();
   }, (err) => console.warn("Products Sync Offline Notice:", err));
 
   const unsubExpenses = onSnapshot(collection(db, "users", uid, "expenses"), (snapshot) => {
-    if (!snapshot.empty) {
-      expensesDB = [];
-      snapshot.forEach((docSnap) => {
-        expensesDB.push(docSnap.data());
-      });
-      saveLocalData(uid, 'expenses', expensesDB);
-      renderAllModules();
-    }
+    expensesDB = [];
+    snapshot.forEach((docSnap) => expensesDB.push(docSnap.data()));
+    saveLocalData(uid, 'expenses', expensesDB);
+    renderAllModules();
   }, (err) => console.warn("Expenses Sync Offline Notice:", err));
 
   activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubSuppliers, unsubPurchases, unsubProducts, unsubExpenses];
@@ -533,9 +488,7 @@ async function fetchAllDataFromCloud() {
 }
 
 const fetchCloudBtn = document.getElementById('fetch-cloud-btn');
-if (fetchCloudBtn) {
-  fetchCloudBtn.addEventListener('click', fetchAllDataFromCloud);
-}
+if (fetchCloudBtn) fetchCloudBtn.addEventListener('click', fetchAllDataFromCloud);
 
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
@@ -1490,8 +1443,8 @@ function getClientCalculatedLedger(clientParam) {
   }
 
   const clientInvoices = invoicesDB.filter(i => 
-    (clientObj.id && i.clientId === clientObj.id) || 
-    (i.client && clientObj.name && i.client.toLowerCase() === clientObj.name.toLowerCase())
+    (clientObj.id && String(i.clientId) === String(clientObj.id)) || 
+    (i.client && clientObj.name && i.client.trim().toLowerCase() === clientObj.name.trim().toLowerCase())
   );
 
   let totalPurchases = clientObj.openingBalance ? clientObj.openingBalance : 0;
@@ -1824,7 +1777,7 @@ if (submitPaymentBtn) {
 }
 
 // ==========================================
-// قسم الموردين والدفاتر وفواتير المشتريات المطور
+// قسم الموردين والدفاتر وفواتير المشتريات
 // ==========================================
 
 const supplierForm = document.getElementById('supplier-form');
@@ -1879,7 +1832,7 @@ if (supplierForm) {
 function getSupplierCalculatedLedger(supplierParam) {
   let supplierObj = null;
   if (typeof supplierParam === 'string') {
-    supplierObj = suppliersDB.find(s => s.name && s.name.toLowerCase() === supplierParam.toLowerCase());
+    supplierObj = suppliersDB.find(s => s.name && s.name.trim().toLowerCase() === supplierParam.trim().toLowerCase());
   } else if (supplierParam && typeof supplierParam === 'object') {
     supplierObj = supplierParam;
   }
@@ -1889,8 +1842,8 @@ function getSupplierCalculatedLedger(supplierParam) {
   }
 
   const supplierPurchases = (purchasesDB || []).filter(p => 
-    (supplierObj.id && p.supplierId === supplierObj.id) || 
-    (p.supplier && supplierObj.name && p.supplier.toLowerCase() === supplierObj.name.toLowerCase())
+    (supplierObj.id && String(p.supplierId) === String(supplierObj.id)) || 
+    (p.supplier && supplierObj.name && p.supplier.trim().toLowerCase() === supplierObj.name.trim().toLowerCase())
   );
 
   let totalPurchases = parseFloat(supplierObj.openingBalance) || 0;
@@ -1941,7 +1894,6 @@ function renderSuppliers() {
 const searchSuppliersInput = document.getElementById('search-suppliers-input');
 if (searchSuppliersInput) searchSuppliersInput.addEventListener('input', renderSuppliers);
 
-// تعديل المورد داخل استمارة الصفحة مباشرة بدون prompt
 window.editSupplier = (index) => {
   const supplier = suppliersDB[index];
   if (!supplier) return;
@@ -2000,7 +1952,7 @@ window.deleteSupplier = async (index) => {
 
 window.openSupplierLedger = (supplierName) => {
   try {
-    const supplierObj = suppliersDB.find(s => s.name && s.name.toLowerCase() === (supplierName || '').toLowerCase());
+    const supplierObj = suppliersDB.find(s => s.name && s.name.trim().toLowerCase() === (supplierName || '').trim().toLowerCase());
     if (!supplierObj) {
       alert('تعذر العثور على بيانات المورد!');
       return;
@@ -2027,9 +1979,12 @@ window.openSupplierLedger = (supplierName) => {
 
       (stats.supplierPurchases || []).forEach(pur => {
         historyHtml += `
-          <li style="border-right: 4px solid var(--accent)">
+          <li style="border-right: 4px solid var(--accent); display:flex; justify-content:space-between; align-items:center;">
             <div>فاتورة توريد #${pur.id} (${pur.date || ''})<br><small>${(pur.items ? pur.items : []).length} أصناف - ${pur.status || ''}</small></div>
-            <strong>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+            <div>
+              <strong>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+              <button class="btn-sm" style="color:var(--danger); margin-right:6px;" onclick="window.deletePurchase(${pur.id})">🗑️</button>
+            </div>
           </li>
         `;
       });
@@ -2358,8 +2313,27 @@ window.handlePurchaseItemInput = (index, val) => {
   if (matched && activePurchaseItems[index]) {
     activePurchaseItems[index].cost = matched.cost ? matched.cost : 0;
     activePurchaseItems[index].price = matched.price ? matched.price : 0;
+    if (purchaseItemsBody) {
+      const rows = purchaseItemsBody.querySelectorAll('tr');
+      if (rows[index]) {
+        const inputs = rows[index].querySelectorAll('input');
+        if (inputs.length >= 4) {
+          inputs[2].value = matched.cost || 0;
+          inputs[3].value = matched.price || 0;
+        }
+      }
+    }
   }
   calculatePurchaseTotals();
+  if (purchaseItemsBody) {
+    const rows = purchaseItemsBody.querySelectorAll('tr');
+    if (rows[index] && activePurchaseItems[index]) {
+      const totalSpan = rows[index].querySelector('.p-item-total-text');
+      if (totalSpan) {
+        totalSpan.textContent = (((activePurchaseItems[index].qty || 0)) * ((activePurchaseItems[index].cost || 0))).toFixed(2);
+      }
+    }
+  }
   showPurchaseItemDropdown(index, val);
 };
 
@@ -2379,6 +2353,15 @@ window.updatePurchaseItem = (index, key, val) => {
     activePurchaseItems[index][key] = parseFloat(val) ? parseFloat(val) : 0;
   }
   calculatePurchaseTotals();
+  if (purchaseItemsBody) {
+    const rows = purchaseItemsBody.querySelectorAll('tr');
+    if (rows[index] && activePurchaseItems[index]) {
+      const totalSpan = rows[index].querySelector('.p-item-total-text');
+      if (totalSpan) {
+        totalSpan.textContent = (((activePurchaseItems[index].qty || 0)) * ((activePurchaseItems[index].cost || 0))).toFixed(2);
+      }
+    }
+  }
 };
 
 window.removePurchaseItem = (index) => {
@@ -2446,7 +2429,6 @@ if (purchaseForm) {
       isoTime: new Date().toISOString()
     };
 
-    // زيادة وتحديث المنتجات في المخزن تلقائياً عند الشراء من المورد
     validItems.forEach(item => {
       let prod = productsDB.find(p => p.name.toLowerCase() === item.name.toLowerCase());
       if (prod) {
@@ -2508,7 +2490,7 @@ function renderPurchases() {
       </div>
       <div style="text-align: left;">
         <strong style="color:var(--danger); font-size: 1.05rem;">-${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</strong>
-        <button class="btn-sm" style="color:var(--danger); margin-right:6px;" onclick="window.deletePurchase(${pur.id})">🗑️</button>
+        <button class="btn-sm" style="color:var(--danger); margin-right:6px;" onclick="window.deletePurchase(${pur.id})">🗑️️</button>
       </div>
     </li>
   `).join('');
@@ -2525,6 +2507,9 @@ window.deletePurchase = async (id) => {
       saveLocalData(currentUser.uid, 'purchases', purchasesDB);
     }
     renderAllModules();
+    if (activeLedgerSupplierName) {
+      window.openSupplierLedger(activeLedgerSupplierName);
+    }
   } catch (err) {
     console.error("Delete Purchase Error:", err);
   }
