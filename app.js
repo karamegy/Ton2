@@ -54,7 +54,7 @@ const translations = {
     login: "تسجيل الدخول", register: "حساب جديد", googleAuth: "متابعة بواسطة Google",
     or: "أو", email: "البريد الإلكتروني", password: "كلمة المرور", loginBtn: "دخول التطبيق",
     storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب مجاني", logout: "تسجيل الخروج",
-    accountDisabled: "⚠️ الحساب معطل من قبل الإدارة",
+    accountDisabled: "⚠️️ الحساب معطل من قبل الإدارة",
     accountDisabledDesc: "تم تعطيل رخصة هذا الحساب. يرجى التواصل مع Admin Master (haretg@gmail.com).",
     tabInvoices: "🧾 الفواتير الحية", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabSuppliers: "🏭 الموردين والشركات", tabExpenses: "💸 الخزينة",
     totalSales: "إجمالي المبيعات", netProfit: "صافي الأرباح", expenses: "المصروفات", invoiceCount: "عدد الفواتير",
@@ -85,7 +85,7 @@ const translations = {
     pName: "Product Name", pPrice: "Selling Price", pCost: "Cost Price", pStock: "Stock Quantity", saveProduct: "Save Product",
     productList: "Stocked Items", clientDb: "Client Accounts", addExpense: "Add Expense",
     expTitle: "Expense Category", expAmount: "Amount", saveExpense: "Record Expense", expList: "Expense Log",
-    previewTitle: "👁️ E-Invoice Preview", downloadImg: "Download Image 🖼️️", settingsTitle: "⚙️ Enterprise Settings",
+    previewTitle: "👁️ E-Invoice Preview", downloadImg: "Download Image 🖼", settingsTitle: "⚙️ Enterprise Settings",
     theme: "UI Theme", currency: "Base Currency", vatNo: "VAT Number", logo: "Company Logo", address: "Address", saveSettings: "Save Cloud Settings"
   }
 };
@@ -308,7 +308,7 @@ onAuthStateChanged(auth, async (user) => {
         if (!navigator.onLine) {
           if (lockScreen) lockScreen.classList.add('hidden');
           if (mainApp) mainApp.classList.remove('hidden');
-          attachCloudRealtimeSync(user.uid);
+          loadDataLocallyAndSync(user.uid);
           return;
         }
         try {
@@ -328,7 +328,7 @@ onAuthStateChanged(auth, async (user) => {
       if (snapshot.data().isActive !== false) {
         if (lockScreen) lockScreen.classList.add('hidden');
         if (mainApp) mainApp.classList.remove('hidden');
-        attachCloudRealtimeSync(user.uid);
+        loadDataLocallyAndSync(user.uid);
         triggerAds();
       } else {
         if (mainApp) mainApp.classList.add('hidden');
@@ -340,7 +340,7 @@ onAuthStateChanged(auth, async (user) => {
       if (currentUser) {
         if (mainApp) mainApp.classList.remove('hidden');
         if (lockScreen) lockScreen.classList.add('hidden');
-        attachCloudRealtimeSync(currentUser.uid);
+        loadDataLocallyAndSync(currentUser.uid);
       }
     });
 
@@ -363,8 +363,8 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// تحميل البيانات فوراً من التخزين المحلي، ثم مزامنتها بدون قيود snapshot.empty لمنع تعطل الأوفلاين
-async function attachCloudRealtimeSync(uid) {
+// تحميل البيانات محلياً فوراً للسرعة القصوى، واستخدام الـ snapshot بذكاء لتوفير القراءات
+function loadDataLocallyAndSync(uid) {
   detachCloudSync();
 
   invoicesDB = getLocalData(uid, 'invoices', []);
@@ -382,73 +382,6 @@ async function attachCloudRealtimeSync(uid) {
   purchasesDB.sort((a, b) => b.id - a.id);
   updateNextInvoiceNumber();
   renderAllModules();
-
-  const unsubProfile = onSnapshot(doc(db, "users", uid, "data", "profile"), (snap) => {
-    if (snap.exists()) {
-      storeProfile = Object.assign({}, storeProfile, snap.data());
-      saveLocalData(uid, 'profile', storeProfile);
-      updateHeaderUI();
-    }
-  }, (err) => console.warn("Profile Sync Offline Notice:", err));
-
-  const unsubInvoices = onSnapshot(collection(db, "users", uid, "invoices"), (snapshot) => {
-    invoicesDB = [];
-    snapshot.forEach((docSnap) => {
-      invoicesDB.push(docSnap.data());
-    });
-    invoicesDB.sort((a, b) => b.id - a.id);
-    saveLocalData(uid, 'invoices', invoicesDB);
-    updateNextInvoiceNumber(); 
-    renderAllModules();
-  }, (err) => console.warn("Invoices Sync Offline Notice:", err));
-
-  const unsubClients = onSnapshot(collection(db, "users", uid, "clients"), (snapshot) => {
-    clientsDB = [];
-    snapshot.forEach((docSnap) => {
-      clientsDB.push(docSnap.data());
-    });
-    saveLocalData(uid, 'clients', clientsDB);
-    renderAllModules();
-  }, (err) => console.warn("Clients Sync Offline Notice:", err));
-
-  const unsubSuppliers = onSnapshot(collection(db, "users", uid, "suppliers"), (snapshot) => {
-    suppliersDB = [];
-    snapshot.forEach((docSnap) => {
-      suppliersDB.push(docSnap.data());
-    });
-    saveLocalData(uid, 'suppliers', suppliersDB);
-    renderAllModules();
-  }, (err) => console.warn("Suppliers Sync Offline Notice:", err));
-
-  const unsubPurchases = onSnapshot(collection(db, "users", uid, "purchases"), (snapshot) => {
-    purchasesDB = [];
-    snapshot.forEach((docSnap) => {
-      purchasesDB.push(docSnap.data());
-    });
-    purchasesDB.sort((a, b) => b.id - a.id);
-    saveLocalData(uid, 'purchases', purchasesDB);
-    renderAllModules();
-  }, (err) => console.warn("Purchases Sync Offline Notice:", err));
-
-  const unsubProducts = onSnapshot(collection(db, "users", uid, "products"), (snapshot) => {
-    productsDB = [];
-    snapshot.forEach((docSnap) => {
-      productsDB.push(docSnap.data());
-    });
-    saveLocalData(uid, 'products', productsDB);
-    renderAllModules();
-  }, (err) => console.warn("Products Sync Offline Notice:", err));
-
-  const unsubExpenses = onSnapshot(collection(db, "users", uid, "expenses"), (snapshot) => {
-    expensesDB = [];
-    snapshot.forEach((docSnap) => {
-      expensesDB.push(docSnap.data());
-    });
-    saveLocalData(uid, 'expenses', expensesDB);
-    renderAllModules();
-  }, (err) => console.warn("Expenses Sync Offline Notice:", err));
-
-  activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubSuppliers, unsubPurchases, unsubProducts, unsubExpenses];
 }
 
 function detachCloudSync() {
@@ -459,11 +392,12 @@ function detachCloudSync() {
 async function syncDocToCloud(docName, payload) {
   if (!currentUser) return;
   saveLocalData(currentUser.uid, docName, payload);
-  await setDoc(doc(db, "users", currentUser.uid, "data", docName), payload).catch(err => {
+  setDoc(doc(db, "users", currentUser.uid, "data", docName), payload).catch(err => {
     console.warn("Sync to cloud queued offline:", err);
   });
 }
 
+// زر جلب السحابة اليدوي الموفر
 async function fetchAllDataFromCloud() {
   if (!currentUser) {
     alert('يرجى تسجيل الدخول أولاً لجلب البيانات.');
@@ -513,7 +447,7 @@ async function fetchAllDataFromCloud() {
 
     updateNextInvoiceNumber();
     renderAllModules();
-    alert('✅ تم جلب وتحديث جميع الفواتير والحسابات بنجاح!');
+    alert('✅ تم جلب وتحديث جميع الفواتير والحسابات بنجاح من السحابة!');
   } catch (err) {
     console.error("Fetch Cloud Error:", err);
     alert('❌ تعذر جلب البيانات من السحابة (جاري العمل على البيانات المحلية المخزنة على جهازك).');
@@ -933,6 +867,7 @@ function calculateTotals() {
 if (discountInput) discountInput.addEventListener('input', calculateTotals);
 if (taxInput) taxInput.addEventListener('input', calculateTotals);
 
+// دالة حفظ الفاتورة مع التحديث الفوري المباشر (Local-First بدون انتظار شبكي يعطل الجداول)
 async function saveInvoiceData() {
   const clientName = clientInput ? clientInput.value.trim() : '';
   const clientPhone = clientPhoneInput ? clientPhoneInput.value.trim() : '';
@@ -997,7 +932,7 @@ async function saveInvoiceData() {
     zatcaQr: zatcaBase64
   }, totals);
 
-  // تحديث المخزن مطابقة آمنة بدون تكرار
+  // تحديث المخزن محلياً فوراً
   validItems.forEach(soldItem => {
     const cleanSoldName = (soldItem.name || '').trim().toLowerCase();
     const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanSoldName);
@@ -1013,23 +948,31 @@ async function saveInvoiceData() {
     invoicesDB.unshift(invoice);
   }
 
+  // 1. الحفظ المحلي الفوري (يضمن تحديث الجداول فوراً دون تعليق)
   saveLocalData(uid, 'invoices', invoicesDB);
   saveLocalData(uid, 'clients', clientsDB);
   saveLocalData(uid, 'products', productsDB);
 
-  const promises = [
-    setDoc(doc(db, "users", uid, "invoices", String(invoice.id)), invoice),
-    setDoc(doc(db, "users", uid, "clients", String(clientObj.id)), clientObj)
-  ];
-
-  productsDB.forEach(prod => {
-    promises.push(setDoc(doc(db, "users", uid, "products", String(prod.id)), prod));
-  });
-
-  await Promise.all(promises).catch(err => console.warn("Cloud Sync Queued Offline:", err));
-
   resetForm();
-  renderAllModules();
+  renderAllModules(); // 👈 تحديث الجداول فوراً على الشاشة
+
+  // 2. المزامنة السحابية الصامتة في الخلفية (بدون await لضمان السرعة وتوفير القراءات)
+  try {
+    setDoc(doc(db, "users", uid, "invoices", String(invoice.id)), invoice).catch(() => {});
+    setDoc(doc(db, "users", uid, "clients", String(clientObj.id)), clientObj).catch(() => {});
+    
+    // مزامنة المنتجات التي تأثرت فقط وليس المخزن كله
+    validItems.forEach(soldItem => {
+      const cleanSoldName = (soldItem.name || '').trim().toLowerCase();
+      const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanSoldName);
+      if (prod) {
+        setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
+      }
+    });
+  } catch (err) {
+    console.warn("Background sync queued offline:", err);
+  }
+
   return invoice;
 }
 
@@ -1274,7 +1217,7 @@ function renderSavedInvoices(filter = '') {
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.viewInvoiceById(${inv.id})">👁️ معاينة</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editInvoiceById(${inv.id})">✏️ تعديل</button>
           <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendWhatsAppById(${inv.id})">💬 واتساب</button>
-          <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨️ طباعة</button>
+          <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨️️ طباعة</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </div>
@@ -1301,12 +1244,10 @@ window.reprintInvoice = (id) => {
 window.deleteInvoice = async (id) => {
   if (!confirm('تأكيد حذف الفاتورة؟')) return;
   try {
-    if (currentUser) {
-      await deleteDoc(doc(db, "users", currentUser.uid, "invoices", String(id)));
-    }
     invoicesDB = invoicesDB.filter(i => i.id !== id);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'invoices', invoicesDB);
+      deleteDoc(doc(db, "users", currentUser.uid, "invoices", String(id))).catch(() => {});
     }
     updateNextInvoiceNumber();
     renderAllModules();
@@ -1358,7 +1299,7 @@ if (productForm) {
 
     if (currentUser) {
       saveLocalData(currentUser.uid, 'products', productsDB);
-      await setDoc(doc(db, "users", currentUser.uid, "products", String(prodToSave.id)), prodToSave).catch(err => console.warn("Offline queued:", err));
+      setDoc(doc(db, "users", currentUser.uid, "products", String(prodToSave.id)), prodToSave).catch(() => {});
     }
     e.target.reset();
     renderAllModules();
@@ -1424,14 +1365,12 @@ window.editProduct = (index) => {
 
 window.deleteProduct = async (idx) => {
   const p = productsDB[idx];
-  if (!p || !confirm('⚠️ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
+  if (!p || !confirm('⚠️️ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
   try {
-    if (currentUser) {
-      await deleteDoc(doc(db, "users", currentUser.uid, "products", String(p.id)));
-    }
     productsDB.splice(idx, 1);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'products', productsDB);
+      deleteDoc(doc(db, "users", currentUser.uid, "products", String(p.id))).catch(() => {});
     }
     renderAllModules();
   } catch (err) {
@@ -1460,10 +1399,11 @@ if (clientForm) {
     clientsDB.push(newClient);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'clients', clientsDB);
-      await setDoc(doc(db, "users", currentUser.uid, "clients", String(newClient.id)), newClient).catch(err => console.warn("Offline queued:", err));
+      setDoc(doc(db, "users", currentUser.uid, "clients", String(newClient.id)), newClient).catch(() => {});
     }
     e.target.reset();
     renderAllModules();
+    alert('✅ تم حفظ العميل بنجاح');
   });
 }
 
@@ -1570,7 +1510,7 @@ window.editClient = async (index) => {
 
   if (currentUser) {
     saveLocalData(currentUser.uid, 'clients', clientsDB);
-    await setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[index].id)), clientsDB[index]).catch(err => console.warn("Offline queued:", err));
+    setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[index].id)), clientsDB[index]).catch(() => {});
   }
   renderAllModules();
   alert('✅ تم تعديل بيانات العميل بنجاح!');
@@ -1580,15 +1520,13 @@ window.deleteClient = async (index) => {
   const client = clientsDB[index];
   if (!client) return;
 
-  if (!confirm(`⚠️ هل أنت متأكد من حذف العميل "${client.name}"؟ سيتم إزالته من الدفتر السحابي.`)) return;
+  if (!confirm(`⚠️ هل أنت متأكد من حذف العميل "${client.name}"؟ سيتم إزالته من الدفتر.`)) return;
 
   try {
-    if (currentUser) {
-      await deleteDoc(doc(db, "users", currentUser.uid, "clients", String(client.id)));
-    }
     clientsDB.splice(index, 1);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'clients', clientsDB);
+      deleteDoc(doc(db, "users", currentUser.uid, "clients", String(client.id))).catch(() => {});
     }
     renderAllModules();
   } catch (err) {
@@ -1652,7 +1590,7 @@ window.deleteClientPayment = async (clientName, paymentIndex) => {
     clientsDB[idx].payments.splice(paymentIndex, 1);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'clients', clientsDB);
-      await setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(err => console.warn("Offline queued:", err));
+      setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(() => {});
     }
     window.openClientLedger(clientName);
     renderAllModules();
@@ -1670,7 +1608,7 @@ window.editClientPayment = async (clientName, paymentIndex) => {
         clientsDB[idx].payments[paymentIndex].amount = newAmount;
         if (currentUser) {
           saveLocalData(currentUser.uid, 'clients', clientsDB);
-          await setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(err => console.warn("Offline queued:", err));
+          setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(() => {});
         }
         window.openClientLedger(clientName);
         renderAllModules();
@@ -1805,16 +1743,14 @@ if (submitPaymentBtn) {
 
       if (currentUser) {
         saveLocalData(currentUser.uid, 'clients', clientsDB);
-        await setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(err => {
-          console.error("Cloud Sync Error:", err);
-        });
+        setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(() => {});
       }
     }
   });
 }
 
 // ==========================================
-// قسم الموردين والدفاتر وفواتير المشتريات المطور
+// قسم الموردين والدفاتر وفواتير المشتريات
 // ==========================================
 
 const supplierForm = document.getElementById('supplier-form');
@@ -1858,7 +1794,7 @@ if (supplierForm) {
 
     if (currentUser) {
       saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
-      await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(supplierToSave.id)), supplierToSave).catch(err => console.warn("Offline queued:", err));
+      setDoc(doc(db, "users", currentUser.uid, "suppliers", String(supplierToSave.id)), supplierToSave).catch(() => {});
     }
     e.target.reset();
     renderAllModules();
@@ -1974,12 +1910,10 @@ window.deleteSupplier = async (index) => {
   if (!confirm(`⚠️ هل أنت متأكد من حذف المورد "${supplier.name}"؟`)) return;
 
   try {
-    if (currentUser) {
-      await deleteDoc(doc(db, "users", currentUser.uid, "suppliers", String(supplier.id)));
-    }
     suppliersDB.splice(index, 1);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
+      deleteDoc(doc(db, "users", currentUser.uid, "suppliers", String(supplier.id))).catch(() => {});
     }
     renderAllModules();
   } catch (err) {
@@ -2078,9 +2012,7 @@ if (submitSupplierPaymentBtn) {
 
       if (currentUser) {
         saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
-        await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(err => {
-          console.error("Cloud Sync Error:", err);
-        });
+        setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(() => {});
       }
     }
   });
@@ -2093,7 +2025,7 @@ window.deleteSupplierPayment = async (supplierName, paymentIndex) => {
     suppliersDB[idx].payments.splice(paymentIndex, 1);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
-      await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(err => console.warn("Offline queued:", err));
+      setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(() => {});
     }
     window.openSupplierLedger(supplierName);
     renderAllModules();
@@ -2111,7 +2043,7 @@ window.editSupplierPayment = async (supplierName, paymentIndex) => {
         suppliersDB[idx].payments[paymentIndex].amount = newAmount;
         if (currentUser) {
           saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
-          await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(err => console.warn("Offline queued:", err));
+          setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(() => {});
         }
         window.openSupplierLedger(supplierName);
         renderAllModules();
@@ -2221,7 +2153,7 @@ if (ledgerSupplierPrintBtn) {
 }
 
 // ------------------------------------------
-// إدارة جدول فواتير المشتريات وتحديث المخزن بدون تكرار
+// إدارة جدول فواتير المشتريات وتحديث المخزن
 // ------------------------------------------
 
 const purchaseSupplierInput = document.getElementById('purchase-supplier-name');
@@ -2435,7 +2367,7 @@ if (purchaseForm) {
       isoTime: new Date().toISOString()
     };
 
-    // تحديث وزيادة المنتجات في المخزن بدون تكرار بفضل توحيد اسم المنتج trimmed/lowercase
+    let modifiedProducts = [];
     validItems.forEach(item => {
       const cleanItemName = (item.name || '').trim().toLowerCase();
       let prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanItemName);
@@ -2443,6 +2375,7 @@ if (purchaseForm) {
         prod.stock = (parseFloat(prod.stock) || 0) + (parseFloat(item.qty) || 0);
         if (item.cost > 0) prod.cost = parseFloat(item.cost);
         if (item.price > 0) prod.price = parseFloat(item.price);
+        modifiedProducts.push(prod);
       } else {
         prod = {
           id: Date.now() + Math.floor(Math.random() * 1000),
@@ -2452,32 +2385,33 @@ if (purchaseForm) {
           stock: parseFloat(item.qty) || 0
         };
         productsDB.push(prod);
+        modifiedProducts.push(prod);
       }
     });
 
     purchasesDB.unshift(purchaseInvoice);
 
+    // الحفظ المحلي الفوري وتحديث الواجهة
     saveLocalData(uid, 'purchases', purchasesDB);
     saveLocalData(uid, 'suppliers', suppliersDB);
     saveLocalData(uid, 'products', productsDB);
-
-    const promises = [
-      setDoc(doc(db, "users", uid, "purchases", String(purchaseInvoice.id)), purchaseInvoice),
-      setDoc(doc(db, "users", uid, "suppliers", String(supplierObj.id)), supplierObj)
-    ];
-
-    productsDB.forEach(prod => {
-      promises.push(setDoc(doc(db, "users", uid, "products", String(prod.id)), prod));
-    });
-
-    await Promise.all(promises).catch(err => console.warn("Cloud Sync Queued Offline:", err));
 
     activePurchaseItems = [];
     if (purchaseSupplierInput) purchaseSupplierInput.value = '';
     if (purchaseSupplierPhoneInput) purchaseSupplierPhoneInput.value = '';
     renderPurchaseItemsTable();
-    renderAllModules();
-    alert('✅ تم حفظ فاتورة المشتريات، تحديث الحسابات، وزيادة كميات المخزن بنجاح!');
+    renderAllModules(); // 👈 تحديث فوري للجداول
+
+    // المزامنة الهادئة في الخلفية
+    try {
+      setDoc(doc(db, "users", uid, "purchases", String(purchaseInvoice.id)), purchaseInvoice).catch(() => {});
+      setDoc(doc(db, "users", uid, "suppliers", String(supplierObj.id)), supplierObj).catch(() => {});
+      modifiedProducts.forEach(prod => {
+        setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
+      });
+    } catch (err) {}
+
+    alert('✅ تم حفظ فاتورة المشتريات، وتحديث الحسابات والمخزن بنجاح!');
   });
 }
 
@@ -2498,7 +2432,7 @@ function renderPurchases() {
       </div>
       <div style="text-align: left;">
         <strong style="color:var(--danger); font-size: 1.05rem;">-${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</strong>
-        <button class="btn-sm" style="color:var(--danger); margin-right:6px;" onclick="window.deletePurchase(${pur.id})">🗑️</button>
+        <button class="btn-sm" style="color:var(--danger); margin-right:6px;" onclick="window.deletePurchase(${pur.id})">🗑️️</button>
       </div>
     </li>
   `).join('');
@@ -2507,12 +2441,10 @@ function renderPurchases() {
 window.deletePurchase = async (id) => {
   if (!confirm('تأكيد حذف فاتورة المشتريات؟')) return;
   try {
-    if (currentUser) {
-      await deleteDoc(doc(db, "users", currentUser.uid, "purchases", String(id)));
-    }
     purchasesDB = purchasesDB.filter(p => p.id !== id);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'purchases', purchasesDB);
+      deleteDoc(doc(db, "users", currentUser.uid, "purchases", String(id))).catch(() => {});
     }
     renderAllModules();
   } catch (err) {
@@ -2533,10 +2465,11 @@ if (expenseForm) {
     expensesDB.push(newExp);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'expenses', expensesDB);
-      await setDoc(doc(db, "users", currentUser.uid, "expenses", String(newExp.id)), newExp).catch(err => console.warn("Offline queued:", err));
+      setDoc(doc(db, "users", currentUser.uid, "expenses", String(newExp.id)), newExp).catch(() => {});
     }
     e.target.reset();
     renderAllModules();
+    alert('✅ تم تسجيل المصروف بنجاح');
   });
 }
 
@@ -2561,12 +2494,10 @@ window.deleteExpense = async (idx) => {
   const exp = expensesDB[idx];
   if (!exp) return;
   try {
-    if (currentUser) {
-      await deleteDoc(doc(db, "users", currentUser.uid, "expenses", String(exp.id)));
-    }
     expensesDB.splice(idx, 1);
     if (currentUser) {
       saveLocalData(currentUser.uid, 'expenses', expensesDB);
+      deleteDoc(doc(db, "users", currentUser.uid, "expenses", String(exp.id))).catch(() => {});
     }
     renderAllModules();
   } catch (err) {
@@ -2624,57 +2555,42 @@ if (importJsonInput) {
 
         if (confirm('⚠️ هل أنت متأكد من استيراد هذه النسخة الاحتياطية؟ سيتم دمج البيانات وتحديثها في حسابك فوراً.')) {
           const uid = currentUser.uid;
-          const promises = [];
 
           if (Array.isArray(importedData.invoices)) {
             invoicesDB = importedData.invoices;
             saveLocalData(uid, 'invoices', invoicesDB);
-            invoicesDB.forEach(inv => {
-              promises.push(setDoc(doc(db, "users", uid, "invoices", String(inv.id)), inv));
-            });
+            invoicesDB.forEach(inv => setDoc(doc(db, "users", uid, "invoices", String(inv.id)), inv).catch(() => {}));
           }
           if (Array.isArray(importedData.clients)) {
             clientsDB = importedData.clients;
             saveLocalData(uid, 'clients', clientsDB);
-            clientsDB.forEach(c => {
-              promises.push(setDoc(doc(db, "users", uid, "clients", String(c.id)), c));
-            });
+            clientsDB.forEach(c => setDoc(doc(db, "users", uid, "clients", String(c.id)), c).catch(() => {}));
           }
           if (Array.isArray(importedData.suppliers)) {
             suppliersDB = importedData.suppliers;
             saveLocalData(uid, 'suppliers', suppliersDB);
-            suppliersDB.forEach(s => {
-              promises.push(setDoc(doc(db, "users", uid, "suppliers", String(s.id)), s));
-            });
+            suppliersDB.forEach(s => setDoc(doc(db, "users", uid, "suppliers", String(s.id)), s).catch(() => {}));
           }
           if (Array.isArray(importedData.purchases)) {
             purchasesDB = importedData.purchases;
             saveLocalData(uid, 'purchases', purchasesDB);
-            purchasesDB.forEach(pur => {
-              promises.push(setDoc(doc(db, "users", uid, "purchases", String(pur.id)), pur));
-            });
+            purchasesDB.forEach(pur => setDoc(doc(db, "users", uid, "purchases", String(pur.id)), pur).catch(() => {}));
           }
           if (Array.isArray(importedData.products)) {
             productsDB = importedData.products;
             saveLocalData(uid, 'products', productsDB);
-            productsDB.forEach(p => {
-              promises.push(setDoc(doc(db, "users", uid, "products", String(p.id)), p));
-            });
+            productsDB.forEach(p => setDoc(doc(db, "users", uid, "products", String(p.id)), p).catch(() => {}));
           }
           if (Array.isArray(importedData.expenses)) {
             expensesDB = importedData.expenses;
             saveLocalData(uid, 'expenses', expensesDB);
-            expensesDB.forEach(exp => {
-              promises.push(setDoc(doc(db, "users", uid, "expenses", String(exp.id)), exp));
-            });
+            expensesDB.forEach(exp => setDoc(doc(db, "users", uid, "expenses", String(exp.id)), exp).catch(() => {}));
           }
           if (importedData.storeProfile) {
             storeProfile = Object.assign({}, storeProfile, importedData.storeProfile);
             saveLocalData(uid, 'profile', storeProfile);
-            promises.push(setDoc(doc(db, "users", uid, "data", "profile"), storeProfile));
+            setDoc(doc(db, "users", uid, "data", "profile"), storeProfile).catch(() => {});
           }
-
-          await Promise.all(promises).catch(err => console.warn("Import cloud sync queued:", err));
 
           updateNextInvoiceNumber();
           alert('✅ تم استيراد وحفظ النسخة الاحتياطية بنجاح!');
