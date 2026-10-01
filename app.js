@@ -66,7 +66,7 @@ const translations = {
     pName: "اسم المنتج", pPrice: "سعر البيع", pCost: "سعر التكلفة", pStock: "الكمية بالمخزن", saveProduct: "حفظ المنتج",
     productList: "قائمة المنتجات المخزنة", clientDb: "سجل العملاء والمديونيات", addExpense: "تسجيل مصروف جديد",
     expTitle: "بند المصروف", expAmount: "المبلغ", saveExpense: "تسجيل المصروف", expList: "سجل المصروفات",
-    previewTitle: "👁️️ معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼️", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
+    previewTitle: "👁 معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼️", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
     theme: "مظهر التطبيق", currency: "العملة الرئيسية", vatNo: "الرقم الضريبي للمنشأة (VAT)", logo: "شعار الشركة", address: "العنوان", saveSettings: "حفظ التغييرات السحابية"
   },
   en: {
@@ -170,13 +170,16 @@ let currentUser = null;
 let invoicesDB = [];
 let clientsDB = [];
 let suppliersDB = [];
+let purchasesDB = [];
 let productsDB = [];
 let expensesDB = [];
 let storeProfile = { name: "GITI Enterprise ERP", phone: "01000000000", address: "", currency: "ج.م", vatNo: "", logo: "" };
 let activeUnsubscribers = [];
 let licenseUnsubscriber = null;
 let activeItems = [];
+let activePurchaseItems = [];
 let activeLedgerClientName = null;
+let activeLedgerSupplierName = null;
 let editingInvoiceId = null;
 let editingProductId = null;
 
@@ -366,6 +369,7 @@ async function attachCloudRealtimeSync(uid) {
   invoicesDB = getLocalData(uid, 'invoices', []);
   clientsDB = getLocalData(uid, 'clients', []);
   suppliersDB = getLocalData(uid, 'suppliers', []);
+  purchasesDB = getLocalData(uid, 'purchases', []);
   productsDB = getLocalData(uid, 'products', []);
   expensesDB = getLocalData(uid, 'expenses', []);
   const localProfile = getLocalData(uid, 'profile', null);
@@ -374,6 +378,7 @@ async function attachCloudRealtimeSync(uid) {
     updateHeaderUI();
   }
   invoicesDB.sort((a, b) => b.id - a.id);
+  purchasesDB.sort((a, b) => b.id - a.id);
   updateNextInvoiceNumber();
   renderAllModules();
 
@@ -420,6 +425,18 @@ async function attachCloudRealtimeSync(uid) {
     }
   }, (err) => console.warn("Suppliers Sync Offline Notice:", err));
 
+  const unsubPurchases = onSnapshot(collection(db, "users", uid, "purchases"), (snapshot) => {
+    if (!snapshot.empty) {
+      purchasesDB = [];
+      snapshot.forEach((docSnap) => {
+        purchasesDB.push(docSnap.data());
+      });
+      purchasesDB.sort((a, b) => b.id - a.id);
+      saveLocalData(uid, 'purchases', purchasesDB);
+      renderAllModules();
+    }
+  }, (err) => console.warn("Purchases Sync Offline Notice:", err));
+
   const unsubProducts = onSnapshot(collection(db, "users", uid, "products"), (snapshot) => {
     if (!snapshot.empty) {
       productsDB = [];
@@ -442,7 +459,7 @@ async function attachCloudRealtimeSync(uid) {
     }
   }, (err) => console.warn("Expenses Sync Offline Notice:", err));
 
-  activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubSuppliers, unsubProducts, unsubExpenses];
+  activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubSuppliers, unsubPurchases, unsubProducts, unsubExpenses];
 }
 
 function detachCloudSync() {
@@ -481,6 +498,12 @@ async function fetchAllDataFromCloud() {
     suppliersDB = [];
     supplierSnap.forEach(d => suppliersDB.push(d.data()));
     saveLocalData(uid, 'suppliers', suppliersDB);
+
+    const purchaseSnap = await getDocs(collection(db, "users", uid, "purchases"));
+    purchasesDB = [];
+    purchaseSnap.forEach(d => purchasesDB.push(d.data()));
+    purchasesDB.sort((a, b) => b.id - a.id);
+    saveLocalData(uid, 'purchases', purchasesDB);
 
     const prodSnap = await getDocs(collection(db, "users", uid, "products"));
     productsDB = [];
@@ -1506,7 +1529,7 @@ function renderClients() {
             ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
           </span>
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name.replace(/'/g, "\\'")}')">كشف 📄</button>
-          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editClient(${index})" title="تعديل العميل">✏️</button>
+          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editClient(${index})" title="تعديل العميل">✏️️</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteClient(${index})" title="حذف العميل">🗑️</button>
         </div>
       </li>
@@ -1799,7 +1822,10 @@ if (submitPaymentBtn) {
   });
 }
 
-// قسم الموردين
+// ==========================================
+// قسم الموردين والدفاتر وفواتير المشتريات المطور
+// ==========================================
+
 const supplierForm = document.getElementById('supplier-form');
 if (supplierForm) {
   supplierForm.addEventListener('submit', async (e) => {
@@ -1826,7 +1852,41 @@ if (supplierForm) {
     }
     e.target.reset();
     renderAllModules();
+    alert('✅ تم إضافة المورد بنجاح');
   });
+}
+
+function getSupplierCalculatedLedger(supplierParam) {
+  let supplierObj = null;
+  if (typeof supplierParam === 'string') {
+    supplierObj = suppliersDB.find(s => s.name.toLowerCase() === supplierParam.toLowerCase());
+  } else if (supplierParam && typeof supplierParam === 'object') {
+    supplierObj = supplierParam;
+  }
+
+  if (!supplierObj) {
+    supplierObj = { name: typeof supplierParam === 'string' ? supplierParam : '', openingBalance: 0, payments: [] };
+  }
+
+  const supplierPurchases = purchasesDB.filter(p => 
+    (supplierObj.id && p.supplierId === supplierObj.id) || 
+    (p.supplier && supplierObj.name && p.supplier.toLowerCase() === supplierObj.name.toLowerCase())
+  );
+
+  let totalPurchases = supplierObj.openingBalance ? supplierObj.openingBalance : 0;
+  let totalPaid = 0;
+
+  supplierPurchases.forEach(p => {
+    totalPurchases += (p.grandTotal ? p.grandTotal : 0);
+    totalPaid += (p.paidAmount ? p.paidAmount : 0);
+  });
+
+  (supplierObj.payments ? supplierObj.payments : []).forEach(pay => {
+    totalPaid += (pay.amount ? pay.amount : 0);
+  });
+
+  const balance = Math.max(0, totalPurchases - totalPaid);
+  return { totalPurchases, totalPaid, balance, supplierPurchases, payments: supplierObj.payments ? supplierObj.payments : [] };
 }
 
 function renderSuppliers() {
@@ -1836,18 +1896,25 @@ function renderSuppliers() {
   const searchFilter = searchSuppliersInput ? searchSuppliersInput.value.toLowerCase() : '';
   const filtered = suppliersDB.filter(s => s.name.toLowerCase().includes(searchFilter));
 
-  container.innerHTML = filtered.map((s, index) => `
-    <li>
-      <div style="flex: 1;">
-        <strong>🏭 ${s.name}</strong> <small style="color:var(--text-muted)">(${s.phone ? s.phone : 'بدون رقم'})</small>
-        <br><small style="color:var(--text-muted)">الرصيد المستحق: ${(s.openingBalance ? s.openingBalance : 0).toFixed(2)} ${storeProfile.currency}</small>
-      </div>
-      <div style="text-align:left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-        <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editSupplier(${index})" title="تعديل المورد">✏️</button>
-        <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteSupplier(${index})" title="حذف المورد">🗑️</button>
-      </div>
-    </li>
-  `).join('');
+  container.innerHTML = filtered.map((s, index) => {
+    const stats = getSupplierCalculatedLedger(s);
+    return `
+      <li>
+        <div style="flex: 1;">
+          <strong>🏭 ${s.name}</strong> <small style="color:var(--text-muted)">(${s.phone ? s.phone : 'بدون رقم'})</small>
+          <br><small style="color:var(--text-muted)">إجمالي التوريدات: ${stats.totalPurchases.toFixed(2)} | المسدد: ${stats.totalPaid.toFixed(2)}</small>
+        </div>
+        <div style="text-align:left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
+            ${stats.balance > 0 ? `مستحق للمورد: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
+          </span>
+          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openSupplierLedger('${s.name.replace(/'/g, "\\'")}')">كشف 📄</button>
+          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editSupplier(${index})" title="تعديل المورد">✏️</button>
+          <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteSupplier(${index})" title="حذف المورد">🗑️</button>
+        </div>
+      </li>
+    `;
+  }).join('');
 }
 
 const searchSuppliersInput = document.getElementById('search-suppliers-input');
@@ -1917,6 +1984,519 @@ window.deleteSupplier = async (index) => {
     console.error("Delete Supplier Error:", err);
   }
 };
+
+window.openSupplierLedger = (supplierName) => {
+  const supplierObj = suppliersDB.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+  if (!supplierObj) return;
+
+  activeLedgerSupplierName = supplierObj.name;
+  const stats = getSupplierCalculatedLedger(supplierObj);
+
+  const ledgerTitle = document.getElementById('ledger-supplier-title');
+  if (ledgerTitle) ledgerTitle.textContent = `🏭 كشف حساب مورد: ${supplierObj.name}`;
+  const ledgerTotalPurchases = document.getElementById('ledger-supplier-total-purchases');
+  if (ledgerTotalPurchases) ledgerTotalPurchases.textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}`;
+  const ledgerTotalPaid = document.getElementById('ledger-supplier-total-paid');
+  if (ledgerTotalPaid) ledgerTotalPaid.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency}`;
+  const ledgerBalance = document.getElementById('ledger-supplier-balance');
+  if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency}`;
+
+  const historyUl = document.getElementById('supplier-ledger-history');
+  if (!historyUl) return;
+  let historyHtml = '';
+
+  stats.supplierPurchases.forEach(pur => {
+    historyHtml += `
+      <li style="border-right: 4px solid var(--accent)">
+        <div>فاتورة توريد #${pur.id} (${pur.date})<br><small>${(pur.items ? pur.items : []).length} أصناف - ${pur.status}</small></div>
+        <strong>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</strong>
+      </li>
+    `;
+  });
+
+  stats.payments.forEach((p, pIndex) => {
+    historyHtml += `
+      <li style="border-right: 4px solid var(--success); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div>دفعة سداد للمورد 💵 (${p.date})</div>
+          <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editSupplierPayment('${supplierObj.name.replace(/'/g, "\\'")}', ${pIndex})">✏️️</button>
+          <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteSupplierPayment('${supplierObj.name.replace(/'/g, "\\'")}', ${pIndex})">🗑️</button>
+        </div>
+      </li>
+    `;
+  });
+
+  historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة للمورد</p>';
+  const ledgerModal = document.getElementById('supplier-ledger-modal');
+  if (ledgerModal) ledgerModal.classList.remove('hidden');
+};
+
+const closeSupplierLedgerBtn = document.getElementById('close-supplier-ledger-btn');
+if (closeSupplierLedgerBtn) {
+  closeSupplierLedgerBtn.addEventListener('click', () => {
+    const ledgerModal = document.getElementById('supplier-ledger-modal');
+    if (ledgerModal) ledgerModal.classList.add('hidden');
+  });
+}
+
+const submitSupplierPaymentBtn = document.getElementById('submit-supplier-payment-btn');
+if (submitSupplierPaymentBtn) {
+  submitSupplierPaymentBtn.addEventListener('click', async () => {
+    const payAmountInput = document.getElementById('supplier-pay-amount-input');
+    const amount = payAmountInput ? (parseFloat(payAmountInput.value) ? parseFloat(payAmountInput.value) : 0) : 0;
+    if (amount <= 0 || !activeLedgerSupplierName) return;
+
+    const idx = suppliersDB.findIndex(s => s.name.toLowerCase() === activeLedgerSupplierName.toLowerCase());
+    if (idx !== -1) {
+      if (!suppliersDB[idx].payments) suppliersDB[idx].payments = [];
+      suppliersDB[idx].payments.push({ amount, date: new Date().toLocaleDateString('ar-EG') });
+      
+      if (payAmountInput) payAmountInput.value = '';
+      window.openSupplierLedger(activeLedgerSupplierName);
+      renderAllModules();
+
+      if (currentUser) {
+        saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
+        await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(err => {
+          console.error("Cloud Sync Error:", err);
+        });
+      }
+    }
+  });
+}
+
+window.deleteSupplierPayment = async (supplierName, paymentIndex) => {
+  if (!confirm('هل أنت متأكد من حذف هذه الدفعة؟')) return;
+  const idx = suppliersDB.findIndex(s => s.name.toLowerCase() === supplierName.toLowerCase());
+  if (idx !== -1 && suppliersDB[idx].payments) {
+    suppliersDB[idx].payments.splice(paymentIndex, 1);
+    if (currentUser) {
+      saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
+      await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(err => console.warn("Offline queued:", err));
+    }
+    window.openSupplierLedger(supplierName);
+    renderAllModules();
+  }
+};
+
+window.editSupplierPayment = async (supplierName, paymentIndex) => {
+  const idx = suppliersDB.findIndex(s => s.name.toLowerCase() === supplierName.toLowerCase());
+  if (idx !== -1 && suppliersDB[idx].payments && suppliersDB[idx].payments[paymentIndex]) {
+    const currentAmount = suppliersDB[idx].payments[paymentIndex].amount;
+    const newAmountStr = prompt('تعديل قيمة الدفعة المسددة للمورد:', currentAmount);
+    if (newAmountStr !== null) {
+      const newAmount = parseFloat(newAmountStr);
+      if (!isNaN(newAmount) && newAmount > 0) {
+        suppliersDB[idx].payments[paymentIndex].amount = newAmount;
+        if (currentUser) {
+          saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
+          await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(err => console.warn("Offline queued:", err));
+        }
+        window.openSupplierLedger(supplierName);
+        renderAllModules();
+      }
+    }
+  }
+};
+
+const ledgerSupplierWhatsappBtn = document.getElementById('ledger-supplier-whatsapp-btn');
+if (ledgerSupplierWhatsappBtn) {
+  ledgerSupplierWhatsappBtn.addEventListener('click', () => {
+    if (!activeLedgerSupplierName) return;
+    const supplierObj = suppliersDB.find(s => s.name.toLowerCase() === activeLedgerSupplierName.toLowerCase());
+    if (!supplierObj) return;
+    const stats = getSupplierCalculatedLedger(supplierObj);
+    let phone = (supplierObj.phone ? supplierObj.phone : '').replace(/[^0-9]/g, '');
+    if (!phone) { alert('يرجى تسجيل رقم الهاتف للمورد أولاً'); return; }
+    if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
+
+    let msg = `*${storeProfile.name}*\n`;
+    msg += `📄 *كشف حساب المورد:* ${activeLedgerSupplierName}\n`;
+    msg += `📅 *التاريخ:* ${new Date().toLocaleDateString('ar-EG')}\n`;
+    msg += `-----------------------------------\n`;
+    msg += `📦 *إجمالي المشتريات والتوريد:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += `✅ *إجمالي الدفعات المسددة:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += `📌 *الصافي / المتبقي للمورد:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += `-----------------------------------\n`;
+    msg += `تحياتنا لكم!`;
+
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  });
+}
+
+const ledgerSupplierDownloadBtn = document.getElementById('ledger-supplier-download-btn');
+if (ledgerSupplierDownloadBtn) {
+  ledgerSupplierDownloadBtn.addEventListener('click', () => {
+    const ledgerCard = document.getElementById('supplier-ledger-printable-card');
+    if (ledgerCard) {
+      html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `كشف_حساب_مورد_${activeLedgerSupplierName}_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+  });
+}
+
+const ledgerSupplierPrintBtn = document.getElementById('ledger-supplier-print-btn');
+if (ledgerSupplierPrintBtn) {
+  ledgerSupplierPrintBtn.addEventListener('click', () => {
+    if (!activeLedgerSupplierName) return;
+    const supplierObj = suppliersDB.find(s => s.name.toLowerCase() === activeLedgerSupplierName.toLowerCase());
+    if (!supplierObj) return;
+    const stats = getSupplierCalculatedLedger(supplierObj);
+    const printTemplate = document.getElementById('print-template');
+    if (!printTemplate) return;
+
+    printTemplate.innerHTML = `
+      <div class="print-header">
+        ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
+        <h1>كشف حساب مورد</h1>
+        <h2>${storeProfile.name}</h2>
+        <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
+        <p>${storeProfile.address ? storeProfile.address : ''}</p>
+        <hr>
+        <p><strong>اسم المورد:</strong> ${activeLedgerSupplierName}</p>
+        <p><strong>تاريخ التقرير:</strong> ${new Date().toLocaleDateString('ar-EG')}</p>
+      </div>
+
+      <div style="margin: 15px 0; padding: 10px; border: 1px solid #000; border-radius: 6px;">
+        <p><strong>إجمالي المشتريات:</strong> ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}</p>
+        <p><strong>إجمالي الدفعات المسددة:</strong> ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}</p>
+        <p style="font-size: 1.1rem; font-weight: bold; margin-top: 5px;"><strong>الرصيد المتبقي المستحق للمورد:</strong> ${stats.balance.toFixed(2)} ${storeProfile.currency}</p>
+      </div>
+
+      <h3>سجل التوريدات والحركة المالية التفصيلي:</h3>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>بيان المعاملة</th>
+            <th>التاريخ</th>
+            <th>المبلغ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${stats.supplierPurchases.map(pur => `
+            <tr>
+              <td>فاتورة توريد بضاعة #${pur.id} (${pur.items ? pur.items.length : 0} أصناف - ${pur.status})</td>
+              <td>${pur.date}</td>
+              <td>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</td>
+            </tr>
+          `).join('')}
+          ${stats.payments.map(p => `
+            <tr>
+              <td>دفعة سداد نقدي للمورد 💵</td>
+              <td>${p.date}</td>
+              <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    window.print();
+  });
+}
+
+// ------------------------------------------
+// إدارة جدول فواتير المشتريات وتحديث المخزن
+// ------------------------------------------
+
+const purchaseSupplierInput = document.getElementById('purchase-supplier-name');
+const purchaseSupplierPhoneInput = document.getElementById('purchase-supplier-phone');
+const purchaseSupplierSuggestions = document.getElementById('purchase-supplier-suggestions');
+
+function showPurchaseSupplierDropdown(filter = '') {
+  if (!purchaseSupplierSuggestions) return;
+  const val = filter.trim().toLowerCase();
+  const filtered = val === '' ? suppliersDB : suppliersDB.filter(s => s.name.toLowerCase().includes(val) || (s.phone && s.phone.includes(val)));
+
+  if (filtered.length === 0) {
+    purchaseSupplierSuggestions.classList.add('hidden');
+    purchaseSupplierSuggestions.innerHTML = '';
+    return;
+  }
+
+  purchaseSupplierSuggestions.innerHTML = filtered.map(s => `
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectPurchaseSupplierItem('${s.name.replace(/'/g, "\\'")}', '${s.phone ? s.phone : ''}')" ontouchstart="window.selectPurchaseSupplierItem('${s.name.replace(/'/g, "\\'")}', '${s.phone ? s.phone : ''}')">
+      <strong>🏭 ${s.name}</strong>
+      <small style="color:var(--text-muted); display:block;">${s.phone ? s.phone : 'بدون رقم'}</small>
+    </div>
+  `).join('');
+  purchaseSupplierSuggestions.classList.remove('hidden');
+}
+
+if (purchaseSupplierInput) {
+  purchaseSupplierInput.addEventListener('input', (e) => {
+    const val = e.target.value;
+    const matched = suppliersDB.find(s => s.name.toLowerCase() === val.trim().toLowerCase());
+    if (matched && matched.phone && purchaseSupplierPhoneInput) {
+      purchaseSupplierPhoneInput.value = matched.phone;
+    }
+    showPurchaseSupplierDropdown(val);
+  });
+  purchaseSupplierInput.addEventListener('focus', () => showPurchaseSupplierDropdown(purchaseSupplierInput.value));
+}
+
+window.selectPurchaseSupplierItem = (name, phone) => {
+  if (purchaseSupplierInput) purchaseSupplierInput.value = name;
+  if (phone && purchaseSupplierPhoneInput) purchaseSupplierPhoneInput.value = phone;
+  setTimeout(() => {
+    if (purchaseSupplierSuggestions) purchaseSupplierSuggestions.classList.add('hidden');
+  }, 100);
+};
+
+const purchaseItemsBody = document.getElementById('purchase-items-body');
+const purchasePayStatus = document.getElementById('purchase-pay-status');
+const purchasePaidWrapper = document.getElementById('purchase-paid-wrapper');
+const purchasePaidAmountInput = document.getElementById('purchase-paid-amount');
+
+if (purchasePayStatus) {
+  purchasePayStatus.addEventListener('change', () => {
+    if (purchasePayStatus.value === 'مدفوعة جزئياً') {
+      if (purchasePaidWrapper) purchasePaidWrapper.classList.remove('hidden');
+    } else {
+      if (purchasePaidWrapper) purchasePaidWrapper.classList.add('hidden');
+    }
+  });
+}
+
+function renderPurchaseItemsTable() {
+  if (!purchaseItemsBody) return;
+  purchaseItemsBody.innerHTML = activePurchaseItems.map((item, index) => `
+    <tr>
+      <td>
+        <div class="autocomplete-wrapper">
+          <input type="text" autocomplete="off" value="${item.name ? item.name : ''}" placeholder="اسم المنتجات" 
+                 oninput="window.handlePurchaseItemInput(${index}, this.value)"
+                 onfocus="window.handlePurchaseItemFocus(${index}, this.value)">
+          <div class="autocomplete-dropdown hidden" id="purchase-item-sug-${index}"></div>
+        </div>
+      </td>
+      <td>
+        <input type="number" value="${item.qty ? item.qty : 1}" min="1" oninput="window.updatePurchaseItem(${index}, 'qty', this.value)">
+      </td>
+      <td>
+        <input type="number" value="${item.cost ? item.cost : 0}" min="0" step="0.5" oninput="window.updatePurchaseItem(${index}, 'cost', this.value)">
+      </td>
+      <td>
+        <input type="number" value="${item.price ? item.price : 0}" min="0" step="0.5" oninput="window.updatePurchaseItem(${index}, 'price', this.value)">
+      </td>
+      <td>
+        <span class="p-item-total-text">${(((item.qty ? item.qty : 0)) * ((item.cost ? item.cost : 0))).toFixed(2)}</span>
+      </td>
+      <td>
+        <button type="button" class="btn-remove" onclick="window.removePurchaseItem(${index})">✕</button>
+      </td>
+    </tr>
+  `).join('');
+  calculatePurchaseTotals();
+}
+
+function showPurchaseItemDropdown(index, val) {
+  const sugBox = document.getElementById(`purchase-item-sug-${index}`);
+  if (!sugBox) return;
+
+  const query = val.trim().toLowerCase();
+  const filtered = query === '' ? productsDB : productsDB.filter(p => p.name.toLowerCase().includes(query));
+
+  if (filtered.length === 0) {
+    sugBox.classList.add('hidden');
+    return;
+  }
+
+  sugBox.innerHTML = filtered.map(p => `
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectPurchaseProductItem(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.cost ? p.cost : 0}, ${p.price ? p.price : 0})" ontouchstart="window.selectPurchaseProductItem(${index}, '${p.name.replace(/'/g, "\\'")}', ${p.cost ? p.cost : 0}, ${p.price ? p.price : 0})">
+      <strong>📦 ${p.name}</strong>
+      <span style="color:var(--text-muted); float:left;">تكلفة: ${p.cost ? p.cost : 0} | بيع: ${p.price ? p.price : 0}</span>
+    </div>
+  `).join('');
+  sugBox.classList.remove('hidden');
+}
+
+window.handlePurchaseItemInput = (index, val) => {
+  if (activePurchaseItems[index]) activePurchaseItems[index].name = val;
+  const matched = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+  if (matched && activePurchaseItems[index]) {
+    activePurchaseItems[index].cost = matched.cost ? matched.cost : 0;
+    activePurchaseItems[index].price = matched.price ? matched.price : 0;
+  }
+  calculatePurchaseTotals();
+  showPurchaseItemDropdown(index, val);
+};
+
+window.handlePurchaseItemFocus = (index, val) => showPurchaseItemDropdown(index, val);
+
+window.selectPurchaseProductItem = (index, name, cost, price) => {
+  if (activePurchaseItems[index]) {
+    activePurchaseItems[index].name = name;
+    activePurchaseItems[index].cost = cost;
+    activePurchaseItems[index].price = price;
+  }
+  renderPurchaseItemsTable();
+};
+
+window.updatePurchaseItem = (index, key, val) => {
+  if (activePurchaseItems[index]) {
+    activePurchaseItems[index][key] = parseFloat(val) ? parseFloat(val) : 0;
+  }
+  calculatePurchaseTotals();
+};
+
+window.removePurchaseItem = (index) => {
+  activePurchaseItems.splice(index, 1);
+  renderPurchaseItemsTable();
+};
+
+const addPurchaseItemBtn = document.getElementById('add-purchase-item-btn');
+if (addPurchaseItemBtn) {
+  addPurchaseItemBtn.addEventListener('click', () => {
+    activePurchaseItems.push({ name: '', qty: 1, cost: 0, price: 0 });
+    renderPurchaseItemsTable();
+  });
+}
+
+function calculatePurchaseTotals() {
+  const total = activePurchaseItems.reduce((acc, i) => acc + (((i.qty ? i.qty : 0)) * ((i.cost ? i.cost : 0))), 0);
+  const totalEl = document.getElementById('purchase-grand-total');
+  if (totalEl) totalEl.textContent = `${total.toFixed(2)} ${storeProfile.currency}`;
+  return total;
+}
+
+const purchaseForm = document.getElementById('purchase-form');
+if (purchaseForm) {
+  purchaseForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const supplierName = purchaseSupplierInput ? purchaseSupplierInput.value.trim() : '';
+    const supplierPhone = purchaseSupplierPhoneInput ? purchaseSupplierPhoneInput.value.trim() : '';
+    const total = calculatePurchaseTotals();
+
+    const validItems = activePurchaseItems.filter(i => (i.name ? i.name : '').trim() !== '' && i.qty > 0);
+
+    if (!supplierName) { alert('يرجى كتابة أو اختيار اسم المورد'); return; }
+    if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل بفاتورة المشتريات'); return; }
+
+    const uid = currentUser ? currentUser.uid : null;
+    if (!uid) { alert('يرجى تسجيل الدخول أولاً'); return; }
+
+    let supplierObj = suppliersDB.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+    if (!supplierObj) {
+      supplierObj = { id: Date.now(), name: supplierName, phone: supplierPhone, openingBalance: 0, payments: [] };
+      suppliersDB.push(supplierObj);
+    } else if (supplierPhone) {
+      supplierObj.phone = supplierPhone;
+    }
+
+    const status = purchasePayStatus ? purchasePayStatus.value : 'مدفوعة';
+    let paidVal = total;
+    if (status === 'آجل / غير مدفوعة') paidVal = 0;
+    else if (status === 'مدفوعة جزئياً') {
+      paidVal = purchasePaidAmountInput ? (parseFloat(purchasePaidAmountInput.value) ? parseFloat(purchasePaidAmountInput.value) : 0) : 0;
+    }
+
+    const purchaseInvoice = {
+      id: Date.now(),
+      supplierId: supplierObj.id,
+      supplier: supplierName,
+      phone: supplierPhone,
+      items: validItems,
+      grandTotal: total,
+      paidAmount: paidVal,
+      dueAmount: total - paidVal,
+      status: status,
+      date: new Date().toLocaleDateString('ar-EG'),
+      isoTime: new Date().toISOString()
+    };
+
+    // زيادة وتحديث المنتجات في المخزن تلقائياً عند الشراء من المورد
+    validItems.forEach(item => {
+      let prod = productsDB.find(p => p.name.toLowerCase() === item.name.toLowerCase());
+      if (prod) {
+        prod.stock = (prod.stock ? prod.stock : 0) + item.qty;
+        if (item.cost > 0) prod.cost = item.cost;
+        if (item.price > 0) prod.price = item.price;
+      } else {
+        prod = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          name: item.name,
+          cost: item.cost,
+          price: item.price,
+          stock: item.qty
+        };
+        productsDB.push(prod);
+      }
+    });
+
+    purchasesDB.unshift(purchaseInvoice);
+
+    saveLocalData(uid, 'purchases', purchasesDB);
+    saveLocalData(uid, 'suppliers', suppliersDB);
+    saveLocalData(uid, 'products', productsDB);
+
+    const promises = [
+      setDoc(doc(db, "users", uid, "purchases", String(purchaseInvoice.id)), purchaseInvoice),
+      setDoc(doc(db, "users", uid, "suppliers", String(supplierObj.id)), supplierObj)
+    ];
+
+    productsDB.forEach(prod => {
+      promises.push(setDoc(doc(db, "users", uid, "products", String(prod.id)), prod));
+    });
+
+    await Promise.all(promises).catch(err => console.warn("Cloud Sync Queued Offline:", err));
+
+    activePurchaseItems = [];
+    if (purchaseSupplierInput) purchaseSupplierInput.value = '';
+    if (purchaseSupplierPhoneInput) purchaseSupplierPhoneInput.value = '';
+    renderPurchaseItemsTable();
+    renderAllModules();
+    alert('✅ تم حفظ فاتورة المشتريات، تحديث الحسابات، وزيادة كميات المخزن بنجاح!');
+  });
+}
+
+function renderPurchases() {
+  const container = document.getElementById('purchases-list-container');
+  if (!container) return;
+
+  container.innerHTML = purchasesDB.map(pur => `
+    <li>
+      <div style="flex: 1;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <strong>فاتورة توريد #${pur.id} - ${pur.supplier}</strong>
+          <span class="badge ${pur.status === 'مدفوعة' ? 'badge-paid' : (pur.status === 'مدفوعة جزئياً' ? 'badge-partial' : 'badge-unpaid')}">${pur.status}</span>
+        </div>
+        <small style="color:var(--text-muted); display: block; margin-top: 2px;">
+          📅 ${pur.date} • 📦 ${(pur.items ? pur.items : []).length} أصناف
+        </small>
+      </div>
+      <div style="text-align: left;">
+        <strong style="color:var(--danger); font-size: 1.05rem;">-${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</strong>
+        <button class="btn-sm" style="color:var(--danger); margin-right:6px;" onclick="window.deletePurchase(${pur.id})">🗑️</button>
+      </div>
+    </li>
+  `).join('');
+}
+
+window.deletePurchase = async (id) => {
+  if (!confirm('تأكيد حذف فاتورة المشتريات؟')) return;
+  try {
+    if (currentUser) {
+      await deleteDoc(doc(db, "users", currentUser.uid, "purchases", String(id)));
+    }
+    purchasesDB = purchasesDB.filter(p => p.id !== id);
+    if (currentUser) {
+      saveLocalData(currentUser.uid, 'purchases', purchasesDB);
+    }
+    renderAllModules();
+  } catch (err) {
+    console.error("Delete Purchase Error:", err);
+  }
+};
+
+// ------------------------------------------
 
 const expenseForm = document.getElementById('expense-form');
 if (expenseForm) {
@@ -1996,7 +2576,7 @@ function updateDashboardStats() {
 const exportJsonBtn = document.getElementById('export-json-btn');
 if (exportJsonBtn) {
   exportJsonBtn.addEventListener('click', () => {
-    const data = { invoices: invoicesDB, clients: clientsDB, suppliers: suppliersDB, products: productsDB, expenses: expensesDB, storeProfile };
+    const data = { invoices: invoicesDB, clients: clientsDB, suppliers: suppliersDB, purchases: purchasesDB, products: productsDB, expenses: expensesDB, storeProfile };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -2043,6 +2623,13 @@ if (importJsonInput) {
             saveLocalData(uid, 'suppliers', suppliersDB);
             suppliersDB.forEach(s => {
               promises.push(setDoc(doc(db, "users", uid, "suppliers", String(s.id)), s));
+            });
+          }
+          if (Array.isArray(importedData.purchases)) {
+            purchasesDB = importedData.purchases;
+            saveLocalData(uid, 'purchases', purchasesDB);
+            purchasesDB.forEach(pur => {
+              promises.push(setDoc(doc(db, "users", uid, "purchases", String(pur.id)), pur));
             });
           }
           if (Array.isArray(importedData.products)) {
@@ -2174,6 +2761,7 @@ function renderAllModules() {
   renderProducts();
   renderClients();
   renderSuppliers();
+  renderPurchases();
   renderExpenses();
   updateDashboardStats();
 }
@@ -2187,3 +2775,4 @@ if ('serviceWorker' in navigator) {
 
 updateHeaderUI();
 if (addItemBtn) addItemBtn.click();
+if (addPurchaseItemBtn) addPurchaseItemBtn.click();
