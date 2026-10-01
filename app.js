@@ -182,6 +182,7 @@ let activeLedgerClientName = null;
 let activeLedgerSupplierName = null;
 let editingInvoiceId = null;
 let editingProductId = null;
+let editingSupplierId = null; // متجول تعديل الموردين
 
 // دوال التخزين المحلي المزدوج لمنع اختفاء البيانات أوفلاين
 function saveLocalData(uid, key, data) {
@@ -1529,7 +1530,7 @@ function renderClients() {
             ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
           </span>
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name.replace(/'/g, "\\'")}')">كشف 📄</button>
-          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editClient(${index})" title="تعديل العميل">✏️️</button>
+          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editClient(${index})" title="تعديل العميل">✏</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteClient(${index})" title="حذف العميل">🗑️</button>
         </div>
       </li>
@@ -1838,28 +1839,47 @@ if (supplierForm) {
     const phone = sPhoneEl ? sPhoneEl.value.trim() : '';
     const openingBalance = sBalanceEl ? (parseFloat(sBalanceEl.value) ? parseFloat(sBalanceEl.value) : 0) : 0;
 
-    if (suppliersDB.some(s => s.name.toLowerCase() === name.toLowerCase())) {
-      alert('المورد موجود بالفعل!');
-      return;
-    }
+    if (!name) { alert('يرجى إدخال اسم المورد'); return; }
 
-    const newSupplier = { id: Date.now(), name, phone, openingBalance, payments: [] };
-    suppliersDB.push(newSupplier);
+    let supplierToSave;
+
+    if (editingSupplierId !== null) {
+      const idx = suppliersDB.findIndex(s => s.id === editingSupplierId);
+      if (idx !== -1) {
+        const exists = suppliersDB.some((s, i) => i !== idx && s.name.toLowerCase() === name.toLowerCase());
+        if (exists) { alert('يوجد مورد آخر بنفس الاسم بالفعل!'); return; }
+        suppliersDB[idx] = Object.assign({}, suppliersDB[idx], { name, phone, openingBalance });
+        supplierToSave = suppliersDB[idx];
+      }
+      editingSupplierId = null;
+      
+      const submitBtn = supplierForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.textContent = 'حفظ بيانات المورد';
+      const cancelBtn = document.getElementById('cancel-edit-supplier-btn');
+      if (cancelBtn) cancelBtn.remove();
+    } else {
+      if (suppliersDB.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+        alert('المورد موجود بالفعل!');
+        return;
+      }
+      supplierToSave = { id: Date.now(), name, phone, openingBalance, payments: [] };
+      suppliersDB.push(supplierToSave);
+    }
 
     if (currentUser) {
       saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
-      await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(newSupplier.id)), newSupplier).catch(err => console.warn("Offline queued:", err));
+      await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(supplierToSave.id)), supplierToSave).catch(err => console.warn("Offline queued:", err));
     }
     e.target.reset();
     renderAllModules();
-    alert('✅ تم إضافة المورد بنجاح');
+    alert(editingSupplierId !== null ? '✅ تم تحديث بيانات المورد بنجاح!' : '✅ تم إضافة المورد بنجاح');
   });
 }
 
 function getSupplierCalculatedLedger(supplierParam) {
   let supplierObj = null;
   if (typeof supplierParam === 'string') {
-    supplierObj = suppliersDB.find(s => s.name.toLowerCase() === supplierParam.toLowerCase());
+    supplierObj = suppliersDB.find(s => s.name && s.name.toLowerCase() === supplierParam.toLowerCase());
   } else if (supplierParam && typeof supplierParam === 'object') {
     supplierObj = supplierParam;
   }
@@ -1868,25 +1888,25 @@ function getSupplierCalculatedLedger(supplierParam) {
     supplierObj = { name: typeof supplierParam === 'string' ? supplierParam : '', openingBalance: 0, payments: [] };
   }
 
-  const supplierPurchases = purchasesDB.filter(p => 
+  const supplierPurchases = (purchasesDB || []).filter(p => 
     (supplierObj.id && p.supplierId === supplierObj.id) || 
     (p.supplier && supplierObj.name && p.supplier.toLowerCase() === supplierObj.name.toLowerCase())
   );
 
-  let totalPurchases = supplierObj.openingBalance ? supplierObj.openingBalance : 0;
+  let totalPurchases = parseFloat(supplierObj.openingBalance) || 0;
   let totalPaid = 0;
 
   supplierPurchases.forEach(p => {
-    totalPurchases += (p.grandTotal ? p.grandTotal : 0);
-    totalPaid += (p.paidAmount ? p.paidAmount : 0);
+    totalPurchases += (parseFloat(p.grandTotal) || 0);
+    totalPaid += (parseFloat(p.paidAmount) || 0);
   });
 
-  (supplierObj.payments ? supplierObj.payments : []).forEach(pay => {
-    totalPaid += (pay.amount ? pay.amount : 0);
+  (supplierObj.payments || []).forEach(pay => {
+    totalPaid += (parseFloat(pay.amount) || 0);
   });
 
   const balance = Math.max(0, totalPurchases - totalPaid);
-  return { totalPurchases, totalPaid, balance, supplierPurchases, payments: supplierObj.payments ? supplierObj.payments : [] };
+  return { totalPurchases, totalPaid, balance, supplierPurchases, payments: supplierObj.payments || [] };
 }
 
 function renderSuppliers() {
@@ -1894,10 +1914,11 @@ function renderSuppliers() {
   if (!container) return;
   const searchSuppliersInput = document.getElementById('search-suppliers-input');
   const searchFilter = searchSuppliersInput ? searchSuppliersInput.value.toLowerCase() : '';
-  const filtered = suppliersDB.filter(s => s.name.toLowerCase().includes(searchFilter));
+  const filtered = suppliersDB.filter(s => s.name && s.name.toLowerCase().includes(searchFilter));
 
   container.innerHTML = filtered.map((s, index) => {
     const stats = getSupplierCalculatedLedger(s);
+    const safeName = (s.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
     return `
       <li>
         <div style="flex: 1;">
@@ -1908,7 +1929,7 @@ function renderSuppliers() {
           <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
             ${stats.balance > 0 ? `مستحق للمورد: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
           </span>
-          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openSupplierLedger('${s.name.replace(/'/g, "\\'")}')">كشف 📄</button>
+          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openSupplierLedger('${safeName}')">كشف 📄</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editSupplier(${index})" title="تعديل المورد">✏️</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteSupplier(${index})" title="حذف المورد">🗑️</button>
         </div>
@@ -1920,49 +1941,41 @@ function renderSuppliers() {
 const searchSuppliersInput = document.getElementById('search-suppliers-input');
 if (searchSuppliersInput) searchSuppliersInput.addEventListener('input', renderSuppliers);
 
-window.editSupplier = async (index) => {
+// تعديل المورد داخل استمارة الصفحة مباشرة بدون prompt
+window.editSupplier = (index) => {
   const supplier = suppliersDB[index];
   if (!supplier) return;
 
-  const newName = prompt('تعديل اسم المورد / الشركة:', supplier.name);
-  if (newName === null) return;
+  editingSupplierId = supplier.id;
 
-  const newPhone = prompt('تعديل رقم الهاتف:', supplier.phone || '');
-  if (newPhone === null) return;
+  const sNameEl = document.getElementById('s-name');
+  const sPhoneEl = document.getElementById('s-phone');
+  const sBalanceEl = document.getElementById('s-balance');
 
-  const newBalanceStr = prompt('تعديل الرصيد الافتتاحي (مستحق للمورد):', supplier.openingBalance || 0);
-  if (newBalanceStr === null) return;
+  if (sNameEl) sNameEl.value = supplier.name || '';
+  if (sPhoneEl) sPhoneEl.value = supplier.phone || '';
+  if (sBalanceEl) sBalanceEl.value = supplier.openingBalance || 0;
 
-  const newBalance = parseFloat(newBalanceStr);
-  if (isNaN(newBalance)) {
-    alert('يرجى إدخال رقم صحيح للرصيد.');
-    return;
+  const submitBtn = supplierForm.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.textContent = 'تحديث بيانات المورد 🔄';
+
+  if (!document.getElementById('cancel-edit-supplier-btn')) {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.id = 'cancel-edit-supplier-btn';
+    cancelBtn.className = 'btn-sm';
+    cancelBtn.style.cssText = 'background: var(--danger); color: #fff; margin-top: 8px; width: 100%; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer;';
+    cancelBtn.textContent = 'إلغاء التعديل ✕';
+    cancelBtn.onclick = () => {
+      editingSupplierId = null;
+      if (supplierForm) supplierForm.reset();
+      if (submitBtn) submitBtn.textContent = 'حفظ بيانات المورد';
+      cancelBtn.remove();
+    };
+    supplierForm.appendChild(cancelBtn);
   }
 
-  const trimmedName = newName.trim();
-  if (!trimmedName) {
-    alert('اسم المورد لا يمكن أن يكون فارغاً.');
-    return;
-  }
-
-  const exists = suppliersDB.some((s, i) => i !== index && s.name.toLowerCase() === trimmedName.toLowerCase());
-  if (exists) {
-    alert('يوجد مورد آخر بنفس الاسم بالفعل!');
-    return;
-  }
-
-  suppliersDB[index] = Object.assign({}, supplier, {
-    name: trimmedName,
-    phone: newPhone.trim(),
-    openingBalance: newBalance
-  });
-
-  if (currentUser) {
-    saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
-    await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[index].id)), suppliersDB[index]).catch(err => console.warn("Offline queued:", err));
-  }
-  renderAllModules();
-  alert('✅ تم تعديل بيانات المورد بنجاح!');
+  supplierForm.scrollIntoView({ behavior: 'smooth' });
 };
 
 window.deleteSupplier = async (index) => {
@@ -1986,52 +1999,68 @@ window.deleteSupplier = async (index) => {
 };
 
 window.openSupplierLedger = (supplierName) => {
-  const supplierObj = suppliersDB.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
-  if (!supplierObj) return;
+  try {
+    const supplierObj = suppliersDB.find(s => s.name && s.name.toLowerCase() === (supplierName || '').toLowerCase());
+    if (!supplierObj) {
+      alert('تعذر العثور على بيانات المورد!');
+      return;
+    }
 
-  activeLedgerSupplierName = supplierObj.name;
-  const stats = getSupplierCalculatedLedger(supplierObj);
+    activeLedgerSupplierName = supplierObj.name;
+    const stats = getSupplierCalculatedLedger(supplierObj);
 
-  const ledgerTitle = document.getElementById('ledger-supplier-title');
-  if (ledgerTitle) ledgerTitle.textContent = `🏭 كشف حساب مورد: ${supplierObj.name}`;
-  const ledgerTotalPurchases = document.getElementById('ledger-supplier-total-purchases');
-  if (ledgerTotalPurchases) ledgerTotalPurchases.textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}`;
-  const ledgerTotalPaid = document.getElementById('ledger-supplier-total-paid');
-  if (ledgerTotalPaid) ledgerTotalPaid.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency}`;
-  const ledgerBalance = document.getElementById('ledger-supplier-balance');
-  if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency}`;
+    const ledgerTitle = document.getElementById('ledger-supplier-title');
+    if (ledgerTitle) ledgerTitle.textContent = `🏭 كشف حساب مورد: ${supplierObj.name}`;
+    
+    const ledgerTotalPurchases = document.getElementById('ledger-supplier-total-purchases');
+    if (ledgerTotalPurchases) ledgerTotalPurchases.textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    
+    const ledgerTotalPaid = document.getElementById('ledger-supplier-total-paid');
+    if (ledgerTotalPaid) ledgerTotalPaid.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    
+    const ledgerBalance = document.getElementById('ledger-supplier-balance');
+    if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
 
-  const historyUl = document.getElementById('supplier-ledger-history');
-  if (!historyUl) return;
-  let historyHtml = '';
+    const historyUl = document.getElementById('supplier-ledger-history');
+    if (historyUl) {
+      let historyHtml = '';
 
-  stats.supplierPurchases.forEach(pur => {
-    historyHtml += `
-      <li style="border-right: 4px solid var(--accent)">
-        <div>فاتورة توريد #${pur.id} (${pur.date})<br><small>${(pur.items ? pur.items : []).length} أصناف - ${pur.status}</small></div>
-        <strong>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</strong>
-      </li>
-    `;
-  });
+      (stats.supplierPurchases || []).forEach(pur => {
+        historyHtml += `
+          <li style="border-right: 4px solid var(--accent)">
+            <div>فاتورة توريد #${pur.id} (${pur.date || ''})<br><small>${(pur.items ? pur.items : []).length} أصناف - ${pur.status || ''}</small></div>
+            <strong>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+          </li>
+        `;
+      });
 
-  stats.payments.forEach((p, pIndex) => {
-    historyHtml += `
-      <li style="border-right: 4px solid var(--success); display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div>دفعة سداد للمورد 💵 (${p.date})</div>
-          <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
-        </div>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editSupplierPayment('${supplierObj.name.replace(/'/g, "\\'")}', ${pIndex})">✏️️</button>
-          <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteSupplierPayment('${supplierObj.name.replace(/'/g, "\\'")}', ${pIndex})">🗑️</button>
-        </div>
-      </li>
-    `;
-  });
+      (stats.payments || []).forEach((p, pIndex) => {
+        const safeSupplierName = (supplierObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        historyHtml += `
+          <li style="border-right: 4px solid var(--success); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div>دفعة سداد للمورد 💵 (${p.date || ''})</div>
+              <strong class="text-success">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editSupplierPayment('${safeSupplierName}', ${pIndex})">✏️</button>
+              <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteSupplierPayment('${safeSupplierName}', ${pIndex})">🗑️</button>
+            </div>
+          </li>
+        `;
+      });
 
-  historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة للمورد</p>';
-  const ledgerModal = document.getElementById('supplier-ledger-modal');
-  if (ledgerModal) ledgerModal.classList.remove('hidden');
+      historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted); padding: 10px;">لا توجد معاملات مسجلة للمورد</p>';
+    }
+
+    const ledgerModal = document.getElementById('supplier-ledger-modal');
+    if (ledgerModal) {
+      ledgerModal.classList.remove('hidden');
+    }
+  } catch (err) {
+    console.error("Error in openSupplierLedger:", err);
+    alert('حدث خطأ أثناء فتح كشف الحساب: ' + err.message);
+  }
 };
 
 const closeSupplierLedgerBtn = document.getElementById('close-supplier-ledger-btn');
@@ -2267,6 +2296,11 @@ if (purchasePayStatus) {
 
 function renderPurchaseItemsTable() {
   if (!purchaseItemsBody) return;
+  
+  if (activePurchaseItems.length === 0) {
+    activePurchaseItems.push({ name: '', qty: 1, cost: 0, price: 0 });
+  }
+
   purchaseItemsBody.innerHTML = activePurchaseItems.map((item, index) => `
     <tr>
       <td>
@@ -2761,6 +2795,7 @@ function renderAllModules() {
   renderProducts();
   renderClients();
   renderSuppliers();
+  renderPurchaseItemsTable();
   renderPurchases();
   renderExpenses();
   updateDashboardStats();
@@ -2775,4 +2810,4 @@ if ('serviceWorker' in navigator) {
 
 updateHeaderUI();
 if (addItemBtn) addItemBtn.click();
-if (addPurchaseItemBtn) addPurchaseItemBtn.click();
+renderPurchaseItemsTable();
