@@ -317,10 +317,10 @@
     <section id="tab-suppliers" class="tab-content">
       <div class="dashboard-grid">
         
-        <!-- إضافة مورد جديد -->
+        <!-- إضافة وتعديل مورد جديد -->
         <div class="card">
           <div class="card-header">
-            <h3>🏭 إضافة مورد جديد</h3>
+            <h3>🏭 إضافة / تعديل بيانات مورد</h3>
           </div>
           <form id="supplier-form" class="form-row">
             <div class="form-group">
@@ -382,7 +382,7 @@
                 </thead>
                 <tbody id="purchase-items-body"></tbody>
               </table>
-              <button type="button" id="add-purchase-item-btn" class="btn-add-row">+ إضافة بند لفاتورة الشراء</button>
+              <button type="button" id="add-purchase-item-btn" class="btn-add-row">+ إضافة بند للفاتورة</button>
             </div>
 
             <div class="form-row" style="margin-top: 15px; align-items: flex-end;">
@@ -391,7 +391,7 @@
                 <select id="purchase-pay-status">
                   <option value="مدفوعة">✅ مدفوعة بالكامل للمورد</option>
                   <option value="آجل / غير مدفوعة">❌ آجل / على الحساب بالكامل</option>
-                  <option value="مدفوعة جزئياً">⚠️️ مدفوع جزء للمورد</option>
+                  <option value="مدفوعة جزئياً">⚠ مدفوع جزء للمورد</option>
                 </select>
               </div>
               <div class="form-group hidden" id="purchase-paid-wrapper">
