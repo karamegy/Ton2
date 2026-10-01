@@ -130,6 +130,7 @@
     <nav class="app-nav">
       <button class="nav-tab active" data-tab="invoices" data-i18n="tabInvoices">🧾 الفواتير الحية</button>
       <button class="nav-tab" data-tab="clients" data-i18n="tabClients">👥 العملاء والدفاتر</button>
+      <button class="nav-tab" data-tab="suppliers" data-i18n="tabSuppliers">🏭 الموردين والشركات</button>
       <button class="nav-tab" data-tab="products" data-i18n="tabProducts">📦 المخزن</button>
       <button class="nav-tab" data-tab="expenses" data-i18n="tabExpenses">💸 الخزينة</button>
     </nav>
@@ -307,6 +308,42 @@
           </div>
           <div class="list-container">
             <ul id="clients-list-container"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- تبويب الموردين والدفاتر -->
+    <section id="tab-suppliers" class="tab-content">
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card-header">
+            <h3>🏭 إضافة مورد جديد</h3>
+          </div>
+          <form id="supplier-form" class="form-row">
+            <div class="form-group">
+              <label>اسم المورد / الشركة</label>
+              <input type="text" id="s-name" required placeholder="اسم المورد أو الشركة">
+            </div>
+            <div class="form-group">
+              <label>رقم الهاتف</label>
+              <input type="tel" id="s-phone" placeholder="01xxxxxxxxx">
+            </div>
+            <div class="form-group">
+              <label>الرصيد الافتتاحي (مستحق للمورد)</label>
+              <input type="number" id="s-balance" value="0" placeholder="0.00">
+            </div>
+            <button type="submit" class="btn-primary" style="grid-column: 1 / -1;">حفظ بيانات المورد</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>سجل الموردين المجمع</h3>
+            <input type="text" id="search-suppliers-input" placeholder="بحث عن مورد..." style="max-width: 180px; padding: 6px 10px;">
+          </div>
+          <div class="list-container">
+            <ul id="suppliers-list-container"></ul>
           </div>
         </div>
       </div>
@@ -531,4 +568,4 @@
 
   <script type="module" src="app.js"></script>
 </body>
-  </html>
+</html>
