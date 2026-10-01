@@ -85,7 +85,7 @@ const translations = {
     pName: "Product Name", pPrice: "Selling Price", pCost: "Cost Price", pStock: "Stock Quantity", saveProduct: "Save Product",
     productList: "Stocked Items", clientDb: "Client Accounts", addExpense: "Add Expense",
     expTitle: "Expense Category", expAmount: "Amount", saveExpense: "Record Expense", expList: "Expense Log",
-    previewTitle: "👁️ E-Invoice Preview", downloadImg: "Download Image 🖼️", settingsTitle: "⚙️ Enterprise Settings",
+    previewTitle: "👁️ E-Invoice Preview", downloadImg: "Download Image 🖼️️", settingsTitle: "⚙️ Enterprise Settings",
     theme: "UI Theme", currency: "Base Currency", vatNo: "VAT Number", logo: "Company Logo", address: "Address", saveSettings: "Save Cloud Settings"
   }
 };
@@ -182,7 +182,7 @@ let activeLedgerClientName = null;
 let activeLedgerSupplierName = null;
 let editingInvoiceId = null;
 let editingProductId = null;
-let editingSupplierId = null; // متجول تعديل الموردين
+let editingSupplierId = null;
 
 // دوال التخزين المحلي المزدوج لمنع اختفاء البيانات أوفلاين
 function saveLocalData(uid, key, data) {
@@ -363,7 +363,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// تحميل البيانات فوراً من التخزين المحلي (LocalStorage) كاستجابة فورية أوفلاين، ثم مزامنتها مع السحابة
+// تحميل البيانات فوراً من التخزين المحلي، ثم مزامنتها بدون قيود snapshot.empty لمنع تعطل الأوفلاين
 async function attachCloudRealtimeSync(uid) {
   detachCloudSync();
 
@@ -392,72 +392,60 @@ async function attachCloudRealtimeSync(uid) {
   }, (err) => console.warn("Profile Sync Offline Notice:", err));
 
   const unsubInvoices = onSnapshot(collection(db, "users", uid, "invoices"), (snapshot) => {
-    if (!snapshot.empty) {
-      invoicesDB = [];
-      snapshot.forEach((docSnap) => {
-        invoicesDB.push(docSnap.data());
-      });
-      invoicesDB.sort((a, b) => b.id - a.id);
-      saveLocalData(uid, 'invoices', invoicesDB);
-      updateNextInvoiceNumber(); 
-      renderAllModules();
-    }
+    invoicesDB = [];
+    snapshot.forEach((docSnap) => {
+      invoicesDB.push(docSnap.data());
+    });
+    invoicesDB.sort((a, b) => b.id - a.id);
+    saveLocalData(uid, 'invoices', invoicesDB);
+    updateNextInvoiceNumber(); 
+    renderAllModules();
   }, (err) => console.warn("Invoices Sync Offline Notice:", err));
 
   const unsubClients = onSnapshot(collection(db, "users", uid, "clients"), (snapshot) => {
-    if (!snapshot.empty) {
-      clientsDB = [];
-      snapshot.forEach((docSnap) => {
-        clientsDB.push(docSnap.data());
-      });
-      saveLocalData(uid, 'clients', clientsDB);
-      renderAllModules();
-    }
+    clientsDB = [];
+    snapshot.forEach((docSnap) => {
+      clientsDB.push(docSnap.data());
+    });
+    saveLocalData(uid, 'clients', clientsDB);
+    renderAllModules();
   }, (err) => console.warn("Clients Sync Offline Notice:", err));
 
   const unsubSuppliers = onSnapshot(collection(db, "users", uid, "suppliers"), (snapshot) => {
-    if (!snapshot.empty) {
-      suppliersDB = [];
-      snapshot.forEach((docSnap) => {
-        suppliersDB.push(docSnap.data());
-      });
-      saveLocalData(uid, 'suppliers', suppliersDB);
-      renderAllModules();
-    }
+    suppliersDB = [];
+    snapshot.forEach((docSnap) => {
+      suppliersDB.push(docSnap.data());
+    });
+    saveLocalData(uid, 'suppliers', suppliersDB);
+    renderAllModules();
   }, (err) => console.warn("Suppliers Sync Offline Notice:", err));
 
   const unsubPurchases = onSnapshot(collection(db, "users", uid, "purchases"), (snapshot) => {
-    if (!snapshot.empty) {
-      purchasesDB = [];
-      snapshot.forEach((docSnap) => {
-        purchasesDB.push(docSnap.data());
-      });
-      purchasesDB.sort((a, b) => b.id - a.id);
-      saveLocalData(uid, 'purchases', purchasesDB);
-      renderAllModules();
-    }
+    purchasesDB = [];
+    snapshot.forEach((docSnap) => {
+      purchasesDB.push(docSnap.data());
+    });
+    purchasesDB.sort((a, b) => b.id - a.id);
+    saveLocalData(uid, 'purchases', purchasesDB);
+    renderAllModules();
   }, (err) => console.warn("Purchases Sync Offline Notice:", err));
 
   const unsubProducts = onSnapshot(collection(db, "users", uid, "products"), (snapshot) => {
-    if (!snapshot.empty) {
-      productsDB = [];
-      snapshot.forEach((docSnap) => {
-        productsDB.push(docSnap.data());
-      });
-      saveLocalData(uid, 'products', productsDB);
-      renderAllModules();
-    }
+    productsDB = [];
+    snapshot.forEach((docSnap) => {
+      productsDB.push(docSnap.data());
+    });
+    saveLocalData(uid, 'products', productsDB);
+    renderAllModules();
   }, (err) => console.warn("Products Sync Offline Notice:", err));
 
   const unsubExpenses = onSnapshot(collection(db, "users", uid, "expenses"), (snapshot) => {
-    if (!snapshot.empty) {
-      expensesDB = [];
-      snapshot.forEach((docSnap) => {
-        expensesDB.push(docSnap.data());
-      });
-      saveLocalData(uid, 'expenses', expensesDB);
-      renderAllModules();
-    }
+    expensesDB = [];
+    snapshot.forEach((docSnap) => {
+      expensesDB.push(docSnap.data());
+    });
+    saveLocalData(uid, 'expenses', expensesDB);
+    renderAllModules();
   }, (err) => console.warn("Expenses Sync Offline Notice:", err));
 
   activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubSuppliers, unsubPurchases, unsubProducts, unsubExpenses];
@@ -802,7 +790,7 @@ function showItemDropdown(index, val) {
 
 window.handleItemInput = (index, val) => {
   if (activeItems[index]) activeItems[index].name = val;
-  const matchedProd = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+  const matchedProd = productsDB.find(p => p.name.trim().toLowerCase() === val.trim().toLowerCase());
   if (matchedProd && activeItems[index]) {
     activeItems[index].price = matchedProd.price;
     if (itemsBody) {
@@ -1009,10 +997,12 @@ async function saveInvoiceData() {
     zatcaQr: zatcaBase64
   }, totals);
 
+  // تحديث المخزن مطابقة آمنة بدون تكرار
   validItems.forEach(soldItem => {
-    const prod = productsDB.find(p => p.name.toLowerCase() === soldItem.name.toLowerCase());
+    const cleanSoldName = (soldItem.name || '').trim().toLowerCase();
+    const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanSoldName);
     if (prod) {
-      prod.stock = Math.max(0, (prod.stock ? prod.stock : 0) - soldItem.qty);
+      prod.stock = Math.max(0, (parseFloat(prod.stock) || 0) - (parseFloat(soldItem.qty) || 0));
     }
   });
 
@@ -1530,7 +1520,7 @@ function renderClients() {
             ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
           </span>
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name.replace(/'/g, "\\'")}')">كشف 📄</button>
-          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editClient(${index})" title="تعديل العميل">✏</button>
+          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editClient(${index})" title="تعديل العميل">✏️</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteClient(${index})" title="حذف العميل">🗑️</button>
         </div>
       </li>
@@ -1941,7 +1931,6 @@ function renderSuppliers() {
 const searchSuppliersInput = document.getElementById('search-suppliers-input');
 if (searchSuppliersInput) searchSuppliersInput.addEventListener('input', renderSuppliers);
 
-// تعديل المورد داخل استمارة الصفحة مباشرة بدون prompt
 window.editSupplier = (index) => {
   const supplier = suppliersDB[index];
   if (!supplier) return;
@@ -2232,7 +2221,7 @@ if (ledgerSupplierPrintBtn) {
 }
 
 // ------------------------------------------
-// إدارة جدول فواتير المشتريات وتحديث المخزن
+// إدارة جدول فواتير المشتريات وتحديث المخزن بدون تكرار
 // ------------------------------------------
 
 const purchaseSupplierInput = document.getElementById('purchase-supplier-name');
@@ -2354,7 +2343,7 @@ function showPurchaseItemDropdown(index, val) {
 
 window.handlePurchaseItemInput = (index, val) => {
   if (activePurchaseItems[index]) activePurchaseItems[index].name = val;
-  const matched = productsDB.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+  const matched = productsDB.find(p => p.name.trim().toLowerCase() === val.trim().toLowerCase());
   if (matched && activePurchaseItems[index]) {
     activePurchaseItems[index].cost = matched.cost ? matched.cost : 0;
     activePurchaseItems[index].price = matched.price ? matched.price : 0;
@@ -2446,20 +2435,21 @@ if (purchaseForm) {
       isoTime: new Date().toISOString()
     };
 
-    // زيادة وتحديث المنتجات في المخزن تلقائياً عند الشراء من المورد
+    // تحديث وزيادة المنتجات في المخزن بدون تكرار بفضل توحيد اسم المنتج trimmed/lowercase
     validItems.forEach(item => {
-      let prod = productsDB.find(p => p.name.toLowerCase() === item.name.toLowerCase());
+      const cleanItemName = (item.name || '').trim().toLowerCase();
+      let prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanItemName);
       if (prod) {
-        prod.stock = (prod.stock ? prod.stock : 0) + item.qty;
-        if (item.cost > 0) prod.cost = item.cost;
-        if (item.price > 0) prod.price = item.price;
+        prod.stock = (parseFloat(prod.stock) || 0) + (parseFloat(item.qty) || 0);
+        if (item.cost > 0) prod.cost = parseFloat(item.cost);
+        if (item.price > 0) prod.price = parseFloat(item.price);
       } else {
         prod = {
           id: Date.now() + Math.floor(Math.random() * 1000),
-          name: item.name,
-          cost: item.cost,
-          price: item.price,
-          stock: item.qty
+          name: item.name.trim(),
+          cost: parseFloat(item.cost) || 0,
+          price: parseFloat(item.price) || 0,
+          stock: parseFloat(item.qty) || 0
         };
         productsDB.push(prod);
       }
@@ -2529,8 +2519,6 @@ window.deletePurchase = async (id) => {
     console.error("Delete Purchase Error:", err);
   }
 };
-
-// ------------------------------------------
 
 const expenseForm = document.getElementById('expense-form');
 if (expenseForm) {
