@@ -56,7 +56,7 @@ const translations = {
     storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب مجاني", logout: "تسجيل الخروج",
     accountDisabled: "⚠️ الحساب معطل من قبل الإدارة",
     accountDisabledDesc: "تم تعطيل رخصة هذا الحساب. يرجى التواصل مع Admin Master (haretg@gmail.com).",
-    tabInvoices: "🧾 الفواتير الحية", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabExpenses: "💸 الخزينة",
+    tabInvoices: "🧾 الفواتير الحية", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabSuppliers: "🏭 الموردين والشركات", tabExpenses: "💸 الخزينة",
     totalSales: "إجمالي المبيعات", netProfit: "صافي الأرباح", expenses: "المصروفات", invoiceCount: "عدد الفواتير",
     newInvoice: "فاتورة مبيعات جديدة", invNo: "رقم الفاتورة:", clientName: "اسم العميل / الشركة",
     clientPhone: "رقم الهاتف (للواتساب)", itemTitle: "الصنف / الخدمة", qtyTitle: "الكمية", priceTitle: "السعر",
@@ -66,7 +66,7 @@ const translations = {
     pName: "اسم المنتج", pPrice: "سعر البيع", pCost: "سعر التكلفة", pStock: "الكمية بالمخزن", saveProduct: "حفظ المنتج",
     productList: "قائمة المنتجات المخزنة", clientDb: "سجل العملاء والمديونيات", addExpense: "تسجيل مصروف جديد",
     expTitle: "بند المصروف", expAmount: "المبلغ", saveExpense: "تسجيل المصروف", expList: "سجل المصروفات",
-    previewTitle: "👁️ معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼️", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
+    previewTitle: "👁️️ معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼️", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
     theme: "مظهر التطبيق", currency: "العملة الرئيسية", vatNo: "الرقم الضريبي للمنشأة (VAT)", logo: "شعار الشركة", address: "العنوان", saveSettings: "حفظ التغييرات السحابية"
   },
   en: {
@@ -75,7 +75,7 @@ const translations = {
     storeName: "Business Name", registerBtn: "Create Free Instant Account", logout: "Sign Out",
     accountDisabled: "⚠️ Account Disabled by Admin",
     accountDisabledDesc: "This license has been suspended. Contact Admin Master (haretg@gmail.com).",
-    tabInvoices: "🧾 Live Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients & Ledger", tabExpenses: "💸 Expenses",
+    tabInvoices: "🧾 Live Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients & Ledger", tabSuppliers: "🏭 Suppliers", tabExpenses: "💸 Expenses",
     totalSales: "Total Sales", netProfit: "Net Profit", expenses: "Expenses", invoiceCount: "Total Invoices",
     newInvoice: "New Sales Invoice", invNo: "Invoice #:", clientName: "Client / Company Name",
     clientPhone: "Client Phone (WhatsApp)", itemTitle: "Item / Service", qtyTitle: "Qty", priceTitle: "Price",
@@ -169,6 +169,7 @@ const authSuccess = document.getElementById('auth-success');
 let currentUser = null;
 let invoicesDB = [];
 let clientsDB = [];
+let suppliersDB = [];
 let productsDB = [];
 let expensesDB = [];
 let storeProfile = { name: "GITI Enterprise ERP", phone: "01000000000", address: "", currency: "ج.م", vatNo: "", logo: "" };
@@ -362,9 +363,9 @@ onAuthStateChanged(auth, async (user) => {
 async function attachCloudRealtimeSync(uid) {
   detachCloudSync();
 
-  // ⚡ تحميل البيانات محلياً فوراً لمنع ظهور شاشات فارغة أو أصفار عند انقطاع الإنترنت
   invoicesDB = getLocalData(uid, 'invoices', []);
   clientsDB = getLocalData(uid, 'clients', []);
+  suppliersDB = getLocalData(uid, 'suppliers', []);
   productsDB = getLocalData(uid, 'products', []);
   expensesDB = getLocalData(uid, 'expenses', []);
   const localProfile = getLocalData(uid, 'profile', null);
@@ -408,6 +409,17 @@ async function attachCloudRealtimeSync(uid) {
     }
   }, (err) => console.warn("Clients Sync Offline Notice:", err));
 
+  const unsubSuppliers = onSnapshot(collection(db, "users", uid, "suppliers"), (snapshot) => {
+    if (!snapshot.empty) {
+      suppliersDB = [];
+      snapshot.forEach((docSnap) => {
+        suppliersDB.push(docSnap.data());
+      });
+      saveLocalData(uid, 'suppliers', suppliersDB);
+      renderAllModules();
+    }
+  }, (err) => console.warn("Suppliers Sync Offline Notice:", err));
+
   const unsubProducts = onSnapshot(collection(db, "users", uid, "products"), (snapshot) => {
     if (!snapshot.empty) {
       productsDB = [];
@@ -430,7 +442,7 @@ async function attachCloudRealtimeSync(uid) {
     }
   }, (err) => console.warn("Expenses Sync Offline Notice:", err));
 
-  activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubProducts, unsubExpenses];
+  activeUnsubscribers = [unsubProfile, unsubInvoices, unsubClients, unsubSuppliers, unsubProducts, unsubExpenses];
 }
 
 function detachCloudSync() {
@@ -464,6 +476,11 @@ async function fetchAllDataFromCloud() {
     clientsDB = [];
     clientSnap.forEach(d => clientsDB.push(d.data()));
     saveLocalData(uid, 'clients', clientsDB);
+
+    const supplierSnap = await getDocs(collection(db, "users", uid, "suppliers"));
+    suppliersDB = [];
+    supplierSnap.forEach(d => suppliersDB.push(d.data()));
+    saveLocalData(uid, 'suppliers', suppliersDB);
 
     const prodSnap = await getDocs(collection(db, "users", uid, "products"));
     productsDB = [];
@@ -982,7 +999,6 @@ async function saveInvoiceData() {
     invoicesDB.unshift(invoice);
   }
 
-  // حفظ محلي فوري لتثبيت البيانات أوفلاين
   saveLocalData(uid, 'invoices', invoicesDB);
   saveLocalData(uid, 'clients', clientsDB);
   saveLocalData(uid, 'products', productsDB);
@@ -1783,6 +1799,125 @@ if (submitPaymentBtn) {
   });
 }
 
+// قسم الموردين
+const supplierForm = document.getElementById('supplier-form');
+if (supplierForm) {
+  supplierForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const sNameEl = document.getElementById('s-name');
+    const sPhoneEl = document.getElementById('s-phone');
+    const sBalanceEl = document.getElementById('s-balance');
+
+    const name = sNameEl ? sNameEl.value.trim() : '';
+    const phone = sPhoneEl ? sPhoneEl.value.trim() : '';
+    const openingBalance = sBalanceEl ? (parseFloat(sBalanceEl.value) ? parseFloat(sBalanceEl.value) : 0) : 0;
+
+    if (suppliersDB.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+      alert('المورد موجود بالفعل!');
+      return;
+    }
+
+    const newSupplier = { id: Date.now(), name, phone, openingBalance, payments: [] };
+    suppliersDB.push(newSupplier);
+
+    if (currentUser) {
+      saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
+      await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(newSupplier.id)), newSupplier).catch(err => console.warn("Offline queued:", err));
+    }
+    e.target.reset();
+    renderAllModules();
+  });
+}
+
+function renderSuppliers() {
+  const container = document.getElementById('suppliers-list-container');
+  if (!container) return;
+  const searchSuppliersInput = document.getElementById('search-suppliers-input');
+  const searchFilter = searchSuppliersInput ? searchSuppliersInput.value.toLowerCase() : '';
+  const filtered = suppliersDB.filter(s => s.name.toLowerCase().includes(searchFilter));
+
+  container.innerHTML = filtered.map((s, index) => `
+    <li>
+      <div style="flex: 1;">
+        <strong>🏭 ${s.name}</strong> <small style="color:var(--text-muted)">(${s.phone ? s.phone : 'بدون رقم'})</small>
+        <br><small style="color:var(--text-muted)">الرصيد المستحق: ${(s.openingBalance ? s.openingBalance : 0).toFixed(2)} ${storeProfile.currency}</small>
+      </div>
+      <div style="text-align:left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+        <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editSupplier(${index})" title="تعديل المورد">✏️</button>
+        <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteSupplier(${index})" title="حذف المورد">🗑️</button>
+      </div>
+    </li>
+  `).join('');
+}
+
+const searchSuppliersInput = document.getElementById('search-suppliers-input');
+if (searchSuppliersInput) searchSuppliersInput.addEventListener('input', renderSuppliers);
+
+window.editSupplier = async (index) => {
+  const supplier = suppliersDB[index];
+  if (!supplier) return;
+
+  const newName = prompt('تعديل اسم المورد / الشركة:', supplier.name);
+  if (newName === null) return;
+
+  const newPhone = prompt('تعديل رقم الهاتف:', supplier.phone || '');
+  if (newPhone === null) return;
+
+  const newBalanceStr = prompt('تعديل الرصيد الافتتاحي (مستحق للمورد):', supplier.openingBalance || 0);
+  if (newBalanceStr === null) return;
+
+  const newBalance = parseFloat(newBalanceStr);
+  if (isNaN(newBalance)) {
+    alert('يرجى إدخال رقم صحيح للرصيد.');
+    return;
+  }
+
+  const trimmedName = newName.trim();
+  if (!trimmedName) {
+    alert('اسم المورد لا يمكن أن يكون فارغاً.');
+    return;
+  }
+
+  const exists = suppliersDB.some((s, i) => i !== index && s.name.toLowerCase() === trimmedName.toLowerCase());
+  if (exists) {
+    alert('يوجد مورد آخر بنفس الاسم بالفعل!');
+    return;
+  }
+
+  suppliersDB[index] = Object.assign({}, supplier, {
+    name: trimmedName,
+    phone: newPhone.trim(),
+    openingBalance: newBalance
+  });
+
+  if (currentUser) {
+    saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
+    await setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[index].id)), suppliersDB[index]).catch(err => console.warn("Offline queued:", err));
+  }
+  renderAllModules();
+  alert('✅ تم تعديل بيانات المورد بنجاح!');
+};
+
+window.deleteSupplier = async (index) => {
+  const supplier = suppliersDB[index];
+  if (!supplier) return;
+
+  if (!confirm(`⚠️ هل أنت متأكد من حذف المورد "${supplier.name}"؟`)) return;
+
+  try {
+    if (currentUser) {
+      await deleteDoc(doc(db, "users", currentUser.uid, "suppliers", String(supplier.id)));
+    }
+    suppliersDB.splice(index, 1);
+    if (currentUser) {
+      saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
+    }
+    renderAllModules();
+  } catch (err) {
+    console.error("Delete Supplier Error:", err);
+  }
+};
+
 const expenseForm = document.getElementById('expense-form');
 if (expenseForm) {
   expenseForm.addEventListener('submit', async (e) => {
@@ -1861,7 +1996,7 @@ function updateDashboardStats() {
 const exportJsonBtn = document.getElementById('export-json-btn');
 if (exportJsonBtn) {
   exportJsonBtn.addEventListener('click', () => {
-    const data = { invoices: invoicesDB, clients: clientsDB, products: productsDB, expenses: expensesDB, storeProfile };
+    const data = { invoices: invoicesDB, clients: clientsDB, suppliers: suppliersDB, products: productsDB, expenses: expensesDB, storeProfile };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -1901,6 +2036,13 @@ if (importJsonInput) {
             saveLocalData(uid, 'clients', clientsDB);
             clientsDB.forEach(c => {
               promises.push(setDoc(doc(db, "users", uid, "clients", String(c.id)), c));
+            });
+          }
+          if (Array.isArray(importedData.suppliers)) {
+            suppliersDB = importedData.suppliers;
+            saveLocalData(uid, 'suppliers', suppliersDB);
+            suppliersDB.forEach(s => {
+              promises.push(setDoc(doc(db, "users", uid, "suppliers", String(s.id)), s));
             });
           }
           if (Array.isArray(importedData.products)) {
@@ -2031,6 +2173,7 @@ function renderAllModules() {
   renderSavedInvoices();
   renderProducts();
   renderClients();
+  renderSuppliers();
   renderExpenses();
   updateDashboardStats();
 }
