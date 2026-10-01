@@ -313,9 +313,11 @@
       </div>
     </section>
 
-    <!-- تبويب الموردين والدفاتر -->
+    <!-- تبويب الموردين والشركات المطور بالكامل -->
     <section id="tab-suppliers" class="tab-content">
       <div class="dashboard-grid">
+        
+        <!-- إضافة مورد جديد -->
         <div class="card">
           <div class="card-header">
             <h3>🏭 إضافة مورد جديد</h3>
@@ -337,15 +339,85 @@
           </form>
         </div>
 
+        <!-- سجل الموردين المجمع -->
         <div class="card">
           <div class="card-header">
-            <h3>سجل الموردين المجمع</h3>
+            <h3>سجل الموردين والدفاتر</h3>
             <input type="text" id="search-suppliers-input" placeholder="بحث عن مورد..." style="max-width: 180px; padding: 6px 10px;">
           </div>
           <div class="list-container">
             <ul id="suppliers-list-container"></ul>
           </div>
         </div>
+
+        <!-- تسجيل فاتورة مشتريات / توريد من مورد -->
+        <div class="card" style="grid-column: 1 / -1;">
+          <div class="card-header">
+            <h3>📦 تسجيل فاتورة مشتريات / توريد بضاعة جديدة من مورد</h3>
+          </div>
+          <form id="purchase-form" style="margin-top: 10px;">
+            <div class="form-row">
+              <div class="form-group autocomplete-wrapper">
+                <label>اسم المورد</label>
+                <input type="text" id="purchase-supplier-name" required placeholder="اختر المورد..." autocomplete="off">
+                <div id="purchase-supplier-suggestions" class="autocomplete-dropdown hidden"></div>
+              </div>
+              <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="tel" id="purchase-supplier-phone" placeholder="01xxxxxxxxx">
+              </div>
+            </div>
+
+            <div class="modern-table-container" style="margin-top: 15px;">
+              <table class="modern-items-table">
+                <thead>
+                  <tr>
+                    <th style="width: 35%;">اسم المنتج / الصنف</th>
+                    <th style="width: 15%;">الكمية</th>
+                    <th style="width: 20%;">سعر الشراء (التكلفة)</th>
+                    <th style="width: 20%;">سعر البيع بالمحل</th>
+                    <th style="width: 10%;">الإجمالي</th>
+                    <th style="width: 40px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="purchase-items-body"></tbody>
+              </table>
+              <button type="button" id="add-purchase-item-btn" class="btn-add-row">+ إضافة بند لفاتورة الشراء</button>
+            </div>
+
+            <div class="form-row" style="margin-top: 15px; align-items: flex-end;">
+              <div class="form-group">
+                <label>حالة الدفع للمورد:</label>
+                <select id="purchase-pay-status">
+                  <option value="مدفوعة">✅ مدفوعة بالكامل للمورد</option>
+                  <option value="آجل / غير مدفوعة">❌ آجل / على الحساب بالكامل</option>
+                  <option value="مدفوعة جزئياً">⚠️️ مدفوع جزء للمورد</option>
+                </select>
+              </div>
+              <div class="form-group hidden" id="purchase-paid-wrapper">
+                <label>المبلغ المدفوع كاش للمورد:</label>
+                <input type="number" id="purchase-paid-amount" value="0" min="0" placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label>إجمالي فاتورة المشتريات:</label>
+                <strong id="purchase-grand-total" style="font-size: 1.3rem; color: var(--accent); display: block; padding: 6px 0;">0.00</strong>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-success" style="margin-top: 15px; width: 100%;">💾 حفظ فاتورة المشتريات وتحديث المخزن والحسابات</button>
+          </form>
+        </div>
+
+        <!-- سجل فواتير المشتريات -->
+        <div class="card" style="grid-column: 1 / -1;">
+          <div class="card-header">
+            <h3>📋 سجل فواتير المشتريات من الموردين</h3>
+          </div>
+          <div class="list-container">
+            <ul id="purchases-list-container"></ul>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -454,6 +526,54 @@
         <button id="ledger-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
         <button id="ledger-download-btn" class="btn-primary">صورة 🖼️</button>
         <button id="ledger-print-btn" class="btn-success">طباعة 🖨️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal كشف حساب مورد مجمع والتسديد (جديد) -->
+  <div id="supplier-ledger-modal" class="modal hidden">
+    <div class="modal-content ledger-modal-content">
+      <div class="modal-header">
+        <h3 id="ledger-supplier-title">🏭 كشف حساب مورد</h3>
+        <button id="close-supplier-ledger-btn" class="btn-close">✕</button>
+      </div>
+      
+      <div id="supplier-ledger-printable-card" style="padding: 4px; border-radius: 12px;">
+        <div class="ledger-summary-card">
+          <div>
+            <span>إجمالي المشتريات:</span>
+            <strong id="ledger-supplier-total-purchases">0.00</strong>
+          </div>
+          <div>
+            <span>المسدد للمورد:</span>
+            <strong id="ledger-supplier-total-paid" class="text-success">0.00</strong>
+          </div>
+          <div>
+            <span>الصافي / المستحق للمورد:</span>
+            <strong id="ledger-supplier-balance" class="text-danger">0.00</strong>
+          </div>
+        </div>
+
+        <div class="pay-section">
+          <div class="form-group">
+            <label>تسجيل دفعة سداد نقدي للمورد</label>
+            <div style="display:flex; gap:8px;">
+              <input type="number" id="supplier-pay-amount-input" placeholder="المبلغ">
+              <button id="submit-supplier-payment-btn" class="btn-success">سداد للمورد 💵</button>
+            </div>
+          </div>
+        </div>
+
+        <h4>سجل فواتير التوريد والدفعات:</h4>
+        <div class="list-container" style="max-height: 250px;">
+          <ul id="supplier-ledger-history"></ul>
+        </div>
+      </div>
+
+      <div class="modal-actions-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+        <button id="ledger-supplier-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
+        <button id="ledger-supplier-download-btn" class="btn-primary">صورة 🖼️</button>
+        <button id="ledger-supplier-print-btn" class="btn-success">طباعة 🖨️</button>
       </div>
     </div>
   </div>
