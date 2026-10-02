@@ -123,6 +123,7 @@
         <button id="admin-btn" class="btn-icon hidden" title="لوحة الإدارة" onclick="window.location.href='admin.html'">🛡️</button>
         <button id="toggle-lang-btn" class="btn-icon">🌐 EN/عربي</button>
         <button id="open-settings-btn" class="btn-icon">⚙️</button>
+        <button id="fetch-cloud-btn" class="btn-icon" title="جلب وتحديث البيانات من السحابة يدوياً">☁️</button>
         <button id="logout-btn" class="btn-icon btn-logout" title="خروج">🚪</button>
       </div>
     </header>
@@ -257,7 +258,6 @@
           <div class="card-header">
             <h3 data-i18n="invHistory">سجل الفواتير السحابي</h3>
             <div class="backup-btns" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-              <button id="fetch-cloud-btn" class="btn-sm" style="background-color: #3b82f6; color: white;" title="جلب وتحديث البيانات من السحابة يدوياً">☁️ جلب السحابة</button>
               <button id="export-json-btn" class="btn-sm">💾 نسخة احتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
               
@@ -582,7 +582,7 @@
   <div id="view-modal" class="modal hidden">
     <div class="modal-content preview-modal-content">
       <div class="modal-header">
-        <h3 data-i18n="previewTitle">👁️ معاينة الفاتورة الإلكترونية</h3>
+        <h3 data-i18n="previewTitle">👁️️ معاينة الفاتورة الإلكترونية</h3>
         <button id="close-view-btn" class="btn-close">✕</button>
       </div>
       <div id="invoice-card-preview" class="invoice-card-preview">
