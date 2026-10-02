@@ -123,7 +123,7 @@
         <button id="admin-btn" class="btn-icon hidden" title="لوحة الإدارة" onclick="window.location.href='admin.html'">🛡️</button>
         <button id="toggle-lang-btn" class="btn-icon">🌐 EN/عربي</button>
         <button id="open-settings-btn" class="btn-icon">⚙️</button>
-        <button id="fetch-cloud-btn" class="btn-icon" title="جلب وتحديث البيانات من السحابة يدوياً">☁️</button>
+        <button id="fetch-cloud-btn" class="btn-icon" title="جلب وتحديث البيانات من السحابة">☁️</button>
         <button id="logout-btn" class="btn-icon btn-logout" title="خروج">🚪</button>
       </div>
     </header>
@@ -228,7 +228,7 @@
                 <select id="payment-status-select">
                   <option value="مدفوعة">✅ مدفوعة بالكامل (نقدي / تحويل)</option>
                   <option value="آجل / غير مدفوعة">❌ آجل / على الحساب بالكامل</option>
-                  <option value="مدفوعة جزئياً">⚠️ مدفوع جزء من المبلغ (جزئي)</option>
+                  <option value="مدفوعة جزئياً">⚠️️ مدفوع جزء من المبلغ (جزئي)</option>
                 </select>
               </div>
             </div>
@@ -257,6 +257,7 @@
         <section class="card invoice-list-section">
           <div class="card-header">
             <h3 data-i18n="invHistory">سجل الفواتير السحابي</h3>
+            <!-- تم إزالة الزر من هنا لمنع تكرار الـ ID ولحل المشكلة -->
             <div class="backup-btns" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
               <button id="export-json-btn" class="btn-sm">💾 نسخة احتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
@@ -524,7 +525,7 @@
 
       <div class="modal-actions-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
         <button id="ledger-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
-        <button id="ledger-download-btn" class="btn-primary">صورة 🖼️</button>
+        <button id="ledger-download-btn" class="btn-primary">صورة 🖼️️</button>
         <button id="ledger-print-btn" class="btn-success">طباعة 🖨️</button>
       </div>
     </div>
@@ -582,7 +583,7 @@
   <div id="view-modal" class="modal hidden">
     <div class="modal-content preview-modal-content">
       <div class="modal-header">
-        <h3 data-i18n="previewTitle">👁️️ معاينة الفاتورة الإلكترونية</h3>
+        <h3 data-i18n="previewTitle">👁️ معاينة الفاتورة الإلكترونية</h3>
         <button id="close-view-btn" class="btn-close">✕</button>
       </div>
       <div id="invoice-card-preview" class="invoice-card-preview">
@@ -642,7 +643,7 @@
           <option value="dark">🌙 داكن حديث (Dark Glass)</option>
           <option value="indigo">🟣 بنفسجي (Indigo Modern)</option>
           <option value="emerald">🟢 زمردي (Emerald Enterprise)</option>
-          <option value="light">☀️ فاتح (Light Classic)</option>
+          <option value="light">☀️️ فاتح (Light Classic)</option>
         </select>
       </div>
       <div class="form-group" style="margin-top:10px;">
