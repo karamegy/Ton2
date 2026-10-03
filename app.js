@@ -66,7 +66,7 @@ const translations = {
     pName: "اسم المنتج", pPrice: "سعر البيع", pCost: "سعر التكلفة", pStock: "الكمية بالمخزن", saveProduct: "حفظ المنتج",
     productList: "قائمة المنتجات المخزنة", clientDb: "سجل العملاء والمديونيات", addExpense: "تسجيل مصروف جديد",
     expTitle: "بند المصروف", expAmount: "المبلغ", saveExpense: "تسجيل المصروف", expList: "سجل المصروفات",
-    previewTitle: "👁 معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼️️", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
+    previewTitle: "👁 معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
     theme: "مظهر التطبيق", currency: "العملة الرئيسية", vatNo: "الرقم الضريبي للمنشأة (VAT)", logo: "شعار الشركة", address: "العنوان", saveSettings: "حفظ التغييرات السحابية"
   },
   en: {
@@ -1687,7 +1687,7 @@ if (ledgerWhatsappBtn) {
     msg += `📄 *كشف حساب العميل:* ${activeLedgerClientName}\n`;
     msg += `📅 *التاريخ:* ${new Date().toLocaleDateString('ar-EG')}\n`;
     msg += `-----------------------------------\n`;
-    msg += `🛍️ *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += `🛍️️ *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `✅ *إجمالي المدفوعات:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `-----------------------------------\n`;
@@ -2392,6 +2392,9 @@ if (purchaseForm) {
       paidVal = purchasePaidAmountInput ? (parseFloat(purchasePaidAmountInput.value) ? parseFloat(purchasePaidAmountInput.value) : 0) : 0;
     }
 
+    const isoTime = new Date().toISOString();
+    const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, total, 0);
+
     const purchaseInvoice = {
       id: Date.now(),
       supplierId: supplierObj.id,
@@ -2403,7 +2406,8 @@ if (purchaseForm) {
       dueAmount: total - paidVal,
       status: status,
       date: new Date().toLocaleDateString('ar-EG'),
-      isoTime: new Date().toISOString()
+      isoTime: isoTime,
+      zatcaQr: zatcaBase64
     };
 
     let modifiedProducts = [];
@@ -2457,23 +2461,194 @@ function renderPurchases() {
   if (!container) return;
 
   container.innerHTML = purchasesDB.map(pur => `
-    <li>
+    <li onclick="window.viewPurchaseById(${pur.id})" style="cursor: pointer;">
       <div style="flex: 1;">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <strong>فاتورة توريد #${pur.id} - ${pur.supplier}</strong>
           <span class="badge ${pur.status === 'مدفوعة' ? 'badge-paid' : (pur.status === 'مدفوعة جزئياً' ? 'badge-partial' : 'badge-unpaid')}">${pur.status}</span>
         </div>
         <small style="color:var(--text-muted); display: block; margin-top: 2px;">
-          📅 ${pur.date} • 📦 ${(pur.items ? pur.items : []).length} أصناف
+          📅 ${pur.date} • 📦 ${(pur.items ? pur.items : []).length} أصناف ${pur.phone ? '• 📞 ' + pur.phone : ''}
         </small>
+        <div class="inv-actions" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;" onclick="event.stopPropagation();">
+          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.viewPurchaseById(${pur.id})">👁️ معاينة</button>
+          <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendSupplierWhatsAppById(${pur.id})">💬 واتساب</button>
+          <button class="btn-sm" onclick="window.reprintPurchase(${pur.id})">🖨 طباعة</button>
+          <button class="btn-sm" style="color:var(--danger)" onclick="window.deletePurchase(${pur.id})">🗑️</button>
+        </div>
       </div>
       <div style="text-align: left;">
         <strong style="color:var(--danger); font-size: 1.05rem;">-${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</strong>
-        <button class="btn-sm" style="color:var(--danger); margin-right:6px;" onclick="window.deletePurchase(${pur.id})">🗑</button>
       </div>
     </li>
   `).join('');
 }
+
+let currentActivePurchaseForPreview = null;
+
+function openSupplierInvoicePreview(pur) {
+  currentActivePurchaseForPreview = pur;
+  const modal = document.getElementById('supplier-view-modal');
+  if (modal) modal.classList.remove('hidden');
+
+  requestAnimationFrame(() => {
+    const vLogo = document.getElementById('sv-logo');
+    if (vLogo) {
+      if (storeProfile.logo) {
+        vLogo.src = storeProfile.logo;
+        vLogo.classList.remove('hidden');
+      } else {
+        vLogo.classList.add('hidden');
+      }
+    }
+
+    const vStoreName = document.getElementById('sv-store-name');
+    if (vStoreName) vStoreName.textContent = storeProfile.name;
+    const vStorePhone = document.getElementById('sv-store-phone');
+    if (vStorePhone) vStorePhone.textContent = storeProfile.phone;
+    const vStoreVat = document.getElementById('sv-store-vat');
+    if (vStoreVat) vStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+    const vStoreAddress = document.getElementById('sv-store-address');
+    if (vStoreAddress) vStoreAddress.textContent = storeProfile.address;
+    
+    const vInvId = document.getElementById('sv-inv-id');
+    if (vInvId) vInvId.textContent = `رقم فاتورة المشتريات: #${pur.id}`;
+    const vDate = document.getElementById('sv-date');
+    if (vDate) vDate.textContent = `التاريخ: ${pur.date}`;
+    
+    const vSupplierName = document.getElementById('sv-supplier-name');
+    if (vSupplierName) vSupplierName.textContent = pur.supplier;
+    const vSupplierPhone = document.getElementById('sv-supplier-phone');
+    if (vSupplierPhone) vSupplierPhone.textContent = pur.phone ? pur.phone : '-';
+    const vPaymentStatus = document.getElementById('sv-payment-status');
+    if (vPaymentStatus) vPaymentStatus.textContent = pur.status;
+    
+    const vTotal = document.getElementById('sv-total');
+    if (vTotal) vTotal.textContent = `${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+
+    const vItemsBody = document.getElementById('sv-items-body');
+    if (vItemsBody) {
+      vItemsBody.innerHTML = (pur.items ? pur.items : []).map(item => `
+        <tr><td>${item.name}</td><td>${item.qty}</td><td>${(item.cost ? item.cost : 0).toFixed(2)}</td><td>${(item.qty * (item.cost ? item.cost : 0)).toFixed(2)}</td></tr>
+      `).join('');
+    }
+
+    renderQrCode('supplier-preview-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
+  });
+}
+
+const closeSupplierViewBtn = document.getElementById('close-supplier-view-btn');
+if (closeSupplierViewBtn) {
+  closeSupplierViewBtn.addEventListener('click', () => {
+    const modal = document.getElementById('supplier-view-modal');
+    if (modal) modal.classList.add('hidden');
+  });
+}
+
+const supplierDownloadImgBtn = document.getElementById('supplier-download-img-btn');
+if (supplierDownloadImgBtn) {
+  supplierDownloadImgBtn.addEventListener('click', () => {
+    const previewCard = document.getElementById('supplier-invoice-card-preview');
+    if (previewCard) {
+      html2canvas(previewCard, { scale: 2 }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }
+  });
+}
+
+const supplierPrintViewBtn = document.getElementById('supplier-print-view-btn');
+if (supplierPrintViewBtn) {
+  supplierPrintViewBtn.addEventListener('click', () => {
+    if (currentActivePurchaseForPreview) printPurchaseInvoice(currentActivePurchaseForPreview);
+  });
+}
+
+function printPurchaseInvoice(pur) {
+  const printTemplate = document.getElementById('print-template');
+  if (!printTemplate) return;
+  printTemplate.innerHTML = `
+    <div class="print-header">
+      ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
+      <h1>${storeProfile.name}</h1>
+      <h2>فاتورة مشتريات / توريد من مورد</h2>
+      <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
+      <p>${storeProfile.vatNo ? 'الرقم الضريبي: ' + storeProfile.vatNo : ''}</p>
+      <p>${storeProfile.address ? storeProfile.address : ''}</p>
+      <hr>
+      <p>رقم الفاتورة: #${pur.id}</p>
+      <p>التاريخ: ${pur.date}</p>
+    </div>
+    <div class="print-client">
+      <p><strong>المورد:</strong> <span>${pur.supplier}</span></p>
+      <p><strong>الهاتف:</strong> <span>${pur.phone ? pur.phone : '-'}</span></p>
+      <p><strong>حالة الدفع:</strong> <span>${pur.status}</span></p>
+    </div>
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>الصنف</th>
+          <th>الكمية</th>
+          <th>سعر التكلفة</th>
+          <th>الإجمالي</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(pur.items ? pur.items : []).map(item => `
+          <tr><td>${item.name}</td><td>${item.qty}</td><td>${(item.cost ? item.cost : 0).toFixed(2)}</td><td>${(item.qty * (item.cost ? item.cost : 0)).toFixed(2)}</td></tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="print-footer-container">
+      <div class="print-totals">
+        <h3>الإجمالي الكلي: <span>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</span></h3>
+      </div>
+      <div id="print-supplier-qrcode" class="qrcode-wrapper"></div>
+    </div>
+  `;
+
+  renderQrCode('print-supplier-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
+  window.print();
+}
+
+function sendSupplierWhatsApp(pur) {
+  let phone = (pur.phone ? pur.phone : '').replace(/[^0-9]/g, '');
+  if (!phone) { alert('يرجى كتابة رقم الهاتف للمورد لإرسال الفاتورة عبر واتساب'); return; }
+  if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
+
+  let msg = `*${storeProfile.name}*\n`;
+  msg += `🧾 *فاتورة مشتريات / توريد رقم:* #${pur.id}\n`;
+  msg += `🏭 *المورد:* ${pur.supplier}\n`;
+  msg += `📅 *التاريخ:* ${pur.date}\n`;
+  msg += `-----------------------------------\n`;
+  pur.items.forEach(i => {
+    msg += `• ${i.name} (×${i.qty}) = ${(i.qty * (i.cost ? i.cost : 0)).toFixed(2)} ${storeProfile.currency}\n`;
+  });
+  msg += `-----------------------------------\n`;
+  msg += `💰 *الإجمالي الكلي:* ${pur.grandTotal.toFixed(2)} ${storeProfile.currency}\n`;
+  msg += `📌 *حالة الدفع:* ${pur.status}\n\n`;
+  msg += `شكراً لكم!`;
+
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+window.viewPurchaseById = (id) => {
+  const pur = purchasesDB.find(p => p.id === id);
+  if (pur) openSupplierInvoicePreview(pur);
+};
+
+window.sendSupplierWhatsAppById = (id) => {
+  const pur = purchasesDB.find(p => p.id === id);
+  if (pur) sendSupplierWhatsApp(pur);
+};
+
+window.reprintPurchase = (id) => {
+  const pur = purchasesDB.find(p => p.id === id);
+  if (pur) printPurchaseInvoice(pur);
+};
 
 window.deletePurchase = async (id) => {
   if (!confirm('تأكيد حذف فاتورة المشتريات؟')) return;
