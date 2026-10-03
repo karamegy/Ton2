@@ -66,7 +66,7 @@ const translations = {
     pName: "اسم المنتج", pPrice: "سعر البيع", pCost: "سعر التكلفة", pStock: "الكمية بالمخزن", saveProduct: "حفظ المنتج",
     productList: "قائمة المنتجات المخزنة", clientDb: "سجل العملاء والمديونيات", addExpense: "تسجيل مصروف جديد",
     expTitle: "بند المصروف", expAmount: "المبلغ", saveExpense: "تسجيل المصروف", expList: "سجل المصروفات",
-    previewTitle: "👁 معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼️", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
+    previewTitle: "👁 معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼️️", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
     theme: "مظهر التطبيق", currency: "العملة الرئيسية", vatNo: "الرقم الضريبي للمنشأة (VAT)", logo: "شعار الشركة", address: "العنوان", saveSettings: "حفظ التغييرات السحابية"
   },
   en: {
@@ -355,15 +355,25 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      // قراءة التنبيه أو الملاحظة القادمة من الإدارة وعرضها (تم تعديلها لتدعم adminNotes المكتوبة من لوحة التحكم)
+      // قراءة التنبيه أو الملاحظة القادمة من الإدارة وعرضها بدقة
       const licenseData = snapshot.data();
       if (licenseData) {
         const adminNote = licenseData.adminNotes || licenseData.note || licenseData.notification;
-        if (adminNote) {
-          if (notificationContentText) notificationContentText.textContent = adminNote;
-          const isRead = currentUser ? localStorage.getItem(`giti_${currentUser.uid}_notif_read`) : null;
-          if (!isRead && notificationBadge) {
-            notificationBadge.classList.remove('hidden');
+        const notifContentEl = document.getElementById('notification-content-text');
+        const notifBadgeEl = document.getElementById('notification-badge');
+        
+        if (notifContentEl) {
+          if (adminNote) {
+            notifContentEl.textContent = adminNote;
+            const isRead = currentUser ? localStorage.getItem(`giti_${currentUser.uid}_notif_read`) : null;
+            if (!isRead && notifBadgeEl) {
+              notifBadgeEl.classList.remove('hidden');
+            }
+          } else {
+            notifContentEl.textContent = "لا توجد ملاحظات جديدة من الإدارة حالياً.";
+            if (notifBadgeEl) {
+              notifBadgeEl.classList.add('hidden');
+            }
           }
         }
       }
@@ -1035,7 +1045,7 @@ function sendWhatsApp(inv) {
     msg += `• ${i.name} (×${i.qty}) = ${(i.qty * i.price).toFixed(2)} ${storeProfile.currency}\n`;
   });
   msg += `-----------------------------------\n`;
-  if (inv.discount > 0) msg += `🏷️️ *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency}\n`;
+  if (inv.discount > 0) msg += `🏷 *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency}\n`;
   msg += `💰 *الإجمالي النهائي:* ${inv.grandTotal.toFixed(2)} ${storeProfile.currency}\n`;
   msg += `📌 *حالة الدفع:* ${inv.status}\n\n`;
   msg += `شكراً لتعاملكم معنا!`;
