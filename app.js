@@ -54,7 +54,7 @@ const translations = {
     login: "تسجيل الدخول", register: "حساب جديد", googleAuth: "متابعة بواسطة Google",
     or: "أو", email: "البريد الإلكتروني", password: "كلمة المرور", loginBtn: "دخول التطبيق",
     storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب مجاني", logout: "تسجيل الخروج",
-    accountDisabled: "⚠️️ الحساب معطل من قبل الإدارة",
+    accountDisabled: "⚠ الحساب معطل من قبل الإدارة",
     accountDisabledDesc: "تم تعطيل رخصة هذا الحساب. يرجى التواصل مع Admin Master (haretg@gmail.com).",
     tabInvoices: "🧾 الفواتير الحية", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabSuppliers: "🏭 الموردين والشركات", tabExpenses: "💸 الخزينة",
     totalSales: "إجمالي المبيعات", netProfit: "صافي الأرباح", expenses: "المصروفات", invoiceCount: "عدد الفواتير",
@@ -111,6 +111,36 @@ if (toggleLangBtn) toggleLangBtn.addEventListener('click', () => applyLanguage(c
 
 const authLangBtn = document.getElementById('auth-lang-btn');
 if (authLangBtn) authLangBtn.addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
+
+// تفعيل نظام الإشعارات والملاحظات الإدارية واجهة المستخدم
+const notificationBtn = document.getElementById('notification-btn');
+const notificationModal = document.getElementById('notification-modal');
+const closeNotificationBtn = document.getElementById('close-notification-btn');
+const dismissNotificationBtn = document.getElementById('dismiss-notification-btn');
+const notificationBadge = document.getElementById('notification-badge');
+const notificationContentText = document.getElementById('notification-content-text');
+
+if (notificationBtn) {
+  notificationBtn.addEventListener('click', () => {
+    if (notificationModal) notificationModal.classList.remove('hidden');
+    if (notificationBadge) notificationBadge.classList.add('hidden');
+  });
+}
+
+if (closeNotificationBtn) {
+  closeNotificationBtn.addEventListener('click', () => {
+    if (notificationModal) notificationModal.classList.add('hidden');
+  });
+}
+
+if (dismissNotificationBtn) {
+  dismissNotificationBtn.addEventListener('click', () => {
+    if (notificationModal) notificationModal.classList.add('hidden');
+    if (currentUser) {
+      localStorage.setItem(`giti_${currentUser.uid}_notif_read`, 'true');
+    }
+  });
+}
 
 function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAmount) {
   function getTlvTag(tag, value) {
@@ -325,7 +355,20 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      if (snapshot.data().isActive !== false) {
+      // قراءة التنبيه أو الملاحظة القادمة من الإدارة وعرضها
+      const licenseData = snapshot.data();
+      if (licenseData) {
+        const adminNote = licenseData.note || licenseData.notification;
+        if (adminNote) {
+          if (notificationContentText) notificationContentText.textContent = adminNote;
+          const isRead = currentUser ? localStorage.getItem(`giti_${currentUser.uid}_notif_read`) : null;
+          if (!isRead && notificationBadge) {
+            notificationBadge.classList.remove('hidden');
+          }
+        }
+      }
+
+      if (licenseData.isActive !== false) {
         if (lockScreen) lockScreen.classList.add('hidden');
         if (mainApp) mainApp.classList.remove('hidden');
         loadDataLocallyAndSync(user.uid);
@@ -363,7 +406,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// تحميل البيانات محلياً فوراً للسرعة القصوى، واستخدام الـ snapshot بذكاء لتوفير القراءات
+// تحميل البيانات محلياً فوراً للسرعة القصوى
 function loadDataLocallyAndSync(uid) {
   detachCloudSync();
 
@@ -867,7 +910,6 @@ function calculateTotals() {
 if (discountInput) discountInput.addEventListener('input', calculateTotals);
 if (taxInput) taxInput.addEventListener('input', calculateTotals);
 
-// دالة حفظ الفاتورة مع التحديث الفوري المباشر (Local-First بدون انتظار شبكي يعطل الجداول)
 async function saveInvoiceData() {
   const clientName = clientInput ? clientInput.value.trim() : '';
   const clientPhone = clientPhoneInput ? clientPhoneInput.value.trim() : '';
@@ -932,7 +974,6 @@ async function saveInvoiceData() {
     zatcaQr: zatcaBase64
   }, totals);
 
-  // تحديث المخزن محلياً فوراً
   validItems.forEach(soldItem => {
     const cleanSoldName = (soldItem.name || '').trim().toLowerCase();
     const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanSoldName);
@@ -948,20 +989,16 @@ async function saveInvoiceData() {
     invoicesDB.unshift(invoice);
   }
 
-  // 1. الحفظ المحلي الفوري (يضمن تحديث الجداول فوراً دون تعليق)
   saveLocalData(uid, 'invoices', invoicesDB);
   saveLocalData(uid, 'clients', clientsDB);
   saveLocalData(uid, 'products', productsDB);
 
   resetForm();
-  renderAllModules(); // 👈 تحديث الجداول فوراً على الشاشة
+  renderAllModules();
 
-  // 2. المزامنة السحابية الصامتة في الخلفية (بدون await لضمان السرعة وتوفير القراءات)
   try {
     setDoc(doc(db, "users", uid, "invoices", String(invoice.id)), invoice).catch(() => {});
     setDoc(doc(db, "users", uid, "clients", String(clientObj.id)), clientObj).catch(() => {});
-    
-    // مزامنة المنتجات التي تأثرت فقط وليس المخزن كله
     validItems.forEach(soldItem => {
       const cleanSoldName = (soldItem.name || '').trim().toLowerCase();
       const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanSoldName);
@@ -1217,7 +1254,7 @@ function renderSavedInvoices(filter = '') {
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.viewInvoiceById(${inv.id})">👁️ معاينة</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editInvoiceById(${inv.id})">✏️ تعديل</button>
           <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendWhatsAppById(${inv.id})">💬 واتساب</button>
-          <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨️️ طباعة</button>
+          <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨 طباعة</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </div>
@@ -1365,7 +1402,7 @@ window.editProduct = (index) => {
 
 window.deleteProduct = async (idx) => {
   const p = productsDB[idx];
-  if (!p || !confirm('⚠️️ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
+  if (!p || !confirm('⚠ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
   try {
     productsDB.splice(idx, 1);
     if (currentUser) {
@@ -1748,10 +1785,6 @@ if (submitPaymentBtn) {
     }
   });
 }
-
-// ==========================================
-// قسم الموردين والدفاتر وفواتير المشتريات
-// ==========================================
 
 const supplierForm = document.getElementById('supplier-form');
 if (supplierForm) {
@@ -2152,10 +2185,6 @@ if (ledgerSupplierPrintBtn) {
   });
 }
 
-// ------------------------------------------
-// إدارة جدول فواتير المشتريات وتحديث المخزن
-// ------------------------------------------
-
 const purchaseSupplierInput = document.getElementById('purchase-supplier-name');
 const purchaseSupplierPhoneInput = document.getElementById('purchase-supplier-phone');
 const purchaseSupplierSuggestions = document.getElementById('purchase-supplier-suggestions');
@@ -2391,7 +2420,6 @@ if (purchaseForm) {
 
     purchasesDB.unshift(purchaseInvoice);
 
-    // الحفظ المحلي الفوري وتحديث الواجهة
     saveLocalData(uid, 'purchases', purchasesDB);
     saveLocalData(uid, 'suppliers', suppliersDB);
     saveLocalData(uid, 'products', productsDB);
@@ -2400,9 +2428,8 @@ if (purchaseForm) {
     if (purchaseSupplierInput) purchaseSupplierInput.value = '';
     if (purchaseSupplierPhoneInput) purchaseSupplierPhoneInput.value = '';
     renderPurchaseItemsTable();
-    renderAllModules(); // 👈 تحديث فوري للجداول
+    renderAllModules();
 
-    // المزامنة الهادئة في الخلفية
     try {
       setDoc(doc(db, "users", uid, "purchases", String(purchaseInvoice.id)), purchaseInvoice).catch(() => {});
       setDoc(doc(db, "users", uid, "suppliers", String(supplierObj.id)), supplierObj).catch(() => {});
@@ -2432,7 +2459,7 @@ function renderPurchases() {
       </div>
       <div style="text-align: left;">
         <strong style="color:var(--danger); font-size: 1.05rem;">-${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</strong>
-        <button class="btn-sm" style="color:var(--danger); margin-right:6px;" onclick="window.deletePurchase(${pur.id})">🗑️️</button>
+        <button class="btn-sm" style="color:var(--danger); margin-right:6px;" onclick="window.deletePurchase(${pur.id})">🗑</button>
       </div>
     </li>
   `).join('');
