@@ -181,7 +181,13 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 .store-logo { max-height: 40px; max-width: 80px; object-fit: contain; }
 .subtitle { color: var(--text-muted); font-size: 0.75rem; font-weight: 500; }
 
-.header-actions { display: flex; align-items: center; gap: 8px; }
+.header-actions { 
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+  flex-wrap: wrap; /* تمكين التفاف الأزرار لمنع اختفاء أيقونة الإشعارات على الجوال */
+  justify-content: flex-end;
+}
 
 .app-nav {
   display: flex; gap: 6px; margin-bottom: 16px;
