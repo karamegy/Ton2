@@ -355,10 +355,10 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      // قراءة التنبيه أو الملاحظة القادمة من الإدارة وعرضها
+      // قراءة التنبيه أو الملاحظة القادمة من الإدارة وعرضها (تم تعديلها لتدعم adminNotes المكتوبة من لوحة التحكم)
       const licenseData = snapshot.data();
       if (licenseData) {
-        const adminNote = licenseData.note || licenseData.notification;
+        const adminNote = licenseData.adminNotes || licenseData.note || licenseData.notification;
         if (adminNote) {
           if (notificationContentText) notificationContentText.textContent = adminNote;
           const isRead = currentUser ? localStorage.getItem(`giti_${currentUser.uid}_notif_read`) : null;
@@ -1035,7 +1035,7 @@ function sendWhatsApp(inv) {
     msg += `• ${i.name} (×${i.qty}) = ${(i.qty * i.price).toFixed(2)} ${storeProfile.currency}\n`;
   });
   msg += `-----------------------------------\n`;
-  if (inv.discount > 0) msg += `🏷️ *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency}\n`;
+  if (inv.discount > 0) msg += `🏷️️ *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency}\n`;
   msg += `💰 *الإجمالي النهائي:* ${inv.grandTotal.toFixed(2)} ${storeProfile.currency}\n`;
   msg += `📌 *حالة الدفع:* ${inv.status}\n\n`;
   msg += `شكراً لتعاملكم معنا!`;
