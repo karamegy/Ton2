@@ -636,6 +636,54 @@
     </div>
   </div>
 
+  <!-- Modal معاينة فاتورة مشتريات / توريد المورد -->
+  <div id="supplier-view-modal" class="modal hidden">
+    <div class="modal-content preview-modal-content">
+      <div class="modal-header">
+        <h3>👁️ معاينة فاتورة مشتريات المورد</h3>
+        <button id="close-supplier-view-btn" class="btn-close">✕</button>
+      </div>
+      <div id="supplier-invoice-card-preview" class="invoice-card-preview">
+        <div class="preview-header">
+          <img id="sv-logo" class="preview-logo hidden" alt="Logo">
+          <h2 id="sv-store-name">اسم المحل</h2>
+          <p id="sv-store-phone"></p>
+          <p id="sv-store-vat"></p>
+          <p id="sv-store-address"></p>
+          <hr>
+          <p id="sv-inv-id"></p>
+          <p id="sv-date"></p>
+        </div>
+        <div class="preview-client">
+          <p><strong>المورد:</strong> <span id="sv-supplier-name"></span></p>
+          <p><strong>الهاتف:</strong> <span id="sv-supplier-phone"></span></p>
+          <p><strong>حالة الدفع:</strong> <span id="sv-payment-status"></span></p>
+        </div>
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>الصنف</th>
+              <th>الكمية</th>
+              <th>سعر التكلفة</th>
+              <th>الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody id="sv-items-body"></tbody>
+        </table>
+        <div class="preview-footer-container">
+          <div class="preview-totals">
+            <h3>الإجمالي الكلي: <span id="sv-total"></span></h3>
+          </div>
+          <div id="supplier-preview-qrcode" class="qrcode-wrapper"></div>
+        </div>
+      </div>
+      <div class="modal-actions-row">
+        <button id="supplier-download-img-btn" class="btn-primary">تحميل كصورة 🖼️</button>
+        <button id="supplier-print-view-btn" class="btn-success">طباعة 🖨️</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal الإعدادات السحابية والتنظيمية -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-content">
