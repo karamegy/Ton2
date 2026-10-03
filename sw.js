@@ -1,4 +1,4 @@
-const CACHE_NAME = 'giti-invoices-v44';
+const CACHE_NAME = 'giti-invoices-v45';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -9,6 +9,9 @@ const ASSETS_TO_CACHE = [
   './app.js',
   './manifest.json',
   './logo.png',
+  './sitemap.xml',
+  './robots.txt',
+  './googleeb8d677c7529419b.html',
 ];
 
 self.addEventListener('install', (event) => {
