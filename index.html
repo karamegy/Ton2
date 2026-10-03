@@ -124,6 +124,13 @@
         <button id="toggle-lang-btn" class="btn-icon">🌐 EN/عربي</button>
         <button id="open-settings-btn" class="btn-icon">⚙️</button>
         <button id="fetch-cloud-btn" class="btn-icon" title="جلب وتحديث البيانات من السحابة">☁️</button>
+        
+        <!-- أيقونة الإشعارات بجوار زر الباب -->
+        <button id="notification-btn" class="btn-icon" title="الإشعارات والملاحظات الإدارية" style="position: relative;">
+          🔔
+          <span id="notification-badge" class="hidden" style="position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; background: var(--danger); border-radius: 50%; box-shadow: 0 0 6px var(--danger);"></span>
+        </button>
+
         <button id="logout-btn" class="btn-icon btn-logout" title="خروج">🚪</button>
       </div>
     </header>
@@ -228,7 +235,7 @@
                 <select id="payment-status-select">
                   <option value="مدفوعة">✅ مدفوعة بالكامل (نقدي / تحويل)</option>
                   <option value="آجل / غير مدفوعة">❌ آجل / على الحساب بالكامل</option>
-                  <option value="مدفوعة جزئياً">⚠️️ مدفوع جزء من المبلغ (جزئي)</option>
+                  <option value="مدفوعة جزئياً">⚠ مدفوع جزء من المبلغ (جزئي)</option>
                 </select>
               </div>
             </div>
@@ -257,7 +264,6 @@
         <section class="card invoice-list-section">
           <div class="card-header">
             <h3 data-i18n="invHistory">سجل الفواتير السحابي</h3>
-            <!-- تم إزالة الزر من هنا لمنع تكرار الـ ID ولحل المشكلة -->
             <div class="backup-btns" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
               <button id="export-json-btn" class="btn-sm">💾 نسخة احتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
@@ -525,13 +531,13 @@
 
       <div class="modal-actions-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
         <button id="ledger-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
-        <button id="ledger-download-btn" class="btn-primary">صورة 🖼️️</button>
+        <button id="ledger-download-btn" class="btn-primary">صورة 🖼</button>
         <button id="ledger-print-btn" class="btn-success">طباعة 🖨️</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal كشف حساب مورد مجمع والتسديد (جديد) -->
+  <!-- Modal كشف حساب مورد مجمع والتسديد -->
   <div id="supplier-ledger-modal" class="modal hidden">
     <div class="modal-content ledger-modal-content">
       <div class="modal-header">
@@ -643,7 +649,7 @@
           <option value="dark">🌙 داكن حديث (Dark Glass)</option>
           <option value="indigo">🟣 بنفسجي (Indigo Modern)</option>
           <option value="emerald">🟢 زمردي (Emerald Enterprise)</option>
-          <option value="light">☀️️ فاتح (Light Classic)</option>
+          <option value="light">☀ فاتح (Light Classic)</option>
         </select>
       </div>
       <div class="form-group" style="margin-top:10px;">
@@ -681,6 +687,22 @@
       <div style="margin-top: 15px; border-top: 1px dashed var(--border-color); padding-top: 12px; text-align: center;">
         <a href="privacy.html" target="_blank" class="btn-secondary" style="display: block; width: 100%; text-align: center; text-decoration: none; line-height: 38px;">🔒 عرض سياسة الخصوصية</a>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal عرض الملاحظات الإدارية للإشعارات -->
+  <div id="notification-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 380px; text-align: right;">
+      <div class="modal-header">
+        <h3 style="margin: 0; font-size: 1.1rem;">🔔 ملاحظات الإدارة العليا</h3>
+        <button id="close-notification-btn" class="btn-close">✕</button>
+      </div>
+      <div style="padding: 15px 0;">
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); padding: 12px; border-radius: 8px;">
+          <p id="notification-content-text" style="color: var(--text-main); font-size: 0.95rem; line-height: 1.6; margin: 0; white-space: pre-wrap;">لا توجد ملاحظات جديدة من الإدارة حالياً.</p>
+        </div>
+      </div>
+      <button id="dismiss-notification-btn" class="btn-primary" style="width: 100%; margin-top: 5px;">حفظ وفهم</button>
     </div>
   </div>
 
