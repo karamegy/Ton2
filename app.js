@@ -1687,7 +1687,7 @@ if (ledgerWhatsappBtn) {
     msg += `📄 *كشف حساب العميل:* ${activeLedgerClientName}\n`;
     msg += `📅 *التاريخ:* ${new Date().toLocaleDateString('ar-EG')}\n`;
     msg += `-----------------------------------\n`;
-    msg += `🛍️️ *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += `🛍 *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `✅ *إجمالي المدفوعات:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `-----------------------------------\n`;
@@ -2921,7 +2921,11 @@ applyTheme(localStorage.getItem('app_theme') ? localStorage.getItem('app_theme')
 applyLanguage(currentLang);
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: '/Ton2/' }).catch((err) => {
+      console.warn("SW Registration Error:", err);
+    });
+  });
 }
 
 updateHeaderUI();
