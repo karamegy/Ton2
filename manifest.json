@@ -1,6 +1,6 @@
 {
-  "name": "GITI - Enterprise ERP 2027",
-  "short_name": "GITI ERP",
+  "name": "GITI - فواتير ERP 2027",
+  "short_name": "GITI فواتير",
   "description": "نظام إدارة الأعمال والفواتير الإلكترونية السحابي",
   "id": "giti-erp-ton2-app",
   "start_url": "https://karamegy.github.io/Ton2/index.html?pwa=ton2_erp",
