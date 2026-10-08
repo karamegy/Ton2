@@ -285,11 +285,15 @@
         return;
       }
 
-      // عرض البطاقات بتصميم الثري دي المتطور والفاخر
+      // عرض البطاقات بتصميم الثري دي المتطور والفاخر مع تصحيح الأسطر والرموز
       container.innerHTML = filtered.map(data => {
         const isActive = data.isActive === true;
         const expiryText = data.expiryDate ? `📅 انتهاء الاشتراك: ${data.expiryDate}` : '📅 تاريخ الانتهاء: غير محدد';
         const notesText = data.adminNotes ? `<div style="color: var(--warning); font-size: 0.8rem; margin-top: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">📌 ملاحظة: ${data.adminNotes}</div>` : '';
+
+        // معالجة آمنة لاسم النشاط والملاحظات لمنع تعطل الأزرار بسبب الأسطر الجديدة والرموز
+        const safeStoreName = (data.storeName || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const safeAdminNotes = (data.adminNotes || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n').replace(/\r/g, '');
 
         return `
           <div style="background: linear-gradient(135deg, rgba(25, 33, 56, 0.85), rgba(12, 18, 32, 0.95)); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); border-top: 1px solid rgba(255, 255, 255, 0.18); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateZ(0);" onmouseover="this.style.transform='translateY(-3px) scale(1.005)'; this.style.boxShadow='0 18px 40px -10px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.25)';" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 12px 30px -8px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15)';">
@@ -314,8 +318,8 @@
               <button class="btn-sm ${isActive ? 'btn-secondary' : 'btn-success'}" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: filter 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'" onclick="window.toggleUserStatus('${data.id}', ${!isActive})">
                 ${isActive ? '🔴 تعطيل الحساب' : '🟢 تفعيل الحساب'}
               </button>
-              <button class="btn-sm" style="background: var(--warning); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: filter 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'" onclick="window.openEditModal('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}', '${data.expiryDate || ''}', '${(data.adminNotes || '').replace(/'/g, "\\'")}')">✏️ تعديل</button>
-              <button class="btn-sm" style="background: var(--danger); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: filter 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'" onclick="window.deleteUserLicense('${data.id}', '${(data.storeName || '').replace(/'/g, "\\'")}')">🗑️ حذف</button>
+              <button class="btn-sm" style="background: var(--warning); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: filter 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'" onclick="window.openEditModal('${data.id}', '${safeStoreName}', '${data.expiryDate || ''}', '${safeAdminNotes}')">✏️ تعديل</button>
+              <button class="btn-sm" style="background: var(--danger); color: #fff; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: filter 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'" onclick="window.deleteUserLicense('${data.id}', '${safeStoreName}')">🗑️ حذف</button>
             </div>
           </div>
         `;
