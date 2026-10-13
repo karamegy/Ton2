@@ -1,3 +1,44 @@
+// ==========================================
+// Capacitor Native Bridge Integration
+// ==========================================
+const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+
+function initCapacitorBridge() {
+  if (isCapacitorNative) {
+    console.log("Capacitor Native Bridge Connected Successfully.");
+    
+    // التعامل مع زر الرجوع الخلفي للاندرويد
+    if (window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+      window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
+        const activeModals = document.querySelectorAll('.modal:not(.hidden)');
+        if (activeModals.length > 0) {
+          activeModals.forEach(modal => modal.classList.add('hidden'));
+        } else if (canGoBack) {
+          window.history.back();
+        } else {
+          window.Capacitor.Plugins.App.exitApp();
+        }
+      });
+    }
+
+    // إخفاء شاشة البدء (SplashScreen) عند تجهيز التطبيق
+    if (window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen) {
+      setTimeout(() => {
+        window.Capacitor.Plugins.SplashScreen.hide();
+      }, 500);
+    }
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initCapacitorBridge);
+} else {
+  initCapacitorBridge();
+}
+
+// ==========================================
+// Firebase & Core Application Engine
+// ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
   getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc, getDocs,
@@ -112,7 +153,6 @@ if (toggleLangBtn) toggleLangBtn.addEventListener('click', () => applyLanguage(c
 const authLangBtn = document.getElementById('auth-lang-btn');
 if (authLangBtn) authLangBtn.addEventListener('click', () => applyLanguage(currentLang === 'ar' ? 'en' : 'ar'));
 
-// تفعيل نظام الإشعارات والملاحظات الإدارية واجهة المستخدم
 const notificationBtn = document.getElementById('notification-btn');
 const notificationModal = document.getElementById('notification-modal');
 const closeNotificationBtn = document.getElementById('close-notification-btn');
@@ -214,7 +254,6 @@ let editingInvoiceId = null;
 let editingProductId = null;
 let editingSupplierId = null;
 
-// دوال التخزين المحلي المزدوج لمنع اختفاء البيانات أوفلاين
 function saveLocalData(uid, key, data) {
   try {
     localStorage.setItem(`giti_${uid}_${key}`, JSON.stringify(data));
@@ -355,7 +394,6 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
 
-      // قراءة التنبيه أو الملاحظة القادمة من الإدارة وعرضها بدقة
       const licenseData = snapshot.data();
       if (licenseData) {
         const adminNote = licenseData.adminNotes || licenseData.note || licenseData.notification;
@@ -416,7 +454,6 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// تحميل البيانات محلياً فوراً للسرعة القصوى
 function loadDataLocallyAndSync(uid) {
   detachCloudSync();
 
@@ -450,7 +487,6 @@ async function syncDocToCloud(docName, payload) {
   });
 }
 
-// زر جلب السحابة اليدوي الموفر
 async function fetchAllDataFromCloud() {
   if (!currentUser) {
     alert('يرجى تسجيل الدخول أولاً لجلب البيانات.');
@@ -1412,7 +1448,7 @@ window.editProduct = (index) => {
 
 window.deleteProduct = async (idx) => {
   const p = productsDB[idx];
-  if (!p || !confirm('⚠ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
+  if (!p || !confirm('⚠️ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
   try {
     productsDB.splice(idx, 1);
     if (currentUser) {
@@ -2922,7 +2958,7 @@ applyLanguage(currentLang);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: '/Ton2/' }).catch((err) => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((err) => {
       console.warn("SW Registration Error:", err);
     });
   });
