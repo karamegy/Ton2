@@ -1,0 +1,24 @@
+{
+  "appId": "com.karamegy.gitierp",
+  "appName": "GITI ERP",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": [
+      "karamegy.github.io",
+      "*.firebaseapp.com",
+      "*.googleapis.com",
+      "*.googlesyndication.com",
+      "*.doubleclick.net"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#090d16",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    }
+  }
+}
