@@ -69,7 +69,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, 
+  GoogleAuthProvider, signInWithPopup, getRedirectResult, 
   signOut, onAuthStateChanged, setPersistence, browserLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
@@ -91,8 +91,9 @@ const db = initializeFirestore(app, {
 });
 
 const auth = getAuth(app);
+auth.languageCode = 'ar';
 
-// ضبط الدوامة لتجنب فقدان الجلسة في بيئات المتصفح المقيدة
+// ضبط الدوامة وتخزين الجلسة محلياً لتجنب فقدانها عند إغلاق التطبيق
 setPersistence(auth, browserLocalPersistence).catch((error) => {
   console.error("Auth Persistence Error:", error);
 });
@@ -345,7 +346,7 @@ function clearAuthMsgs() {
   if (authSuccess) authSuccess.classList.add('hidden');
 }
 
-// معالجة النتيجة القادمة من re-direct بمرونة وتجنب خطأ missing initial state
+// التزام صامت بتجاهل أي أخطاء سابقة ناجمة عن استخدام signInWithRedirect في البيئات المقيدة
 getRedirectResult(auth).then(async (result) => {
   if (result && result.user) {
     const u = result.user;
@@ -362,20 +363,12 @@ getRedirectResult(auth).then(async (result) => {
         });
       }
     } catch (e) {
-      console.warn("Redirect License Check Error:", e);
+      console.warn("Redirect License Check Warning:", e);
     }
   }
 }).catch((err) => {
-  // تجاهل خطأ فقدان الجلسة في البيئات المقيدة بدلاً من تجميد التطبيق
-  if (err.code === 'auth/missing-initial-state' || err.code === 'auth/redirect-cancelled-by-user') {
-    console.warn("Ignored Partitioned Redirect State Issue:", err.message);
-  } else {
-    console.error("Redirect Error:", err);
-    if (authError) {
-      authError.textContent = `تنبيه: تعذر إكمال الدخول عبر التوجيه (${err.code ? err.code : err.message}). يرجى استخدام النافذة المنبثقة.`;
-      authError.classList.remove('hidden');
-    }
-  }
+  // كتم أخطاء فقدان الجلسة في WebView تماماً لعدم إظهار الشاشة البيضاء
+  console.warn("Ignored Redirect Result check:", err.code || err.message);
 });
 
 onAuthStateChanged(auth, async (user) => {
@@ -598,11 +591,12 @@ if (loginForm) {
   });
 }
 
-// حل مشكلة الدخول بواسطة Google بالاعتماد المباشر على Popup وتجنب Redirect المسبب لفقدان الـ State
+// اعتماد حاصري ومستقر على signInWithPopup لتجنب الانحراف إلى صفحة missing initial state
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
     clearAuthMsgs();
+    
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const u = result.user;
@@ -619,16 +613,15 @@ if (googleLoginBtn) {
       }
     } catch (err) {
       console.error("Google Auth Error:", err);
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-        if (authError) {
-          authError.textContent = "يرجى السماح بالنوافذ المنبثقة (Popups) لتسجيل الدخول بواسطة Google.";
-          authError.classList.remove('hidden');
-        }
-      } else {
-        if (authError) {
+      if (authError) {
+        if (err.code === 'auth/popup-closed-by-user') {
+          authError.textContent = "تم إغلاق نافذة تسجيل الدخول قبل الإكمال.";
+        } else if (err.code === 'auth/popup-blocked') {
+          authError.textContent = "يرجى السماح بفتح النوافذ المنبثقة (Popups) لإكمال التوثيق.";
+        } else {
           authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code ? err.code : 'خطأ غير معروف'})`;
-          authError.classList.remove('hidden');
         }
+        authError.classList.remove('hidden');
       }
     }
   });
