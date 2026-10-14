@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, signInWithCredential, signInWithRedirect,
+  GoogleAuthProvider, signInWithPopup, signInWithCredential, 
   signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
@@ -21,11 +21,11 @@ function initCapacitorBridge() {
   if (isCapacitorNative) {
     console.log("Capacitor Native Bridge Connected Successfully.");
     
-    // تهيئة مكتبة Google Auth الأصلية عند فتح التطبيق
+    // تهيئة مكتبة Google Auth الأصلية باستخدام Web Client ID الكامل والمعتمد
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
       window.Capacitor.Plugins.GoogleAuth.initialize({
-        clientId: '753885709520-web.apps.googleusercontent.com',
-        serverClientId: '753885709520-web.apps.googleusercontent.com',
+        clientId: '753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com',
+        serverClientId: '753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com',
         grantOfflineAccess: true,
         scopes: ['profile', 'email']
       }).catch(err => console.warn("GoogleAuth init warning:", err));
@@ -591,7 +591,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// زر تسجيل الدخول الشامل (بكل الطرق: Capacitor Native -> Popup -> Redirect)
+// زر تسجيل الدخول بجوجل المباشر المقاوم لأخطاء الـ Redirect
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -615,24 +615,17 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. التشغيل المباشر عبر Popup كبديل آمن
+      // 2. التشغيل المباشر عبر signInWithPopup لتجنب خطأ missing initial state
       const result = await signInWithPopup(auth, googleProvider);
       if (result && result.user) {
         await ensureUserLicense(result.user);
       }
 
     } catch (err) {
-      console.warn("Google Popup/Native Auth Error, falling back to Redirect:", err);
-      
-      // 3. الحل الاحتياطي النهائي الآمن (Redirect) لمنع أي خطأ أو شاشة بيضاء نهائياً
-      try {
-        await signInWithRedirect(auth, googleProvider);
-      } catch (redirErr) {
-        console.error("Redirect Fallback Error:", redirErr);
-        if (authError) {
-          authError.textContent = "حدث خطأ أثناء الاتصال بخدمة جوجل. يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.";
-          authError.classList.remove('hidden');
-        }
+      console.error("Google Auth Error:", err);
+      if (authError) {
+        authError.textContent = "حدث خطأ أثناء الاتصال بخدمة جوجل. يرجى التأكد من الإنترنت والمحاولة مرة أخرى.";
+        authError.classList.remove('hidden');
       }
     }
   });
