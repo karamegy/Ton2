@@ -3,6 +3,10 @@ name: Build GITI ERP Android App
 on:
   push:
     branches: [ "main", "master" ]
+    paths:
+      - 'capacitor.config.json'
+      - 'signing.keystore'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 jobs:
