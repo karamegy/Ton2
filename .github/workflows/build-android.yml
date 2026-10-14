@@ -106,7 +106,7 @@ jobs:
           # 7. مزامنة المشروع أولاً
           npx cap sync android
 
-          # 8. حقن إعدادات الـ SDK (المستوى 34 المدعوم ثابتاً في البيئة) وإعدادات التوقيع المعتمدة
+          # 8. حقن إعدادات الـ SDK (المستوى 34) وإعدادات التوقيع المعتمدة
           cat << 'EOF' >> android/app/build.gradle
 
           android {
@@ -138,13 +138,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Cache Gradle Packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/build.gradle', 'android/app/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
       - name: Build Android App (AAB & APK)
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           cd android
           chmod +x gradlew
-          ./gradlew bundleRelease
-          ./gradlew assembleDebug
+          ./gradlew bundleRelease --no-daemon
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload AAB Bundle Artifact (Google Play)
         uses: actions/upload-artifact@v4
