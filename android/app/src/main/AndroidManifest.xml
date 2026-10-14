@@ -33,11 +33,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- ربط النطاق الأساسي المباشر (App Links Verification) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="@string/hostName" android:pathPrefix="/Ton2/" />
+                
+                <!-- النطاق الأساسي المباشر -->
+                <data android:scheme="https" android:host="karamegy.github.io" android:pathPrefix="/Ton2" />
+                <!-- نطاق الفايربيس (اختياري لضمان توثيق الروابط الفرعية) -->
+                <data android:scheme="https" android:host="giti-68750.firebaseapp.com" />
             </intent-filter>
         </activity>
 
