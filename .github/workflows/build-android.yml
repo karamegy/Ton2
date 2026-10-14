@@ -18,21 +18,12 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Ensure Android Structure & Dependencies
+      - name: Initialize Android Platform & Dependencies
         run: |
           npm install
           
-          # تأكيد وجود مسار الجافا والـ MainActivity في الخادم دائماً
-          mkdir -p android/app/src/main/java/com/giti/erp/ton2
-          cat << 'EOF' > android/app/src/main/java/com/giti/erp/ton2/MainActivity.java
-          package com.giti.erp.ton2;
-
-          import android.os.Bundle;
-          import com.getcapacitor.BridgeActivity;
-
-          public class MainActivity extends BridgeActivity {}
-          EOF
-
+          # توليد منصة الأندرويد وملفات الـ Gradle إذا لم تكن موجودة بالكامل
+          npx @capacitor/cli add android || true
           npx cap sync android || true
 
       - name: Set up JDK 17
