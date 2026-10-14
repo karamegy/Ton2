@@ -99,14 +99,24 @@ jobs:
           </manifest>
           EOF
 
-          # 6. نسخ ملف التوقيع الأصلي الحقيقي (signing.keystore) من جذر المشروع إلى مجلد أندرويد
+          # 6. تحديث مستويات الـ SDK إلى المستوى 36 المطلوب لمتجر جوجل بلاي تلقائياً في ملف build.gradle الخاص بالتطبيق
+          sed -i 's/compileSdkVersion 33/compileSdkVersion 36/g' android/app/build.gradle || true
+          sed -i 's/targetSdkVersion 33/targetSdkVersion 36/g' android/app/build.gradle || true
+          sed -i 's/compileSdk 33/compileSdk 36/g' android/app/build.gradle || true
+          sed -i 's/targetSdk 33/targetSdk 36/g' android/app/build.gradle || true
+
+          # 7. نسخ ملف التوقيع الأصلي الحقيقي (signing.keystore) من جذر المشروع إلى مجلد أندرويد
           mkdir -p android/app
           cp signing.keystore android/app/
 
-          # 7. إضافة إعدادات التوقيع لاستخدام المفتاح الأصلي ببياناته الصحيحة
+          # 8. إضافة إعدادات التوقيع لاستخدام المفتاح الأصلي ببياناته الصحيحة
           cat << 'EOF' >> android/app/build.gradle
 
           android {
+              compileSdk 36
+              defaultConfig {
+                  targetSdk 36
+              }
               signingConfigs {
                   release {
                       storeFile file('signing.keystore')
@@ -125,7 +135,7 @@ jobs:
           }
           EOF
 
-          # 8. مزامنة المشروع
+          # 9. مزامنة المشروع
           npx cap sync android
 
       - name: Set up JDK 17
