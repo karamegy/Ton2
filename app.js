@@ -46,7 +46,7 @@ async function authenticateWithBiometrics() {
       });
       return result && result.verified;
     }
-    return true; // تجاوز سلس في حال عدم دعم البصمة
+    return true;
   } catch (err) {
     console.warn("Biometric authentication error or fallback:", err);
     return false;
@@ -578,7 +578,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// معالجة تسجيل الدخول بـ Google وحل مشكلة missing initial state بالكامل
+// الحل الجذري والنهائي لتسجيل الدخول بـ Google ومنع خطأ missing initial state
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -586,35 +586,36 @@ if (googleLoginBtn) {
     clearAuthMsgs();
     
     try {
-      // 1. الدخول الأصيل المباشر داخل أجهزة الموبايل (Capacitor Native GoogleAuth)
+      // 1. الدخول الأصيل المباشر داخل أجهزة الموبايل (Capacitor Native GoogleAuth) لتجنب WebView تماماً
       if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins) {
         const NativeGoogleAuth = window.Capacitor.Plugins.GoogleAuth || window.Capacitor.Plugins.GoogleAuthPlugin;
         if (NativeGoogleAuth) {
-          const googleUser = await NativeGoogleAuth.signIn();
-          const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
-          if (idToken) {
-            const credential = GoogleAuthProvider.credential(idToken);
-            const result = await signInWithCredential(auth, credential);
-            await ensureUserLicense(result.user);
-            return;
+          try {
+            if (typeof NativeGoogleAuth.initialize === 'function') {
+              await NativeGoogleAuth.initialize({ clientId: '753885709520-web.apps.googleusercontent.com', grantOfflineAccess: true }).catch(() => {});
+            }
+            const googleUser = await NativeGoogleAuth.signIn();
+            const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
+            if (idToken) {
+              const credential = GoogleAuthProvider.credential(idToken);
+              const result = await signInWithCredential(auth, credential);
+              await ensureUserLicense(result.user);
+              return;
+            }
+          } catch (nativeErr) {
+            console.warn("Native Google Auth plugin skipped, switching to secure web fallback:", nativeErr);
           }
         }
       }
 
-      // 2. الدخول عبر مكتبة Google Identity Services (GSI) في الويب لمنع العزل والتوجيه
-      if (window.google && window.google.accounts && window.google.accounts.id) {
-        window.google.accounts.id.prompt(async (notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
-            const result = await signInWithPopup(auth, googleProvider);
-            await ensureUserLicense(result.user);
-          }
-        });
-        return;
-      }
-
-      // 3. الدخول المباشر المضمون عبر النافذة المنبثقة للويب مع تثبيت الجلسة في IndexedDB
+      // 2. التثبيت المؤكد للجلسة على المتصفح عبر IndexedDB
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
+
+      // 3. فتح نافذة منبثقة آمنة ومستقلة تماماً لا تتاثر بالـ Redirect أو مسح الـ sessionStorage
+      googleProvider.setCustomParameters({
+        prompt: 'select_account'
+      });
+
       const result = await signInWithPopup(auth, googleProvider);
       await ensureUserLicense(result.user);
 
@@ -628,7 +629,7 @@ if (googleLoginBtn) {
         } else if (err.code === 'auth/cancelled-popup-request') {
           authError.textContent = "تم إلغاء الطلب السابق، يرجى المحاولة مرة أخرى.";
         } else {
-          authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.message ? err.message : 'خطأ في الجلسة والتخزين'})`;
+          authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.message ? err.message : 'خطأ في الجلسة'})`;
         }
         authError.classList.remove('hidden');
       }
