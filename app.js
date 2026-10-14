@@ -590,16 +590,13 @@ if (loginForm) {
   });
 }
 
-// =========================================================
-// زر تسجيل الدخول بجوجل المباشر (من داخل التطبيق بدون متصفح خارجي)
-// =========================================================
-const googleLoginBtn = document.getElementById('google-login-btn');
+ const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
     clearAuthMsgs();
     
     try {
-      // 1. المحاولة عبر البلاجن الأصلي لأندرويد لو متوفر في تطبيق Capacitor
+      // 1. إذا كان التطبيق يعمل على تطبيق أندرويد (Native)، نستخدم البلاجن الأصلي حصرياً
       if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         try {
           const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
@@ -611,20 +608,20 @@ if (googleLoginBtn) {
             return;
           }
         } catch (nativeErr) {
-          console.warn("Native GoogleAuth warning, falling back to popup:", nativeErr);
+          console.warn("Native GoogleAuth signin failed:", nativeErr);
         }
       }
 
-      // 2. التشغيل المباشر عبر Popup من داخل التطبيق مباشرة بدون الانتقال للمتصفح
+      // 2. إذا كان يعمل على المتصفح (Web)، نستخدم الـ Popup مع معالجة الأخطاء لتجنب مشاكل الـ state
       const result = await signInWithPopup(auth, googleProvider);
       if (result && result.user) {
         await ensureUserLicense(result.user);
       }
 
     } catch (err) {
-      console.error("Google Auth Popup Error:", err);
+      console.error("Google Auth Error:", err);
       if (authError) {
-        authError.textContent = "حدث خطأ أثناء تسجيل الدخول. يرجى التأكد من اتصال الإنترنت وإعدادات التطبيق.";
+        authError.textContent = "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى أو التأكد من اتصال الإنترنت.";
         authError.classList.remove('hidden');
       }
     }
