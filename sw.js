@@ -1,4 +1,4 @@
-const CACHE_NAME = 'giti-invoices-v58';
+const CACHE_NAME = 'giti-invoices-v59';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -42,11 +42,13 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // استثناء طلبات الفايربيس والإعلانات والجسر الداخلي لضمان عدم تخزينها مؤقتاً
+  // استثناء طلبات الفايربيس والتوثيق والإعلانات لضمان مرورها عبر الشبكة مباشرة
   if (
     event.request.url.includes('firestore.googleapis.com') ||
     event.request.url.includes('identitytoolkit.googleapis.com') ||
     event.request.url.includes('securetoken.googleapis.com') ||
+    event.request.url.includes('firebaseapp.com') ||
+    event.request.url.includes('accounts.google.com') ||
     event.request.url.includes('pagead2.googlesyndication.com') ||
     event.request.url.includes('googleads') ||
     event.request.url.includes('capacitor://')
