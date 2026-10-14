@@ -30,7 +30,7 @@ function initCapacitorBridge() {
   }
 }
 
-// دالة المصادقة ببصمة الأصبع / الوجه (Biometric / WebAuthn Integration)
+// دالة المصادقة ببصمة الأصبع / الوجه (Biometric Integration)
 async function authenticateWithBiometrics() {
   try {
     if (window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) {
@@ -46,7 +46,7 @@ async function authenticateWithBiometrics() {
       });
       return result && result.verified;
     }
-    return true; // في حال عدم دعم البصمة بالعتاد يتم تجاوزها بسلاسة
+    return true; // تجاوز سلس في حال عدم دعم البصمة
   } catch (err) {
     console.warn("Biometric authentication error or fallback:", err);
     return false;
@@ -93,7 +93,7 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app);
 auth.languageCode = 'ar';
 
-// ضبط التخزين عبر IndexedDB لتفادي حظر كوكيز الطرف الثالث وفقدان الشفرة المبدئية على GitHub Pages
+// ضبط التخزين عبر IndexedDB لتفادي فقدان الجلسة ومشاكل النوافذ المنبثقة
 setPersistence(auth, indexedDBLocalPersistence).catch(() => {
   setPersistence(auth, browserLocalPersistence).catch((error) => {
     console.error("Auth Persistence Error:", error);
@@ -125,7 +125,7 @@ const translations = {
     login: "تسجيل الدخول", register: "حساب جديد", googleAuth: "متابعة بواسطة Google",
     or: "أو", email: "البريد الإلكتروني", password: "كلمة المرور", loginBtn: "دخول التطبيق",
     storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب مجاني", logout: "تسجيل الخروج",
-    accountDisabled: "⚠ الحساب معطل من قبل الإدارة",
+    accountDisabled: "⚠️ الحساب معطل من قبل الإدارة",
     accountDisabledDesc: "تم تعطيل رخصة هذا الحساب. يرجى التواصل مع Admin Master (haretg@gmail.com).",
     tabInvoices: "🧾 الفواتير الحية", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabSuppliers: "🏭 الموردين والشركات", tabExpenses: "💸 الخزينة",
     totalSales: "إجمالي المبيعات", netProfit: "صافي الأرباح", expenses: "المصروفات", invoiceCount: "عدد الفواتير",
@@ -137,7 +137,7 @@ const translations = {
     pName: "اسم المنتج", pPrice: "سعر البيع", pCost: "سعر التكلفة", pStock: "الكمية بالمخزن", saveProduct: "حفظ المنتج",
     productList: "قائمة المنتجات المخزنة", clientDb: "سجل العملاء والمديونيات", addExpense: "تسجيل مصروف جديد",
     expTitle: "بند المصروف", expAmount: "المبلغ", saveExpense: "تسجيل المصروف", expList: "سجل المصروفات",
-    previewTitle: "👁 معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
+    previewTitle: "👁️ معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
     theme: "مظهر التطبيق", currency: "العملة الرئيسية", vatNo: "الرقم الضريبي للمنشأة (VAT)", logo: "شعار الشركة", address: "العنوان", saveSettings: "حفظ التغييرات السحابية"
   },
   en: {
@@ -302,6 +302,25 @@ function getLocalData(uid, key, fallback = []) {
   }
 }
 
+async function ensureUserLicense(user) {
+  if (!user) return;
+  const userRef = doc(db, "licenses", user.uid);
+  try {
+    const docSnap = await getDoc(userRef);
+    if (!docSnap.exists()) {
+      await setDoc(userRef, {
+        email: user.email,
+        storeName: user.displayName ? user.displayName : "نشاط تجاري جديد",
+        isActive: true,
+        role: user.email === 'haretg@gmail.com' ? "admin_master" : "user",
+        createdAt: new Date().toISOString()
+      });
+    }
+  } catch (e) {
+    console.warn("License registration error:", e);
+  }
+}
+
 const privacyModal = document.getElementById('privacy-modal');
 const openPrivacyAuthBtn = document.getElementById('open-privacy-auth-btn');
 if (openPrivacyAuthBtn) openPrivacyAuthBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.remove('hidden'); });
@@ -383,17 +402,7 @@ onAuthStateChanged(auth, async (user) => {
           loadDataLocallyAndSync(user.uid);
           return;
         }
-        try {
-          await setDoc(userRef, {
-            email: user.email,
-            storeName: user.displayName ? user.displayName : "نشاط تجاري جديد",
-            isActive: true,
-            role: isAdmin ? "admin_master" : "user",
-            createdAt: new Date().toISOString()
-          });
-        } catch (e) {
-          console.warn("License creation warning:", e);
-        }
+        await ensureUserLicense(user);
         return;
       }
 
@@ -568,48 +577,26 @@ if (loginForm) {
   });
 }
 
-// معالجة تسجيل الدخول بـ Google وحل مشكلة missing initial state بـ IndexedDB & Native Fallback
+// معالجة تسجيل الدخول بـ Google وحل مشكلة missing initial state بالكامل
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
     clearAuthMsgs();
     
     try {
-      // 1. الدخول المباشر إذا كان التطبيق يعمل داخل بيئة Capacitor Native
+      // 1. الدخول عبر إَضافة Capacitor GoogleAuth الأصيلة إذا كانت متوفرة
       if (isCapacitorNative && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
         const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
         const result = await signInWithCredential(auth, credential);
-        const u = result.user;
-        const userRef = doc(db, "licenses", u.uid);
-        const docSnap = await getDoc(userRef);
-        if (!docSnap.exists()) {
-          await setDoc(userRef, {
-            email: u.email,
-            storeName: u.displayName ? u.displayName : "نشاط جديد",
-            isActive: true,
-            role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
-            createdAt: new Date().toISOString()
-          });
-        }
+        await ensureUserLicense(result.user);
         return;
       }
 
-      // 2. الدخول عبر GitHub Pages مع تأكيد التخزين الدائم لحل missing initial state
+      // 2. الدخول المباشر المضمون عبر النافذة المنبثقة للويب مع تثبيت الجلسة في IndexedDB
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
       const result = await signInWithPopup(auth, googleProvider);
-      const u = result.user;
-      const userRef = doc(db, "licenses", u.uid);
-      const docSnap = await getDoc(userRef);
-      if (!docSnap.exists()) {
-        await setDoc(userRef, {
-          email: u.email,
-          storeName: u.displayName ? u.displayName : "نشاط جديد",
-          isActive: true,
-          role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
-          createdAt: new Date().toISOString()
-        });
-      }
+      await ensureUserLicense(result.user);
     } catch (err) {
       console.error("Google Auth Error:", err);
       if (authError) {
@@ -2209,7 +2196,7 @@ if (ledgerSupplierPrintBtn) {
       <div class="print-header">
         ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
         <h1>كشف حساب مورد</h1>
-        2>${storeProfile.name}</h2>
+        <h2>${storeProfile.name}</h2>
         <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
         <p>${storeProfile.address ? storeProfile.address : ''}</p>
         <hr>
