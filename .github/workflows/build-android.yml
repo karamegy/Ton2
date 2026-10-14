@@ -24,9 +24,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build Android App Safely
+      - name: Force Install Android SDK 36 and Build
         run: |
-          # 1. إعداد مجلد الويب وتحديث ملف التكوين مباشرة
+          # 1. تثبيت منصة SDK 36 إجبارياً لتجنب خطأ نقص الحزمة
+          echo "y" | ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;34.0.0"
+
+          # 2. إعداد مجلد الويب وتحديث ملف التكوين مباشرة
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
@@ -39,15 +43,15 @@ jobs:
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 2. تثبيت أدوات الكاباسيتور بشكل مباشر وسريع لتجنب مشاكل npm install
-          npm install -g @capacitor/cli @capacitor/core
-          
-          # 3. إعادة إنشاء منصة أندرويد نظيفة
-          rm -rf android
-          npx @capacitor add android
+          # 3. تثبيت أدوات الكاباسيتور الأساسية
+          npm install @capacitor/cli @capacitor/core --save-dev
 
-          # 4. إنشاء مسار الجافا الصحيح وملف MainActivity
-          mkdir -p android/app/src/main/java/io/github/karamegy/Ton2
+          # 4. إعادة إنشاء منصة أندرويد نظيفة
+          rm -rf android
+          npx cap add android
+
+          # 5. إنشاء مسار الجافا الصحيح وملف MainActivity
+          mkdir -p android/app/src/main/java/io/github/karamegy.Ton2
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy.Ton2/MainActivity.java
           package io.github.karamegy.Ton2;
 
@@ -57,10 +61,10 @@ jobs:
           public class MainActivity extends BridgeActivity {}
           EOF
 
-          # 5. نسخ ملف التوقيع الحقيقي
+          # 6. نسخ ملف التوقيع الحقيقي
           cp signing.keystore android/app/ || true
 
-          # 6. حقن إعدادات الـ SDK (المستوى 36 المطلوب لمتجر جوجل) وإعدادات التوقيع في ملف build.gradle
+          # 7. حقن إعدادات الـ SDK (المستوى 36 المطلوب لمتجر جوجل) وإعدادات التوقيع
           cat << 'EOF' >> android/app/build.gradle
 
           android {
@@ -87,7 +91,7 @@ jobs:
           }
           EOF
 
-          # 7. مزامنة المشروع وبناء الحزمة مباشرة
+          # 8. مزامنة المشروع وبناء الحزمة مباشرة
           npx cap sync android
           cd android
           chmod +x gradlew
