@@ -18,15 +18,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Generate and Build Android App
+      - name: Prepare Clean Environment and Generate Android Project
         run: |
-          # 1. إعداد مجلد الويب وتكوين الكاباسيتور
+          npm install
+
+          # 1. تهيئة مجلد www وتحديث ملف التكوين لتثبيت اسم الحزمة الإجباري io.github.karamegy.Ton2 والـ webDir
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
@@ -39,13 +35,15 @@ jobs:
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 2. تنظيف مسار أندرويد وإعادة إنشائه
+          # 2. مسح مجلد أندرويد لإجبار الكاباسيتور على توليد مشروع جديد ونظيف
           rm -rf android
-          npx @capacitor/cli add android
 
-          # 3. إنشاء مسار وملف الجافا بالمعرف الإجباري
-          mkdir -p android/app/src/main/java/io/github/karamegy/Ton2
-          cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Ton2/MainActivity.java
+          # 3. إنشاء منصة أندرويد المربوطة بالحزمة المعتمدة
+          npx @capacitor/cli add android
+          
+          # 4. إنشاء مسار الجافا وملف MainActivity بالمعرف الإجباري الصحيح
+          mkdir -p android/app/src/main/java/io/github/karamegy.Ton2
+          cat << 'EOF' > android/app/src/main/java/io/github/karamegy.Ton2/MainActivity.java
           package io.github.karamegy.Ton2;
 
           import android.os.Bundle;
@@ -54,17 +52,66 @@ jobs:
           public class MainActivity extends BridgeActivity {}
           EOF
 
-          # 4. نسخ مفتاح التوقيع
-          cp signing.keystore android/app/ || true
+          # 5. كتابة ملف AndroidManifest.xml التلقائي المصحح بدقة الموارد والأذونات
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-          # 5. ضبط إعدادات الـ build.gradle بالمستوى 36 وإعدادات التوقيع
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+              <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+
+                  <activity
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                      android:name="io.github.karamegy.Ton2.MainActivity"
+                      android:label="@string/title_activity_main"
+                      android:theme="@style/AppTheme.NoActionBarLaunch"
+                      android:launchMode="singleTask"
+                      android:exported="true">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="https" android:host="karamegy.github.io" android:pathPrefix="/Ton2" />
+                          <data android:scheme="https" android:host="giti-68750.firebaseapp.com" />
+                      </intent-filter>
+                  </activity>
+
+              </application>
+
+          </manifest>
+          EOF
+
+          # 6. نسخ ملف التوقيع الأصلي الحقيقي (signing.keystore) من جذر المشروع إلى مجلد أندرويد
+          mkdir -p android/app
+          cp signing.keystore android/app/
+
+          # 7. مزامنة المشروع أولاً
+          npx cap sync android
+
+          # 8. حقن إعدادات الـ SDK بالمستوى 36 وإعدادات التوقيع المعتمدة
           cat << 'EOF' >> android/app/build.gradle
 
           android {
               compileSdk 36
               defaultConfig {
-                  applicationId "io.github.karamegy.Ton2"
-                  minSdk 22
                   targetSdk 36
               }
               signingConfigs {
@@ -79,13 +126,39 @@ jobs:
                   release {
                       signingConfig signingConfigs.release
                       minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
                   }
               }
           }
           EOF
 
-          # 6. مزامنة المشروع وبناء الحزمة مباشرة
-          npx cap sync android
+          # تعديل إصدار Gradle إلى الإصدار 8.5 السريع المدعوم
+          sed -i 's/distributionUrl=.*$/distributionUrl=https\:\/\/services.gradle.org\/distributions\/gradle-8.5-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Force Install Android SDK 36 Platform
+        run: |
+          echo "y" | ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;34.0.0"
+
+      - name: Cache Gradle Packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-v4-${{ hashFiles('android/build.gradle', 'android/app/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-v4-
+
+      - name: Build Android App (AAB & APK)
+        run: |
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
           cd android
           chmod +x gradlew
           ./gradlew bundleRelease --no-daemon
