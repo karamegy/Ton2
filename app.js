@@ -70,7 +70,7 @@ import {
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
   GoogleAuthProvider, signInWithPopup, 
-  signOut, onAuthStateChanged, setPersistence, browserLocalPersistence 
+  signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -93,14 +93,17 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app);
 auth.languageCode = 'ar';
 
-// ضبط الدوامة وتخزين الجلسة محلياً لتجنب فقدانها عند إغلاق التطبيق
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Auth Persistence Error:", error);
+// استخدام التخزين المستقر المتوافق مع تطبيقات الهاتف لمنع فقدان الـ Session State
+setPersistence(auth, indexedDBLocalPersistence).catch((error) => {
+  console.warn("IndexedDB Persistence Fallback:", error);
+  setPersistence(auth, browserLocalPersistence).catch(err => console.error("Auth Persistence Error:", err));
 });
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
-  prompt: 'select_account'
+  prompt: 'select_account',
+  // إجبار النظام على منع تداخل النوافذ في بيئة الـ WebView المحمولة
+  flow: 'popup'
 });
 
 function triggerAds() {
@@ -566,7 +569,7 @@ if (loginForm) {
   });
 }
 
-// الاعتماد الحصري والمستقر على signInWithPopup فقط
+// تعديل التعامل مع تسجيل الدخول بجوجل خصيصاً لمنع مشكلة الـ missing initial state
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
@@ -2929,6 +2932,7 @@ if (saveSettingsBtn) {
     };
 
     if (logoInput && logoInput.files && logoInput.files[0]) {
+      new ReviewReader(); // standard flow
       new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => resolve(e.target.result);
