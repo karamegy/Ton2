@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, signInWithCredential, 
+  GoogleAuthProvider, signInWithPopup, signInWithCredential, signInWithRedirect,
   signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
@@ -591,7 +591,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// زر تسجيل الدخول بجوجل المباشر المقاوم لأخطاء ה-Redirect
+// زر تسجيل الدخول الشامل (بكل الطرق: Capacitor Native -> Popup -> Redirect)
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -615,17 +615,24 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. التشغيل المباشر عبر signInWithPopup لتجنب خطأ missing initial state
+      // 2. التشغيل المباشر عبر Popup كبديل آمن
       const result = await signInWithPopup(auth, googleProvider);
       if (result && result.user) {
         await ensureUserLicense(result.user);
       }
 
     } catch (err) {
-      console.error("Google Auth Error:", err);
-      if (authError) {
-        authError.textContent = "حدث خطأ أثناء الاتصال بخدمة جوجل. يرجى التأكد من الإنترنت والمحاولة مرة أخرى.";
-        authError.classList.remove('hidden');
+      console.warn("Google Popup/Native Auth Error, falling back to Redirect:", err);
+      
+      // 3. الحل الاحتياطي النهائي الآمن (Redirect) لمنع أي خطأ أو شاشة بيضاء نهائياً
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirErr) {
+        console.error("Redirect Fallback Error:", redirErr);
+        if (authError) {
+          authError.textContent = "حدث خطأ أثناء الاتصال بخدمة جوجل. يرجى التأكد من اتصال الإنترنت والمحاولة مرة أخرى.";
+          authError.classList.remove('hidden');
+        }
       }
     }
   });
