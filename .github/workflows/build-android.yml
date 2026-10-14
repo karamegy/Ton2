@@ -26,7 +26,7 @@ jobs:
 
       - name: Force Install Android SDK 36 and Build
         run: |
-          # 1. تثبيت منصة SDK 36 إجبارياً لتجنب خطأ نقص الحزمة
+          # 1. تثبيت منصة SDK 36 إجبارياً
           echo "y" | ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --licenses || true
           ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;34.0.0"
 
@@ -61,17 +61,66 @@ jobs:
           public class MainActivity extends BridgeActivity {}
           EOF
 
-          # 6. نسخ ملف التوقيع الحقيقي
+          # 6. تحديث ملف AndroidManifest.xml لإضافة أمر التجاوز الآمن للـ SDK
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+              <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme"
+                  tools:overrideLibrary="com.getcapacitor.android">
+
+                  <activity
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                      android:name="io.github.karamegy.Ton2.MainActivity"
+                      android:label="@string/title_activity_main"
+                      android:theme="@style/AppTheme.NoActionBarLaunch"
+                      android:launchMode="singleTask"
+                      android:exported="true">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="https" android:host="karamegy.github.io" android:pathPrefix="/Ton2" />
+                          <data android:scheme="https" android:host="giti-68750.firebaseapp.com" />
+                      </intent-filter>
+                  </activity>
+
+              </application>
+
+          </manifest>
+          EOF
+
+          # 7. نسخ ملف التوقيع الحقيقي
           cp signing.keystore android/app/ || true
 
-          # 7. حقن إعدادات الـ SDK (المستوى 36 المطلوب لمتجر جوجل) وإعدادات التوقيع
+          # 8. حقن إعدادات الـ SDK (compileSdk 36 و minSdk 23 و targetSdk 36) وإعدادات التوقيع
           cat << 'EOF' >> android/app/build.gradle
 
           android {
               compileSdk 36
               defaultConfig {
                   applicationId "io.github.karamegy.Ton2"
-                  minSdk 22
+                  minSdk 23
                   targetSdk 36
               }
               signingConfigs {
@@ -91,7 +140,7 @@ jobs:
           }
           EOF
 
-          # 8. مزامنة المشروع وبناء الحزمة مباشرة
+          # 9. مزامنة المشروع وبناء الحزمة مباشرة
           npx cap sync android
           cd android
           chmod +x gradlew
