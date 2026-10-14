@@ -15,7 +15,7 @@
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/appName"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
@@ -23,7 +23,7 @@
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:name="io.github.karamegy.Ton2.MainActivity"
-            android:label="@string/launcherName"
+            android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
             android:exported="true">
@@ -41,7 +41,7 @@
                 
                 <!-- النطاق الأساسي المباشر -->
                 <data android:scheme="https" android:host="karamegy.github.io" android:pathPrefix="/Ton2" />
-                <!-- نطاق الفايربيس (اختياري لضمان توثيق الروابط الفرعية) -->
+                <!-- نطاق الفايربيس -->
                 <data android:scheme="https" android:host="giti-68750.firebaseapp.com" />
             </intent-filter>
         </activity>
