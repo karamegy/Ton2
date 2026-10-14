@@ -30,7 +30,7 @@ jobs:
           echo "y" | ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --licenses || true
           ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;34.0.0"
 
-          # 2. إعداد مجلد الويب وتحديث ملف التكوين لتثبيت اسم الحزمة الإجباري
+          # 2. إعداد مجلد الويب وتحديث ملف التكوين لتثبيت اسم الحزمة وإعدادات GoogleAuth
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
@@ -40,11 +40,17 @@ jobs:
             cfg.webDir = "www";
             cfg.appId = "io.github.karamegy.Ton2";
             cfg.appName = "Ton2 ERP";
+            cfg.plugins = cfg.plugins || {};
+            cfg.plugins.GoogleAuth = {
+              scopes: ["profile", "email"],
+              serverClientId: "753885709520-web.apps.googleusercontent.com",
+              forceCodeForRefreshToken: true
+            };
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 3. تثبيت أدوات الكاباسيتور الأساسية
-          npm install @capacitor/cli @capacitor/core --save-dev
+          # 3. تثبيت أدوات الكاباسيتور الأساسية + إضافة مكتبة Google Auth للأندرويد
+          npm install @capacitor/cli @capacitor/core @capacitor-community/google-auth --save
 
           # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
