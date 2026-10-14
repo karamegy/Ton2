@@ -41,7 +41,7 @@ jobs:
           # 3. إنشاء منصة أندرويد المربوطة بالحزمة المعتمدة
           npx @capacitor/cli add android
           
-          # 4. إنشاء مسار الجافا بالشرطة المائلة الصحيحة وملف MainActivity بالمعرف الإجباري
+          # 4. إنشاء مسار الجافا وملف MainActivity بالمعرف الإجباري الصحيح
           mkdir -p android/app/src/main/java/io/github/karamegy/Ton2
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Ton2/MainActivity.java
           package io.github.karamegy.Ton2;
@@ -106,7 +106,7 @@ jobs:
           # 7. مزامنة المشروع أولاً
           npx cap sync android
 
-          # 8. حقن إعدادات الـ SDK (المستوى 36 المطلوب لمتجر جوجل) وإعدادات التوقيع المعتمدة
+          # 8. حقن إعدادات الـ SDK (المستوى 36) وإعدادات التوقيع المعتمدة
           cat << 'EOF' >> android/app/build.gradle
 
           android {
@@ -137,6 +137,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Install Android SDK 36 Platform
+        run: |
+          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platforms;android-36"
 
       - name: Build Android App (AAB & APK)
         run: |
