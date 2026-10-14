@@ -49,8 +49,8 @@ jobs:
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 3. تثبيت أدوات الكاباسيتور الأساسية + إضافة مكتبة Google Auth للأندرويد
-          npm install @capacitor/cli @capacitor/core @capacitor-community/google-auth --save
+          # 3. تثبيت أدوات الكاباسيتور الأساسية + إضافة مكتبة Google Auth الصحيحة للأندرويد
+          npm install @capacitor/cli @capacitor/core @codetrix-studio/capacitor-google-auth --save
 
           # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
