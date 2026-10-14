@@ -7,6 +7,15 @@ function initCapacitorBridge() {
   if (isCapacitorNative) {
     console.log("Capacitor Native Bridge Connected Successfully.");
     
+    // تهيئة مكتبة Google Auth الأصلية عند فتح التطبيق لو متوفرة
+    if (window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+      window.Capacitor.Plugins.GoogleAuth.initialize({
+        clientId: '753885709520-web.apps.googleusercontent.com',
+        grantOfflineAccess: true,
+        scopes: ['profile', 'email']
+      }).catch(err => console.warn("GoogleAuth init warning:", err));
+    }
+    
     // التعامل مع زر الرجوع الخلفي لأجهزة الأندرويد
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
       window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
@@ -93,7 +102,7 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app);
 auth.languageCode = 'ar';
 
-// ضبط التخزين عبر IndexedDB لتفادي فقدان الجلسة ومشاكل النوافذ المنبثقة
+// ضبط التخزين عبر IndexedDB لتفادي فقدان الجلسة
 setPersistence(auth, indexedDBLocalPersistence).catch(() => {
   setPersistence(auth, browserLocalPersistence).catch((error) => {
     console.error("Auth Persistence Error:", error);
@@ -578,7 +587,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// الحل الجذري والنهائي لتسجيل الدخول بـ Google ومنع خطأ missing initial state
+// الحل الجذري والنهائي لتسجيل الدخول بـ Google عبر المكتبة الأصلية (Native Google Auth)
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -586,36 +595,24 @@ if (googleLoginBtn) {
     clearAuthMsgs();
     
     try {
-      // 1. الدخول الأصيل المباشر داخل أجهزة الموبايل (Capacitor Native GoogleAuth) لتجنب WebView تماماً
-      if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins) {
-        const NativeGoogleAuth = window.Capacitor.Plugins.GoogleAuth || window.Capacitor.Plugins.GoogleAuthPlugin;
-        if (NativeGoogleAuth) {
-          try {
-            if (typeof NativeGoogleAuth.initialize === 'function') {
-              await NativeGoogleAuth.initialize({ clientId: '753885709520-web.apps.googleusercontent.com', grantOfflineAccess: true }).catch(() => {});
-            }
-            const googleUser = await NativeGoogleAuth.signIn();
-            const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
-            if (idToken) {
-              const credential = GoogleAuthProvider.credential(idToken);
-              const result = await signInWithCredential(auth, credential);
-              await ensureUserLicense(result.user);
-              return;
-            }
-          } catch (nativeErr) {
-            console.warn("Native Google Auth plugin skipped, switching to secure web fallback:", nativeErr);
+      // 1. الدخول عبر المكتبة الأصلية في التطبيق المثبت على الأندرويد لتجنب مشاكل المتصفح نهائياً
+      if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+        try {
+          const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+          const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
+          if (idToken) {
+            const credential = GoogleAuthProvider.credential(idToken);
+            const result = await signInWithCredential(auth, credential);
+            await ensureUserLicense(result.user);
+            return;
           }
+        } catch (nativeErr) {
+          console.warn("Native GoogleAuth plugin error, falling back to popup:", nativeErr);
         }
       }
 
-      // 2. التثبيت المؤكد للجلسة على المتصفح عبر IndexedDB
+      // 2. بديل الويب الآمن (إذا كان يتم التجربة على متصفح عادي)
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
-
-      // 3. فتح نافذة منبثقة آمنة ومستقلة تماماً لا تتاثر بالـ Redirect أو مسح الـ sessionStorage
-      googleProvider.setCustomParameters({
-        prompt: 'select_account'
-      });
-
       const result = await signInWithPopup(auth, googleProvider);
       await ensureUserLicense(result.user);
 
@@ -626,8 +623,6 @@ if (googleLoginBtn) {
           authError.textContent = "تم إغلاق نافذة تسجيل الدخول قبل الإكمال.";
         } else if (err.code === 'auth/popup-blocked') {
           authError.textContent = "يرجى السماح بفتح النوافذ المنبثقة (Popups) لإكمال التوثيق.";
-        } else if (err.code === 'auth/cancelled-popup-request') {
-          authError.textContent = "تم إلغاء الطلب السابق، يرجى المحاولة مرة أخرى.";
         } else {
           authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.message ? err.message : 'خطأ في الجلسة'})`;
         }
@@ -671,10 +666,20 @@ if (registerForm) {
 }
 
 const logoutBtn = document.getElementById('logout-btn');
-if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
+if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+  if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+    try { await window.Capacitor.Plugins.GoogleAuth.signOut(); } catch (e) {}
+  }
+  signOut(auth);
+});
 
 const logoutLockBtn = document.getElementById('logout-lock-btn');
-if (logoutLockBtn) logoutLockBtn.addEventListener('click', () => signOut(auth));
+if (logoutLockBtn) logoutLockBtn.addEventListener('click', async () => {
+  if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+    try { await window.Capacitor.Plugins.GoogleAuth.signOut(); } catch (e) {}
+  }
+  signOut(auth);
+});
 
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -2889,7 +2894,6 @@ if (importJsonInput) {
   });
 }
 
-// تصحيح ترميز ملف الـ CSV لفتح اللغة العربية بشكل صحيح بدون أخطاء BOM
 const exportCsvBtn = document.getElementById('export-csv-btn');
 if (exportCsvBtn) {
   exportCsvBtn.addEventListener('click', () => {
