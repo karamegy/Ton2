@@ -18,15 +18,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Generate and Force Push Java Native Files
+      - name: Ensure Android Structure & Dependencies
         run: |
           npm install
-
-          # إعداد هوية Git لضمان نجاح الرفع التلقائي
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-          # إنشاء مسار الجافا المطلوبة لمشروع Ton2 وإعداد MainActivity بدقة
+          
+          # تأكيد وجود مسار الجافا والـ MainActivity في الخادم دائماً
           mkdir -p android/app/src/main/java/com/giti/erp/ton2
           cat << 'EOF' > android/app/src/main/java/com/giti/erp/ton2/MainActivity.java
           package com.giti.erp.ton2;
@@ -37,14 +33,7 @@ jobs:
           public class MainActivity extends BridgeActivity {}
           EOF
 
-          # إضافة مجلد الأندرويد والجافا وحفظهما في المستودع فوراً
-          git add android/app/src/main/java/com/giti/erp/ton2/MainActivity.java || true
-
-      - name: Commit and Push Java Files
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Restore native Java MainActivity for Ton2 [skip ci]"
-          branch: main
+          npx cap sync android || true
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
