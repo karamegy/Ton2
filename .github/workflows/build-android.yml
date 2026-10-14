@@ -46,7 +46,7 @@ jobs:
           # 3. تثبيت أدوات الكاباسيتور الأساسية
           npm install @capacitor/cli @capacitor/core --save-dev
 
-          # 4. إعادة إنشاء منصة أندرويد (تقوم الأداة بتوليد MainActivity تلقائياً بالمعرف الصحيح)
+          # 4. إعادة إنشاء منصة أندرويد
           rm -rf android
           npx cap add android
 
@@ -102,7 +102,7 @@ jobs:
           # 6. نسخ ملف التوقيع الحقيقي
           cp signing.keystore android/app/ || true
 
-          # 7. حقن إعدادات الـ SDK (compileSdk 36 و targetSdk 36) وتوافق Java 17 وإعدادات التوقيع
+          # 7. حقن إعدادات الـ SDK (compileSdk 36) وزيادة رقم الإصدار تلقائياً
           cat << 'EOF' >> android/app/build.gradle
 
           android {
@@ -111,6 +111,8 @@ jobs:
                   applicationId "io.github.karamegy.Ton2"
                   minSdk 23
                   targetSdk 36
+                  versionCode ${{ github.run_number }}
+                  versionName "1.0.${{ github.run_number }}"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
