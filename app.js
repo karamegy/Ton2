@@ -591,7 +591,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// زر تسجيل الدخول بجوجل المباشر المقاوم لأخطاء الـ Redirect
+// زر تسجيل الدخول بجوجل المباشر (من داخل التطبيق بدون متصفح خارجي)
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -615,16 +615,16 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. التشغيل المباشر عبر signInWithPopup لتجنب خطأ missing initial state
+      // 2. التشغيل المباشر عبر Popup من داخل التطبيق مباشرة بدون الانتقال للمتصفح
       const result = await signInWithPopup(auth, googleProvider);
       if (result && result.user) {
         await ensureUserLicense(result.user);
       }
 
     } catch (err) {
-      console.error("Google Auth Error:", err);
+      console.error("Google Auth Popup Error:", err);
       if (authError) {
-        authError.textContent = "حدث خطأ أثناء الاتصال بخدمة جوجل. يرجى التأكد من الإنترنت والمحاولة مرة أخرى.";
+        authError.textContent = "حدث خطأ أثناء تسجيل الدخول. يرجى التأكد من اتصال الإنترنت وإعدادات التطبيق.";
         authError.classList.remove('hidden');
       }
     }
