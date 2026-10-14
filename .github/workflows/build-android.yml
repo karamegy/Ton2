@@ -1,0 +1,56 @@
+name: Build GITI ERP Android App
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npx cap sync || echo "Capacitor sync skipped or manual config used"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Android App (AAB & APK)
+        if: hashFiles('android/gradlew') != ''
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease
+          ./gradlew assembleRelease
+
+      - name: Upload AAB Bundle Artifact
+        if: success() && hashFiles('android/app/build/outputs/bundle/release/app-release.aab') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: giti-erp-release-bundle
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload APK Artifact
+        if: success() && hashFiles('android/app/build/outputs/apk/release/app-release.unsigned.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: giti-erp-release-apk
+          path: android/app/build/outputs/apk/release/
