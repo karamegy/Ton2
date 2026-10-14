@@ -99,7 +99,34 @@ jobs:
           </manifest>
           EOF
 
-          # 6. مزامنة المشروع
+          # 6. إعداد إدمان ملف التوقيع Keystore داخل مشروع أندرويد لكي يتم التوقيع التلقائي
+          mkdir -p android/app
+          # (تأكد أن ملف signing.keystore مرفوع في جذر مستودع جيت هوب الخاص بك)
+          cp signing.keystore android/app/
+
+          # 7. إضافة إعدادات التوقيع (Signing Configs) إلى ملف build.gradle الخاص بتطبيق أندرويد
+          cat << 'EOF' >> android/app/build.gradle
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file('signing.keystore')
+                      storePassword 'Gamef90IIwmB'
+                      keyAlias 'my-key-alias'
+                      keyPassword 'Gamef90IIwmB'
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+          }
+          EOF
+
+          # 8. مزامنة المشروع
           npx cap sync android
 
       - name: Set up JDK 17
