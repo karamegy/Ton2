@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- اسم التطبيق والعنوان -->
+    <string name="app_name">GITI Enterprise ERP</string>
+    <string name="title_activity_main">GITI Enterprise ERP</string>
+    <string name="package_name">com.giti.app</string>
+    <string name="custom_url_scheme">com.giti.app</string>
+
+    <!-- المعرف الخاص بتسجيل الدخول بـ Google (Web Client ID) -->
+    <string name="server_client_id">753885709520-web.apps.googleusercontent.com</string>
+</resources>
