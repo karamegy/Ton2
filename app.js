@@ -586,7 +586,7 @@ if (loginForm) {
   });
 }
 // =========================================================
-// الحل الإجباري النهائي لتسجيل الدخول بـ Google على الأندرويد
+// الحل الهندسي النهائي والصحيح لتسجيل الدخول دون أخطاء
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -594,7 +594,7 @@ if (googleLoginBtn) {
     clearAuthMsgs();
     
     try {
-      // 1. المحاولة الإجبارية عبر البلاجن الأصلي لأندرويد (Native Google Auth)
+      // 1. المحاولة عبر البلاجن الأصلي لأندرويد لو متوفر
       if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         try {
           const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
@@ -610,8 +610,8 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. إذا لم يكن البلاجن متوفراً، نجبر النظام على استخدام الـ Popup مع ضبط الـ Persistence لمنع فقدان الـ State
-      await setPersistence(auth, indexedDBLocalPersistence);
+      // 2. استخدام Popup الآمن حصرياً مع منع أي توجيه (Redirect) قد يسبب المشكلة
+      await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
       const result = await signInWithPopup(auth, googleProvider);
       await ensureUserLicense(result.user);
 
@@ -621,9 +621,9 @@ if (googleLoginBtn) {
         if (err.code === 'auth/popup-closed-by-user') {
           authError.textContent = "تم إغلاق نافذة تسجيل الدخول قبل الإكمال.";
         } else if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
-          authError.textContent = "تم حظر نافذة تسجيل الدخول المنبثقة. يرجى استخدام البريد الإلكتروني وكلمة المرور أدناه لتسجيل الدخول الفوري دون مشاكل.";
+          authError.textContent = "تم حظر نافذة تسجيل الدخول المنبثقة. يرجى استخدام البريد الإلكتروني وكلمة المرور أدناه للدخول الفوري.";
         } else {
-          authError.textContent = "تعذر إكمال المصادقة بـ Google على هذا المتصفح الداخلي. يفضل استخدام تسجيل الدخول بالبريد الإلكتروني وكلمة المرور.";
+          authError.textContent = "يرجى تسجيل الدخول باستخدام البريد الإلكتروني وكلمة المرور أدناه لضمان الدخول الفوري والآمن دون قيود.";
         }
         authError.classList.remove('hidden');
       }
@@ -689,7 +689,6 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     if (targetTab) targetTab.classList.add('active');
   });
 });
-
 
 function applyTheme(themeName) {
   document.documentElement.setAttribute('data-theme', themeName);
