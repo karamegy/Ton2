@@ -18,11 +18,9 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Dependencies & Initialize Android
+      - name: Install Dependencies & Sync Capacitor
         run: |
           npm install
-          npx cap init || true
-          npx cap add android || true
           npx cap sync android
 
       - name: Set up JDK 17
