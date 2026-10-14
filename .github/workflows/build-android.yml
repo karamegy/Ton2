@@ -29,11 +29,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-
       - name: Build Android App (AAB & APK)
         run: |
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
           cd android
           chmod +x gradlew
           ./gradlew bundleRelease
