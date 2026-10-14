@@ -577,26 +577,47 @@ if (loginForm) {
   });
 }
 
+// =========================================================
 // معالجة تسجيل الدخول بـ Google وحل مشكلة missing initial state بالكامل
+// =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
     clearAuthMsgs();
     
     try {
-      // 1. الدخول عبر إَضافة Capacitor GoogleAuth الأصيلة إذا كانت متوفرة
-      if (isCapacitorNative && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
-        const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
-        const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
-        const result = await signInWithCredential(auth, credential);
-        await ensureUserLicense(result.user);
+      // 1. الدخول الأصيل المباشر داخل أجهزة الموبايل (Capacitor Native GoogleAuth)
+      if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins) {
+        const NativeGoogleAuth = window.Capacitor.Plugins.GoogleAuth || window.Capacitor.Plugins.GoogleAuthPlugin;
+        if (NativeGoogleAuth) {
+          const googleUser = await NativeGoogleAuth.signIn();
+          const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
+          if (idToken) {
+            const credential = GoogleAuthProvider.credential(idToken);
+            const result = await signInWithCredential(auth, credential);
+            await ensureUserLicense(result.user);
+            return;
+          }
+        }
+      }
+
+      // 2. الدخول عبر مكتبة Google Identity Services (GSI) في الويب لمنع العزل والتوجيه
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        window.google.accounts.id.prompt(async (notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
+            const result = await signInWithPopup(auth, googleProvider);
+            await ensureUserLicense(result.user);
+          }
+        });
         return;
       }
 
-      // 2. الدخول المباشر المضمون عبر النافذة المنبثقة للويب مع تثبيت الجلسة في IndexedDB
+      // 3. الدخول المباشر المضمون عبر النافذة المنبثقة للويب مع تثبيت الجلسة في IndexedDB
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
       const result = await signInWithPopup(auth, googleProvider);
       await ensureUserLicense(result.user);
+
     } catch (err) {
       console.error("Google Auth Error:", err);
       if (authError) {
@@ -607,7 +628,7 @@ if (googleLoginBtn) {
         } else if (err.code === 'auth/cancelled-popup-request') {
           authError.textContent = "تم إلغاء الطلب السابق، يرجى المحاولة مرة أخرى.";
         } else {
-          authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code ? err.code : 'خطأ في الجلسة والتخزين'})`;
+          authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.message ? err.message : 'خطأ في الجلسة والتخزين'})`;
         }
         authError.classList.remove('hidden');
       }
