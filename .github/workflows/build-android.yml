@@ -62,7 +62,7 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-              <uses-permission android:name="android.permission.USE_FINGERPRINT"  />
+              <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
               <application
                   android:allowBackup="true"
@@ -99,20 +99,20 @@ jobs:
           </manifest>
           EOF
 
-          # 6. إنشاء مفتاح التوقيع تلقائياً في مجلد أندرويد لكي يتطابق مع البصمة المسجلة دون الحاجة لرفع الملف
+          # 6. إنشاء مفتاح التوقيع تلقائياً في مجلد أندرويد لكي يتطابق تماماً مع البيانات المطلوبة دون أخطاء مسار
           mkdir -p android/app
-          keytool -genkey -v -keystore android/app/signing.keystore -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" -dname "CN=GITI Admin, OU=Engineering, O=GITI, C=US"
+          keytool -genkey -v -keystore android/app/signing.keystore -alias "my-key-alias" -keyalg RSA -keysize 2048 -validity 10000 -storepass "Gamef90IIwmB" -keypass "Gamef90IIwmB" -dname "CN=GITI Admin, OU=Engineering, O=GITI, C=US"
 
-          # 7. إضافة إعدادات التوقيع لقراءة المفتاح المُنشأ مباشرة
+          # 7. إضافة إعدادات التوقيع مباشرة بكلمات المرور الواضحة لتجنب مشكلة قراءة المتغيرات البيئية الفارغة
           cat << 'EOF' >> android/app/build.gradle
 
           android {
               signingConfigs {
                   release {
                       storeFile file('signing.keystore')
-                      storePassword System.getenv("KEYSTORE_PASSWORD")
-                      keyAlias System.getenv("KEY_ALIAS")
-                      keyPassword System.getenv("KEY_PASSWORD")
+                      storePassword 'Gamef90IIwmB'
+                      keyAlias 'my-key-alias'
+                      keyPassword 'Gamef90IIwmB'
                   }
               }
               buildTypes {
@@ -127,10 +127,6 @@ jobs:
 
           # 8. مزامنة المشروع
           npx cap sync android
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
