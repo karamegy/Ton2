@@ -99,6 +99,21 @@ jobs:
           </manifest>
           EOF
 
+          # 5.1 إنشاء وحقن ملف strings.xml المعتمد مع معرف Google Login
+          mkdir -p android/app/src/main/res/values/
+          cat << 'EOF' > android/app/src/main/res/values/strings.xml
+          <?xml version='1.0' encoding='utf-8'?>
+          <resources>
+              <string name="app_name">Ton2 ERP</string>
+              <string name="title_activity_main">Ton2 ERP</string>
+              <string name="package_name">io.github.karamegy.Ton2</string>
+              <string name="custom_url_scheme">io.github.karamegy.Ton2</string>
+
+              <!-- المعرف الخاص بتسجيل الدخول بـ Google -->
+              <string name="server_client_id">753885709520-web.apps.googleusercontent.com</string>
+          </resources>
+          EOF
+
           # 6. نسخ ملف التوقيع الحقيقي
           cp signing.keystore android/app/ || true
 
