@@ -78,7 +78,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, signInWithCredential, signInWithRedirect,
+  GoogleAuthProvider, signInWithPopup, signInWithCredential, signInWithRedirect, getRedirectResult,
   signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
@@ -112,6 +112,15 @@ setPersistence(auth, indexedDBLocalPersistence).catch(() => {
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
+});
+
+// معالجة نتيجة الـ Redirect لو تم العودة من تسجيل الدخول
+getRedirectResult(auth).then(async (result) => {
+  if (result && result.user) {
+    await ensureUserLicense(result.user);
+  }
+}).catch((error) => {
+  console.warn("Redirect result error:", error);
 });
 
 function triggerAds() {
@@ -585,8 +594,9 @@ if (loginForm) {
     }
   });
 }
+
 // =========================================================
-// الحل الهندسي النهائي والصحيح لتسجيل الدخول دون أخطاء
+// الحل الهندسي النهائي والصحيح لتسجيل الدخول بـ Google على أندرويد
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -610,21 +620,14 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. استخدام Popup الآمن حصرياً مع منع أي توجيه (Redirect) قد يسبب المشكلة
+      // 2. استخدام Redirect بدلاً من Popup لتجنب حظر النوافذ في WebView الموبايل نهائياً
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
-      const result = await signInWithPopup(auth, googleProvider);
-      await ensureUserLicense(result.user);
+      await signInWithRedirect(auth, googleProvider);
 
     } catch (err) {
       console.error("Google Auth Error:", err);
       if (authError) {
-        if (err.code === 'auth/popup-closed-by-user') {
-          authError.textContent = "تم إغلاق نافذة تسجيل الدخول قبل الإكمال.";
-        } else if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
-          authError.textContent = "تم حظر نافذة تسجيل الدخول المنبثقة. يرجى استخدام البريد الإلكتروني وكلمة المرور أدناه للدخول الفوري.";
-        } else {
-          authError.textContent = "يرجى تسجيل الدخول باستخدام البريد الإلكتروني وكلمة المرور أدناه لضمان الدخول الفوري والآمن دون قيود.";
-        }
+        authError.textContent = "تعذر إكمال المصادقة. يرجى استخدام البريد الإلكتروني وكلمة المرور للدخول الفوري.";
         authError.classList.remove('hidden');
       }
     }
