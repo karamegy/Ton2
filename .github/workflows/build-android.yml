@@ -22,7 +22,7 @@ jobs:
         run: |
           npm install
 
-          # 1. تهيئة مجلد www وتحديث ملف التكوين لتثبيت اسم الحزمة com.giti.erp.ton2 والـ webDir
+          # 1. تهيئة مجلد www وتحديث ملف التكوين لتثبيت اسم الحزمة الإجباري io.github.karamegy.Ton2 والـ webDir
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
@@ -30,7 +30,7 @@ jobs:
             const fs = require("fs");
             let cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
             cfg.webDir = "www";
-            cfg.appId = "com.giti.erp.ton2";
+            cfg.appId = "io.github.karamegy.Ton2";
             cfg.appName = "Ton2 ERP";
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
@@ -41,10 +41,10 @@ jobs:
           # 3. إنشاء منصة أندرويد المربوطة بالحزمة المعتمدة
           npx @capacitor/cli add android
           
-          # 4. إنشاء مسار الجافا وملف MainActivity
-          mkdir -p android/app/src/main/java/com/giti/erp/ton2
-          cat << 'EOF' > android/app/src/main/java/com/giti/erp/ton2/MainActivity.java
-          package com.giti.erp.ton2;
+          # 4. إنشاء مسار الجافا وملف MainActivity بالمعرف الإجباري الصحيح
+          mkdir -p android/app/src/main/java/io/github/karamegy/Ton2
+          cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Ton2/MainActivity.java
+          package io.github.karamegy.Ton2;
 
           import android.os.Bundle;
           import com.getcapacitor.BridgeActivity;
@@ -74,7 +74,7 @@ jobs:
 
                   <activity
                       android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
-                      android:name="com.giti.erp.ton2.MainActivity"
+                      android:name="io.github.karamegy.Ton2.MainActivity"
                       android:label="@string/title_activity_main"
                       android:theme="@style/AppTheme.NoActionBarLaunch"
                       android:launchMode="singleTask"
