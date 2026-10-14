@@ -69,7 +69,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, 
+  GoogleAuthProvider, signInWithPopup, getRedirectResult, 
   signOut, onAuthStateChanged, setPersistence, browserLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
@@ -345,6 +345,31 @@ function clearAuthMsgs() {
   if (authError) authError.classList.add('hidden');
   if (authSuccess) authSuccess.classList.add('hidden');
 }
+
+// التزام صامت بتجاهل أي أخطاء سابقة ناجمة عن استخدام signInWithRedirect في البيئات المقيدة
+getRedirectResult(auth).then(async (result) => {
+  if (result && result.user) {
+    const u = result.user;
+    const userRef = doc(db, "licenses", u.uid);
+    try {
+      const docSnap = await getDoc(userRef);
+      if (!docSnap.exists()) {
+        await setDoc(userRef, {
+          email: u.email,
+          storeName: u.displayName ? u.displayName : "نشاط جديد",
+          isActive: true,
+          role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
+          createdAt: new Date().toISOString()
+        });
+      }
+    } catch (e) {
+      console.warn("Redirect License Check Warning:", e);
+    }
+  }
+}).catch((err) => {
+  // كتم أخطاء فقدان الجلسة في WebView تماماً لعدم إظهار الشاشة البيضاء
+  console.warn("Ignored Redirect Result check:", err.code || err.message);
+});
 
 onAuthStateChanged(auth, async (user) => {
   const adminBtn = document.getElementById('admin-btn');
