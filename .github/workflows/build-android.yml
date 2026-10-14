@@ -99,21 +99,20 @@ jobs:
           </manifest>
           EOF
 
-          # 6. إعداد إدمان ملف التوقيع Keystore داخل مشروع أندرويد لكي يتم التوقيع التلقائي
+          # 6. نسخ ملف التوقيع Keystore داخل مشروع أندرويد
           mkdir -p android/app
-          # (تأكد أن ملف signing.keystore مرفوع في جذر مستودع جيت هوب الخاص بك)
           cp signing.keystore android/app/
 
-          # 7. إضافة إعدادات التوقيع (Signing Configs) باستخدام أسرار جيت هوب المضافة أمنياً
+          # 7. إضافة إعدادات التوقيع لقراءة متغيرات البيئة بأمان
           cat << 'EOF' >> android/app/build.gradle
 
           android {
               signingConfigs {
                   release {
                       storeFile file('signing.keystore')
-                      storePassword "${{ secrets.KEYSTORE_PASSWORD }}"
-                      keyAlias "${{ secrets.KEY_ALIAS }}"
-                      keyPassword "${{ secrets.KEY_PASSWORD }}"
+                      storePassword System.getenv("KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("KEY_ALIAS")
+                      keyPassword System.getenv("KEY_PASSWORD")
                   }
               }
               buildTypes {
@@ -128,6 +127,10 @@ jobs:
 
           # 8. مزامنة المشروع
           npx cap sync android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
