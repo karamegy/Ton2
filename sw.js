@@ -1,4 +1,4 @@
-const CACHE_NAME = 'giti-invoices-v60';
+const CACHE_NAME = 'giti-invoices-v61';
 
 const ASSETS_TO_CACHE = [
   './',
