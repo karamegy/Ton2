@@ -1,7 +1,7 @@
 {
   "appId": "io.github.karamegy.Ton2",
   "appName": "GITI ERP",
-    "webDir": "www",
+  "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
