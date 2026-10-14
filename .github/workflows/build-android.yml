@@ -65,16 +65,16 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew bundleRelease
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
-      - name: Upload AAB Bundle Artifact
+      - name: Upload AAB Bundle Artifact (Google Play)
         uses: actions/upload-artifact@v4
         with:
           name: giti-erp-release-bundle
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          path: android/app/build/outputs/bundle/release/*.aab
 
-      - name: Upload APK Artifact
+      - name: Upload APK Artifact (Direct Install)
         uses: actions/upload-artifact@v4
         with:
-          name: giti-erp-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: giti-erp-installable-apk
+          path: android/app/build/outputs/apk/debug/*.apk
