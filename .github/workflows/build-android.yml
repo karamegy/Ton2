@@ -24,9 +24,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build Android App Safely
+      - name: Generate and Build Android App
         run: |
-          # 1. إعداد مجلد الويب وتحديث ملف التكوين
+          # 1. إعداد مجلد الويب وتكوين الكاباسيتور
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
@@ -39,11 +39,11 @@ jobs:
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 2. إنشاء مشروع أندرويد نظيف
-          npx @capacitor/cli init "Ton2 ERP" "io.github.karamegy.Ton2" --web-dir www || true
-          npx @capacitor/cli add android || true
+          # 2. تنظيف مسار أندرويد وإعادة إنشائه
+          rm -rf android
+          npx @capacitor/cli add android
 
-          # 3. إنشاء مسار الجافا الصحيح
+          # 3. إنشاء مسار وملف الجافا بالمعرف الإجباري
           mkdir -p android/app/src/main/java/io/github/karamegy/Ton2
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Ton2/MainActivity.java
           package io.github.karamegy.Ton2;
@@ -57,15 +57,15 @@ jobs:
           # 4. نسخ مفتاح التوقيع
           cp signing.keystore android/app/ || true
 
-          # 5. ضبط إعدادات الـ build.gradle بقوة وثبات على المستوى 34 والتوقيع
+          # 5. ضبط إعدادات الـ build.gradle بالمستوى 36 وإعدادات التوقيع
           cat << 'EOF' >> android/app/build.gradle
 
           android {
-              compileSdk 34
+              compileSdk 36
               defaultConfig {
                   applicationId "io.github.karamegy.Ton2"
                   minSdk 22
-                  targetSdk 34
+                  targetSdk 36
               }
               signingConfigs {
                   release {
@@ -84,7 +84,7 @@ jobs:
           }
           EOF
 
-          # 6. مزامنة وبناء الحزمة
+          # 6. مزامنة المشروع وبناء الحزمة مباشرة
           npx cap sync android
           cd android
           chmod +x gradlew
