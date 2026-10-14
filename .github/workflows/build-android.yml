@@ -42,7 +42,7 @@ jobs:
           npx @capacitor/cli add android
           
           # 4. إنشاء مسار الجافا وملف MainActivity بالمعرف الإجباري الصحيح
-          mkdir -p android/app/src/main/java/io/github/karamegy/Ton2
+          mkdir -p android/app/src/main/java/io/github/karamegy.Ton2
           cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Ton2/MainActivity.java
           package io.github.karamegy.Ton2;
 
@@ -106,13 +106,15 @@ jobs:
           # 7. مزامنة المشروع أولاً
           npx cap sync android
 
-          # 8. حقن إعدادات الـ SDK (المستوى 36) والتوقيع المعتمد في نهاية ملف build.gradle بعد المزامنة
+          # 8. حقن إعدادات الـ SDK (المستوى 36)، وتحديث رقم الإصدار تلقائياً بناءً على رقم الـ Run، وإعدادات التوقيع
           cat << 'EOF' >> android/app/build.gradle
 
           android {
               compileSdk 36
               defaultConfig {
                   targetSdk 36
+                  versionCode ${{ github.run_number }}
+                  versionName "1.0.${{ github.run_number }}"
               }
               signingConfigs {
                   release {
