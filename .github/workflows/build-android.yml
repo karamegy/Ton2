@@ -24,13 +24,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Force Install Android SDK 36 and Build
+      - name: Build Android App
         run: |
-          # 1. تثبيت منصة SDK 36 إجبارياً
-          echo "y" | ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;34.0.0"
-
-          # 2. إعداد مجلد الويب وتحديث ملف التكوين لتثبيت اسم الحزمة وإعدادات GoogleAuth
+          # 1. إعداد مجلد الويب وتحديث ملف التكوين لتثبيت اسم الحزمة وإعدادات GoogleAuth
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
@@ -49,14 +45,14 @@ jobs:
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 3. تثبيت أدوات الكاباسيتور الأساسية + إضافة مكتبة Google Auth الصحيحة للأندرويد
+          # 2. تثبيت أدوات الكاباسيتور الأساسية ومكتبة Google Auth
           npm install @capacitor/cli @capacitor/core @codetrix-studio/capacitor-google-auth --save
 
-          # 4. إعادة إنشاء منصة أندرويد
+          # 3. إعادة إنشاء منصة أندرويد نظيفة
           rm -rf android
           npx cap add android
 
-          # 5. تحديث ملف AndroidManifest.xml المعتمد بالأذونات والتجاوز
+          # 4. تحديث ملف AndroidManifest.xml بالأذونات وواجهات النماذج المطلوبة
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -105,7 +101,7 @@ jobs:
           </manifest>
           EOF
 
-          # 5.1 إنشاء وحقن ملف strings.xml المعتمد مع معرف Google Login
+          # 5. حقن ملف strings.xml مع معرف Google Login
           mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
@@ -114,8 +110,6 @@ jobs:
               <string name="title_activity_main">Ton2 ERP</string>
               <string name="package_name">io.github.karamegy.Ton2</string>
               <string name="custom_url_scheme">io.github.karamegy.Ton2</string>
-
-              <!-- المعرف الخاص بتسجيل الدخول بـ Google -->
               <string name="server_client_id">753885709520-web.apps.googleusercontent.com</string>
           </resources>
           EOF
@@ -123,15 +117,14 @@ jobs:
           # 6. نسخ ملف التوقيع الحقيقي
           cp signing.keystore android/app/ || true
 
-          # 7. حقن إعدادات الـ SDK (compileSdk 36) وزيادة رقم الإصدار تلقائياً
+          # 7. حقن إعدادات بناء الـ Gradle وتكوين الإصدار ورقم البناء التلقائي
           cat << 'EOF' >> android/app/build.gradle
 
           android {
-              compileSdk 36
               defaultConfig {
                   applicationId "io.github.karamegy.Ton2"
                   minSdk 23
-                  targetSdk 36
+                  targetSdk 34
                   versionCode ${{ github.run_number }}
                   versionName "1.0.${{ github.run_number }}"
               }
@@ -156,7 +149,7 @@ jobs:
           }
           EOF
 
-          # 8. مزامنة المشروع وبناء الـ AAB والـ APK بنفس مفتاح التوقيع
+          # 8. مزامنة المشروع وبناء الـ AAB والـ APK
           npx cap sync android
           cd android
           chmod +x gradlew
