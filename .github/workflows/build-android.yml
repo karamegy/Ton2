@@ -4,9 +4,7 @@ on:
   push:
     branches: [ "main", "master" ]
     paths:
-      - 'capacitor.config.json'
-      - 'signing.keystore'
-      - '.github/workflows/**'
+      - '.github/workflows/build-android.yml'
   workflow_dispatch:
 
 jobs:
@@ -30,9 +28,10 @@ jobs:
 
       - name: Build Android App
         run: |
-          # 1. إعداد مجلد الويب وتحديث ملف التكوين لتثبيت اسم الحزمة وإعدادات GoogleAuth
+          # 1. تنظيف وإعداد مجلد الويب وتحديث ملف التكوين لتثبيت اسم الحزمة وإعدادات GoogleAuth
+          rm -rf www
           mkdir -p www
-          cp -r * www/ 2>/dev/null || true
+          find . -maxdepth 1 ! -name '.' ! -name 'www' ! -name 'android' ! -name 'node_modules' ! -name '.git' -exec cp -r {} www/ \; 2>/dev/null || true
           
           node -e '
             const fs = require("fs");
@@ -52,12 +51,12 @@ jobs:
           # 2. تثبيت أدوات الكاباسيتور الأساسية ومكتبة Google Auth
           npm install @capacitor/cli @capacitor/core @codetrix-studio/capacitor-google-auth --save
 
-          # 3. التحقق من وجود مجلد أندرويد أو إضافته بلطف دون مسح جذري لتثبيت البصمات
+          # 3. التحقق من وجود مجلد أندرويد وإضافته بلطف للحفاظ على الثبات
           if [ ! -d "android" ]; then
             npx cap add android
           fi
 
-          # 4. نسخ ملف التوقيع الحقيقي أولاً لضمان ثبات مفتاح التوقيع
+          # 4. نسخ ملف التوقيع الحقيقي لضمان ثبات مفتاح التوقيع
           cp signing.keystore android/app/ || true
 
           # 5. حقن إعدادات بناء الـ Gradle وتكوين الإصدار ورقم البناء التلقائي
@@ -92,7 +91,7 @@ jobs:
           }
           EOF
 
-          # 6. مزامنة المشروع وبناء الـ AAB والـ APK بنمط ثابت
+          # 6. مزامنة المشروع وبناء الـ AAB والـ APK بنمط ثابت مستقر
           npx cap sync android
           cd android
           chmod +x gradlew
