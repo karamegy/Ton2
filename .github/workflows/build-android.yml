@@ -30,7 +30,7 @@ jobs:
           echo "y" | ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --licenses || true
           ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;34.0.0"
 
-          # 2. إعداد مجلد الويب وتحديث ملف التكوين مباشرة
+          # 2. إعداد مجلد الويب وتحديث ملف التكوين لتثبيت اسم الحزمة الإجباري
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
@@ -46,22 +46,11 @@ jobs:
           # 3. تثبيت أدوات الكاباسيتور الأساسية
           npm install @capacitor/cli @capacitor/core --save-dev
 
-          # 4. إعادة إنشاء منصة أندرويد نظيفة
+          # 4. إعادة إنشاء منصة أندرويد (تقوم الأداة بتوليد MainActivity تلقائياً بالمعرف الصحيح)
           rm -rf android
           npx cap add android
 
-          # 5. إنشاء مسار الجافا الصحيح وملف MainActivity
-          mkdir -p android/app/src/main/java/io/github/karamegy.Ton2
-          cat << 'EOF' > android/app/src/main/java/io/github/karamegy.Ton2/MainActivity.java
-          package io.github.karamegy.Ton2;
-
-          import android.os.Bundle;
-          import com.getcapacitor.BridgeActivity;
-
-          public class MainActivity extends BridgeActivity {}
-          EOF
-
-          # 6. تحديث ملف AndroidManifest.xml لإضافة أمر التجاوز الآمن للـ SDK
+          # 5. تحديث ملف AndroidManifest.xml المعتمد بالأذونات والتجاوز
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -110,10 +99,10 @@ jobs:
           </manifest>
           EOF
 
-          # 7. نسخ ملف التوقيع الحقيقي
+          # 6. نسخ ملف التوقيع الحقيقي
           cp signing.keystore android/app/ || true
 
-          # 8. حقن إعدادات الـ SDK (compileSdk 36) وتوافق Java 17 وإعدادات التوقيع
+          # 7. حقن إعدادات الـ SDK (compileSdk 36 و targetSdk 36) وتوافق Java 17 وإعدادات التوقيع
           cat << 'EOF' >> android/app/build.gradle
 
           android {
@@ -144,7 +133,7 @@ jobs:
           }
           EOF
 
-          # 9. مزامنة المشروع وبناء الحزمة مباشرة
+          # 8. مزامنة المشروع وبناء الحزمة مباشرة
           npx cap sync android
           cd android
           chmod +x gradlew
