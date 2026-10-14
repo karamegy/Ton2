@@ -22,7 +22,7 @@ jobs:
         run: |
           npm install
 
-          # 1. تهيئة مجلد www وتحديث ملف التكوين
+          # 1. تهيئة مجلد www وتحديث ملف التكوين لتثبيت اسم الحزمة com.giti.erp.ton2 والـ webDir
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
@@ -30,16 +30,18 @@ jobs:
             const fs = require("fs");
             let cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
             cfg.webDir = "www";
+            cfg.appId = "com.giti.erp.ton2";
+            cfg.appName = "Ton2 ERP";
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 2. مسح مجلد أندرويد الجزئي لإجبار الكاباسيتور على توليد gradlew وملفات البناء بالكامل
+          # 2. مسح مجلد أندرويد لإجبار الكاباسيتور على توليد مشروع جديد ونظيف
           rm -rf android
 
-          # 3. إنشاء منصة أندرويد نظيفة
+          # 3. إنشاء منصة أندرويد المربوطة بالحزمة المعتمدة
           npx @capacitor/cli add android
           
-          # 4. زرع حزمة com.giti.erp.ton2 وملف MainActivity
+          # 4. إنشاء مسار الجافا وملف MainActivity
           mkdir -p android/app/src/main/java/com/giti/erp/ton2
           cat << 'EOF' > android/app/src/main/java/com/giti/erp/ton2/MainActivity.java
           package com.giti.erp.ton2;
