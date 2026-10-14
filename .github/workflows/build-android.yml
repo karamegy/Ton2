@@ -104,16 +104,16 @@ jobs:
           # (تأكد أن ملف signing.keystore مرفوع في جذر مستودع جيت هوب الخاص بك)
           cp signing.keystore android/app/
 
-          # 7. إضافة إعدادات التوقيع (Signing Configs) إلى ملف build.gradle الخاص بتطبيق أندرويد
+          # 7. إضافة إعدادات التوقيع (Signing Configs) باستخدام أسرار جيت هوب المضافة أمنياً
           cat << 'EOF' >> android/app/build.gradle
 
           android {
               signingConfigs {
                   release {
                       storeFile file('signing.keystore')
-                      storePassword 'Gamef90IIwmB'
-                      keyAlias 'my-key-alias'
-                      keyPassword 'Gamef90IIwmB'
+                      storePassword "${{ secrets.KEYSTORE_PASSWORD }}"
+                      keyAlias "${{ secrets.KEY_ALIAS }}"
+                      keyPassword "${{ secrets.KEY_PASSWORD }}"
                   }
               }
               buildTypes {
