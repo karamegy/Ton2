@@ -42,8 +42,8 @@ jobs:
           npx @capacitor/cli add android
           
           # 4. إنشاء مسار الجافا وملف MainActivity بالمعرف الإجباري الصحيح
-          mkdir -p android/app/src/main/java/io/github/karamegy/Ton2
-          cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Ton2/MainActivity.java
+          mkdir -p android/app/src/main/java/io/github/karamegy.Ton2
+          cat << 'EOF' > android/app/src/main/java/io/github/karamegy.Ton2/MainActivity.java
           package io.github.karamegy.Ton2;
 
           import android.os.Bundle;
@@ -106,13 +106,13 @@ jobs:
           # 7. مزامنة المشروع أولاً
           npx cap sync android
 
-          # 8. حقن إعدادات الـ SDK (المستوى 34) وإعدادات التوقيع المعتمدة
+          # 8. حقن إعدادات الـ SDK بالمستوى 36 المطلوب لمتجر جوجل وإعدادات التوقيع المعتمدة
           cat << 'EOF' >> android/app/build.gradle
 
           android {
-              compileSdk 34
+              compileSdk 36
               defaultConfig {
-                  targetSdk 34
+                  targetSdk 36
               }
               signingConfigs {
                   release {
@@ -132,7 +132,7 @@ jobs:
           }
           EOF
 
-          # تعديل إصدار Gradle إلى الإصدار 8.5 السريع المدعوم لتجنب التعليق
+          # تعديل إصدار Gradle إلى الإصدار 8.5 السريع المدعوم
           sed -i 's/distributionUrl=.*$/distributionUrl=https\:\/\/services.gradle.org\/distributions\/gradle-8.5-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties || true
 
       - name: Set up JDK 17
@@ -147,9 +147,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-v2-${{ hashFiles('android/build.gradle', 'android/app/build.gradle') }}
+          key: ${{ runner.os }}-gradle-v3-${{ hashFiles('android/build.gradle', 'android/app/build.gradle') }}
           restore-keys: |
-            ${{ runner.os }}-gradle-v2-
+            ${{ runner.os }}-gradle-v3-
 
       - name: Build Android App (AAB & APK)
         run: |
