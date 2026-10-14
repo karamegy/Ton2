@@ -78,7 +78,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, signInWithCredential, 
+  GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithCredential, 
   signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
@@ -112,6 +112,15 @@ setPersistence(auth, indexedDBLocalPersistence).catch(() => {
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
+});
+
+// معالجة نتيجة تسجيل الدخول عبر إعادة التوجيه للـ PWA والـ WebView لتفادي أخطاء الـ State
+getRedirectResult(auth).then(async (result) => {
+  if (result && result.user) {
+    await ensureUserLicense(result.user);
+  }
+}).catch((error) => {
+  console.warn("Redirect result handling warning:", error);
 });
 
 function triggerAds() {
@@ -587,7 +596,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// الحل الهندسي النهائي والآمن لتسجيل الدخول بـ Google دون أخطاء الـ State
+// الحل الهندسي النهائي والآمن لتسجيل الدخول بـ Google دون أخطاء الـ State (تعديل لـ Redirect)
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -611,12 +620,9 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. استخدام Popup الآمن بدلاً من Redirect لتفادي مشاكل فقدان الـ sessionStorage تماماً في WebView
+      // 2. استخدام Redirect الآمن بدلاً من Popup لمنع خطأ missing initial state نهائياً في WebView و PWA
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
-      const result = await signInWithPopup(auth, googleProvider);
-      if (result && result.user) {
-        await ensureUserLicense(result.user);
-      }
+      await signInWithRedirect(auth, googleProvider);
 
     } catch (err) {
       console.error("Google Auth Error:", err);
