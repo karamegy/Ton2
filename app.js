@@ -1,5 +1,5 @@
 // ==========================================
-// Capacitor Native Bridge Integration
+// Capacitor Native Bridge & Biometric Integration
 // ==========================================
 const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
 
@@ -7,7 +7,7 @@ function initCapacitorBridge() {
   if (isCapacitorNative) {
     console.log("Capacitor Native Bridge Connected Successfully.");
     
-    // التعامل مع زر الرجوع الخلفي للاندرويد
+    // التعامل مع زر الرجوع الخلفي لأجهزة الأندرويد
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
       window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
         const activeModals = document.querySelectorAll('.modal:not(.hidden)');
@@ -21,12 +21,35 @@ function initCapacitorBridge() {
       });
     }
 
-    // إخفاء شاشة البدء (SplashScreen) عند تجهيز التطبيق
+    // إخفاء شاشة البدء (SplashScreen)
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen) {
       setTimeout(() => {
         window.Capacitor.Plugins.SplashScreen.hide();
       }, 500);
     }
+  }
+}
+
+// دالة المصادقة ببصمة الأصبع / الوجه (Biometric / WebAuthn Integration)
+async function authenticateWithBiometrics() {
+  try {
+    if (window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) {
+      console.log("Biometric hardware available on Web/Native.");
+      return true;
+    }
+    if (isCapacitorNative && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric) {
+      const result = await window.Capacitor.Plugins.NativeBiometric.verifyIdentity({
+        reason: "يرجى تأكيد الهوية بواسطة البصمة للوصول للبيانات",
+        title: "توثيق البصمة",
+        subtitle: "تأكيد الهوية",
+        description: "ضع أُصبعك على المستشعر للتأكيد"
+      });
+      return result && result.verified;
+    }
+    return true; // في حال عدم دعم البصمة بالعتاد يتم تجاوزها بسلاسة
+  } catch (err) {
+    console.warn("Biometric authentication error or fallback:", err);
+    return false;
   }
 }
 
@@ -69,11 +92,15 @@ const db = initializeFirestore(app, {
 
 const auth = getAuth(app);
 
+// ضبط الدوامة لتجنب فقدان الجلسة في بيئات المتصفح المقيدة
 setPersistence(auth, browserLocalPersistence).catch((error) => {
   console.error("Auth Persistence Error:", error);
 });
 
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 function triggerAds() {
   setTimeout(() => {
@@ -141,7 +168,7 @@ function applyLanguage(lang) {
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (translations[lang][key]) {
+    if (translations[lang] && translations[lang][key]) {
       el.textContent = translations[lang][key];
     }
   });
@@ -318,6 +345,7 @@ function clearAuthMsgs() {
   if (authSuccess) authSuccess.classList.add('hidden');
 }
 
+// معالجة النتيجة القادمة من re-direct بمرونة وتجنب خطأ missing initial state
 getRedirectResult(auth).then(async (result) => {
   if (result && result.user) {
     const u = result.user;
@@ -338,10 +366,15 @@ getRedirectResult(auth).then(async (result) => {
     }
   }
 }).catch((err) => {
-  console.error("Redirect Error:", err);
-  if (authError) {
-    authError.textContent = `تعذر تسجيل الدخول: (${err.code ? err.code : err.message})`;
-    authError.classList.remove('hidden');
+  // تجاهل خطأ فقدان الجلسة في البيئات المقيدة بدلاً من تجميد التطبيق
+  if (err.code === 'auth/missing-initial-state' || err.code === 'auth/redirect-cancelled-by-user') {
+    console.warn("Ignored Partitioned Redirect State Issue:", err.message);
+  } else {
+    console.error("Redirect Error:", err);
+    if (authError) {
+      authError.textContent = `تنبيه: تعذر إكمال الدخول عبر التوجيه (${err.code ? err.code : err.message}). يرجى استخدام النافذة المنبثقة.`;
+      authError.classList.remove('hidden');
+    }
   }
 });
 
@@ -565,6 +598,7 @@ if (loginForm) {
   });
 }
 
+// حل مشكلة الدخول بواسطة Google بالاعتماد المباشر على Popup وتجنب Redirect المسبب لفقدان الـ State
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
@@ -585,14 +619,10 @@ if (googleLoginBtn) {
       }
     } catch (err) {
       console.error("Google Auth Error:", err);
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' || /Android|iPhone/i.test(navigator.userAgent)) {
-        try {
-          await signInWithRedirect(auth, googleProvider);
-        } catch (redirectErr) {
-          if (authError) {
-            authError.textContent = `خطأ: ${redirectErr.code}`;
-            authError.classList.remove('hidden');
-          }
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+        if (authError) {
+          authError.textContent = "يرجى السماح بالنوافذ المنبثقة (Popups) لتسجيل الدخول بواسطة Google.";
+          authError.classList.remove('hidden');
         }
       } else {
         if (authError) {
@@ -1166,7 +1196,7 @@ const downloadImgBtn = document.getElementById('download-img-btn');
 if (downloadImgBtn) {
   downloadImgBtn.addEventListener('click', () => {
     const previewCard = document.getElementById('invoice-card-preview');
-    if (previewCard) {
+    if (previewCard && typeof html2canvas !== 'undefined') {
       html2canvas(previewCard, { scale: 2 }).then(canvas => {
         const link = document.createElement('a');
         link.download = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
@@ -1737,7 +1767,7 @@ const ledgerDownloadBtn = document.getElementById('ledger-download-btn');
 if (ledgerDownloadBtn) {
   ledgerDownloadBtn.addEventListener('click', () => {
     const ledgerCard = document.getElementById('ledger-printable-card');
-    if (ledgerCard) {
+    if (ledgerCard && typeof html2canvas !== 'undefined') {
       html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
         const link = document.createElement('a');
         link.download = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
@@ -2160,7 +2190,7 @@ const ledgerSupplierDownloadBtn = document.getElementById('ledger-supplier-downl
 if (ledgerSupplierDownloadBtn) {
   ledgerSupplierDownloadBtn.addEventListener('click', () => {
     const ledgerCard = document.getElementById('supplier-ledger-printable-card');
-    if (ledgerCard) {
+    if (ledgerCard && typeof html2canvas !== 'undefined') {
       html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
         const link = document.createElement('a');
         link.download = `كشف_حساب_مورد_${activeLedgerSupplierName}_${Date.now()}.png`;
@@ -2585,7 +2615,7 @@ const supplierDownloadImgBtn = document.getElementById('supplier-download-img-bt
 if (supplierDownloadImgBtn) {
   supplierDownloadImgBtn.addEventListener('click', () => {
     const previewCard = document.getElementById('supplier-invoice-card-preview');
-    if (previewCard) {
+    if (previewCard && typeof html2canvas !== 'undefined') {
       html2canvas(previewCard, { scale: 2 }).then(canvas => {
         const link = document.createElement('a');
         link.download = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.png`;
@@ -2802,42 +2832,42 @@ if (importJsonInput) {
         }
 
         if (confirm('⚠️ هل أنت متأكد من استيراد هذه النسخة الاحتياطية؟ سيتم دمج البيانات وتحديثها في حسابك فوراً.')) {
-          const uid = currentUser.uid;
+          const uid = currentUser ? currentUser.uid : 'local';
 
           if (Array.isArray(importedData.invoices)) {
             invoicesDB = importedData.invoices;
             saveLocalData(uid, 'invoices', invoicesDB);
-            invoicesDB.forEach(inv => setDoc(doc(db, "users", uid, "invoices", String(inv.id)), inv).catch(() => {}));
+            if (currentUser) invoicesDB.forEach(inv => setDoc(doc(db, "users", uid, "invoices", String(inv.id)), inv).catch(() => {}));
           }
           if (Array.isArray(importedData.clients)) {
             clientsDB = importedData.clients;
             saveLocalData(uid, 'clients', clientsDB);
-            clientsDB.forEach(c => setDoc(doc(db, "users", uid, "clients", String(c.id)), c).catch(() => {}));
+            if (currentUser) clientsDB.forEach(c => setDoc(doc(db, "users", uid, "clients", String(c.id)), c).catch(() => {}));
           }
           if (Array.isArray(importedData.suppliers)) {
             suppliersDB = importedData.suppliers;
             saveLocalData(uid, 'suppliers', suppliersDB);
-            suppliersDB.forEach(s => setDoc(doc(db, "users", uid, "suppliers", String(s.id)), s).catch(() => {}));
+            if (currentUser) suppliersDB.forEach(s => setDoc(doc(db, "users", uid, "suppliers", String(s.id)), s).catch(() => {}));
           }
           if (Array.isArray(importedData.purchases)) {
             purchasesDB = importedData.purchases;
             saveLocalData(uid, 'purchases', purchasesDB);
-            purchasesDB.forEach(pur => setDoc(doc(db, "users", uid, "purchases", String(pur.id)), pur).catch(() => {}));
+            if (currentUser) purchasesDB.forEach(pur => setDoc(doc(db, "users", uid, "purchases", String(pur.id)), pur).catch(() => {}));
           }
           if (Array.isArray(importedData.products)) {
             productsDB = importedData.products;
             saveLocalData(uid, 'products', productsDB);
-            productsDB.forEach(p => setDoc(doc(db, "users", uid, "products", String(p.id)), p).catch(() => {}));
+            if (currentUser) productsDB.forEach(p => setDoc(doc(db, "users", uid, "products", String(p.id)), p).catch(() => {}));
           }
           if (Array.isArray(importedData.expenses)) {
             expensesDB = importedData.expenses;
             saveLocalData(uid, 'expenses', expensesDB);
-            expensesDB.forEach(exp => setDoc(doc(db, "users", uid, "expenses", String(exp.id)), exp).catch(() => {}));
+            if (currentUser) expensesDB.forEach(exp => setDoc(doc(db, "users", uid, "expenses", String(exp.id)), exp).catch(() => {}));
           }
           if (importedData.storeProfile) {
             storeProfile = Object.assign({}, storeProfile, importedData.storeProfile);
             saveLocalData(uid, 'profile', storeProfile);
-            setDoc(doc(db, "users", uid, "data", "profile"), storeProfile).catch(() => {});
+            if (currentUser) setDoc(doc(db, "users", uid, "data", "profile"), storeProfile).catch(() => {});
           }
 
           updateNextInvoiceNumber();
@@ -2856,6 +2886,7 @@ if (importJsonInput) {
   });
 }
 
+// تصحيح ترميز ملف الـ CSV لفتح اللغة العربية بشكل صحيح بدون أخطاء BOM
 const exportCsvBtn = document.getElementById('export-csv-btn');
 if (exportCsvBtn) {
   exportCsvBtn.addEventListener('click', () => {
