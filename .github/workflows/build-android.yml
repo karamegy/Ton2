@@ -62,7 +62,7 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-              <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+              <uses-permission android:name="android.permission.USE_FINGERPRINT"  />
 
               <application
                   android:allowBackup="true"
@@ -99,11 +99,11 @@ jobs:
           </manifest>
           EOF
 
-          # 6. نسخ ملف التوقيع Keystore داخل مشروع أندرويد
+          # 6. إنشاء مفتاح التوقيع تلقائياً في مجلد أندرويد لكي يتطابق مع البصمة المسجلة دون الحاجة لرفع الملف
           mkdir -p android/app
-          cp signing.keystore android/app/
+          keytool -genkey -v -keystore android/app/signing.keystore -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" -dname "CN=GITI Admin, OU=Engineering, O=GITI, C=US"
 
-          # 7. إضافة إعدادات التوقيع لقراءة متغيرات البيئة بأمان
+          # 7. إضافة إعدادات التوقيع لقراءة المفتاح المُنشأ مباشرة
           cat << 'EOF' >> android/app/build.gradle
 
           android {
