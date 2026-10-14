@@ -52,8 +52,52 @@ jobs:
           public class MainActivity extends BridgeActivity {}
           EOF
 
-          # 5. تطبيق ملف AndroidManifest.xml المعدل بالأذونات والبصمة
-          cp AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          # 5. كتابة ملف AndroidManifest.xml التلقائي المصحح بدقة الموارد والأذونات
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+              <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+
+                  <activity
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                      android:name="com.giti.erp.ton2.MainActivity"
+                      android:label="@string/title_activity_main"
+                      android:theme="@style/AppTheme.NoActionBarLaunch"
+                      android:launchMode="singleTask"
+                      android:exported="true">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="https" android:host="karamegy.github.io" android:pathPrefix="/Ton2" />
+                          <data android:scheme="https" android:host="giti-68750.firebaseapp.com" />
+                      </intent-filter>
+                  </activity>
+
+              </application>
+
+          </manifest>
+          EOF
 
           # 6. مزامنة المشروع
           npx cap sync android
