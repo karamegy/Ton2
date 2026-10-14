@@ -99,11 +99,11 @@ jobs:
           </manifest>
           EOF
 
-          # 6. إنشاء مفتاح التوقيع تلقائياً في مجلد أندرويد لكي يتطابق تماماً مع البيانات المطلوبة دون أخطاء مسار
+          # 6. نسخ ملف التوقيع الأصلي الحقيقي (signing.keystore) من جذر المشروع إلى مجلد أندرويد
           mkdir -p android/app
-          keytool -genkey -v -keystore android/app/signing.keystore -alias "my-key-alias" -keyalg RSA -keysize 2048 -validity 10000 -storepass "Gamef90IIwmB" -keypass "Gamef90IIwmB" -dname "CN=GITI Admin, OU=Engineering, O=GITI, C=US"
+          cp signing.keystore android/app/
 
-          # 7. إضافة إعدادات التوقيع مباشرة بكلمات المرور الواضحة لتجنب مشكلة قراءة المتغيرات البيئية الفارغة
+          # 7. إضافة إعدادات التوقيع لاستخدام المفتاح الأصلي ببياناته الصحيحة
           cat << 'EOF' >> android/app/build.gradle
 
           android {
