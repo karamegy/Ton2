@@ -1,4 +1,18 @@
 // ==========================================
+// Firebase & Core Application Engine Imports
+// ==========================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { 
+  getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc, getDocs,
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { 
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
+  GoogleAuthProvider, signInWithPopup, signInWithCredential, 
+  signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// ==========================================
 // Capacitor Native Bridge & Biometric Integration
 // ==========================================
 const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
@@ -7,10 +21,11 @@ function initCapacitorBridge() {
   if (isCapacitorNative) {
     console.log("Capacitor Native Bridge Connected Successfully.");
     
-    // تهيئة مكتبة Google Auth الأصلية عند فتح التطبيق لو متوفرة
+    // تهيئة مكتبة Google Auth الأصلية عند فتح التطبيق
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
       window.Capacitor.Plugins.GoogleAuth.initialize({
         clientId: '753885709520-web.apps.googleusercontent.com',
+        serverClientId: '753885709520-web.apps.googleusercontent.com',
         grantOfflineAccess: true,
         scopes: ['profile', 'email']
       }).catch(err => console.warn("GoogleAuth init warning:", err));
@@ -69,19 +84,8 @@ if (document.readyState === 'loading') {
 }
 
 // ==========================================
-// Firebase & Core Application Engine
+// Firebase App Initialization & Config
 // ==========================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { 
-  getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc, getDocs,
-  initializeFirestore, persistentLocalCache, persistentMultipleTabManager 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { 
-  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithCredential, 
-  signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
 const firebaseConfig = {
   apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
   authDomain: "giti-68750.firebaseapp.com",
@@ -112,15 +116,6 @@ setPersistence(auth, indexedDBLocalPersistence).catch(() => {
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
-});
-
-// معالجة نتيجة تسجيل الدخول عبر إعادة التوجيه للـ PWA والـ WebView لتفادي أخطاء الـ State
-getRedirectResult(auth).then(async (result) => {
-  if (result && result.user) {
-    await ensureUserLicense(result.user);
-  }
-}).catch((error) => {
-  console.warn("Redirect result handling warning:", error);
 });
 
 function triggerAds() {
@@ -351,10 +346,10 @@ if (openPrivacySettingsBtn) openPrivacySettingsBtn.addEventListener('click', () 
 });
 
 const closePrivacyBtn = document.getElementById('close-privacy-btn');
-if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.add('hidden'); });
+if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.remove('hidden'); });
 
 const acceptPrivacyBtn = document.getElementById('accept-privacy-btn');
-if (acceptPrivacyBtn) acceptPrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.add('hidden'); });
+if (acceptPrivacyBtn) acceptPrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.remove('hidden'); });
 
 const tabLoginBtn = document.getElementById('tab-login-btn');
 if (tabLoginBtn) {
@@ -596,7 +591,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// زر تسجيل الدخول بجوجل المباشر والمنظف من أي حظر أو رسائل تقييد
+// زر تسجيل الدخول بجوجل المباشر المقاوم لأخطاء ה-Redirect
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -604,8 +599,8 @@ if (googleLoginBtn) {
     clearAuthMsgs();
     
     try {
-      // 1. المحاولة عبر البلاجن الأصلي لأندرويد لو متوفر
-      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+      // 1. المحاولة عبر البلاجن الأصلي لأندرويد لو متوفر في تطبيق Capacitor
+      if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         try {
           const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
           const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
@@ -616,13 +611,15 @@ if (googleLoginBtn) {
             return;
           }
         } catch (nativeErr) {
-          console.warn("Native GoogleAuth warning:", nativeErr);
+          console.warn("Native GoogleAuth warning, falling back to popup:", nativeErr);
         }
       }
 
-      // 2. التشغيل المباشر لتسجيل الدخول بدون أي رسائل حظر أو قيود
-      await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
-      await signInWithRedirect(auth, googleProvider);
+      // 2. التشغيل المباشر عبر signInWithPopup لتجنب خطأ missing initial state
+      const result = await signInWithPopup(auth, googleProvider);
+      if (result && result.user) {
+        await ensureUserLicense(result.user);
+      }
 
     } catch (err) {
       console.error("Google Auth Error:", err);
@@ -669,7 +666,7 @@ if (registerForm) {
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) logoutBtn.addEventListener('click', async () => {
-  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+  if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
     try { await window.Capacitor.Plugins.GoogleAuth.signOut(); } catch (e) {}
   }
   signOut(auth);
@@ -677,7 +674,7 @@ if (logoutBtn) logoutBtn.addEventListener('click', async () => {
 
 const logoutLockBtn = document.getElementById('logout-lock-btn');
 if (logoutLockBtn) logoutLockBtn.addEventListener('click', async () => {
-  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+  if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
     try { await window.Capacitor.Plugins.GoogleAuth.signOut(); } catch (e) {}
   }
   signOut(auth);
@@ -1802,7 +1799,7 @@ if (ledgerPrintBtn) {
       <div class="print-header">
         ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
         <h1>كشف حساب عميل</h1>
-        2>${storeProfile.name}</h2>
+        <h2>${storeProfile.name}</h2>
         <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
         <p>${storeProfile.address ? storeProfile.address : ''}</p>
         <hr>
@@ -1837,7 +1834,7 @@ if (ledgerPrintBtn) {
             <tr>
               <td>دفعة سداد نقدي 💵</td>
               <td>${p.date}</td>
-              <td>-${p.amount.toFixed(2)}${storeProfile.currency}</td>
+              <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
             </tr>
           `).join('')}
         </tbody>
