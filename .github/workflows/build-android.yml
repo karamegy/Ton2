@@ -113,7 +113,7 @@ jobs:
           # 7. نسخ ملف التوقيع الحقيقي
           cp signing.keystore android/app/ || true
 
-          # 8. حقن إعدادات الـ SDK (compileSdk 36 و minSdk 23 و targetSdk 36) وإعدادات التوقيع
+          # 8. حقن إعدادات الـ SDK (compileSdk 36) وتوافق Java 17 وإعدادات التوقيع
           cat << 'EOF' >> android/app/build.gradle
 
           android {
@@ -122,6 +122,10 @@ jobs:
                   applicationId "io.github.karamegy.Ton2"
                   minSdk 23
                   targetSdk 36
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
               }
               signingConfigs {
                   release {
