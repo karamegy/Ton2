@@ -42,8 +42,8 @@ jobs:
           npx @capacitor/cli add android
           
           # 4. إنشاء مسار الجافا وملف MainActivity بالمعرف الإجباري الصحيح
-          mkdir -p android/app/src/main/java/io/github/karamegy/Ton2
-          cat << 'EOF' > android/app/src/main/java/io/github/karamegy/Ton2/MainActivity.java
+          mkdir -p android/app/src/main/java/io/github/karamegy.Ton2
+          cat << 'EOF' > android/app/src/main/java/io/github/karamegy.Ton2/MainActivity.java
           package io.github.karamegy.Ton2;
 
           import android.os.Bundle;
@@ -106,13 +106,13 @@ jobs:
           # 7. مزامنة المشروع أولاً
           npx cap sync android
 
-          # 8. حقن إعدادات الـ SDK (المستوى 36) وإعدادات التوقيع المعتمدة
+          # 8. حقن إعدادات الـ SDK (المستوى 34 المدعوم ثابتاً في البيئة) وإعدادات التوقيع المعتمدة
           cat << 'EOF' >> android/app/build.gradle
 
           android {
-              compileSdk 36
+              compileSdk 34
               defaultConfig {
-                  targetSdk 36
+                  targetSdk 34
               }
               signingConfigs {
                   release {
@@ -137,10 +137,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Install Android SDK 36 Platform
-        run: |
-          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platforms;android-36"
 
       - name: Build Android App (AAB & APK)
         run: |
