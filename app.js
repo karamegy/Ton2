@@ -585,7 +585,6 @@ if (loginForm) {
     }
   });
 }
-
 // =========================================================
 // الحل الجذري والنهائي لتسجيل الدخول بـ Google دون أخطاء Session
 // =========================================================
@@ -611,9 +610,10 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. استخدام Redirect بدلاً من Popup لتجنب مشكلة الـ Session Storage المفقودة على الهواتف
+      // 2. استخدام Popup الآمن بدلاً من Redirect الذي يسبب خطأ missing initial state تماماً
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
-      await signInWithRedirect(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      await ensureUserLicense(result.user);
 
     } catch (err) {
       console.error("Google Auth Error:", err);
@@ -623,7 +623,7 @@ if (googleLoginBtn) {
         } else if (err.code === 'auth/popup-blocked') {
           authError.textContent = "يرجى السماح بفتح النوافذ المنبثقة لإكمال التوثيق.";
         } else {
-          authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.message ? err.message : 'خطأ في الجلسة'})`;
+          authError.textContent = "تعذر إكمال المصادقة. يفضل استخدام تسجيل الدخول بالبريد الإلكتروني وكلمة المرور أدناه لضمان الدخول الفوري دون عقبات.";
         }
         authError.classList.remove('hidden');
       }
