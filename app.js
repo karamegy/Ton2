@@ -69,8 +69,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, 
-  signOut, onAuthStateChanged, setPersistence, browserLocalPersistence 
+  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -149,7 +148,7 @@ const translations = {
     clientPhone: "Client Phone (WhatsApp)", itemTitle: "Item / Service", qtyTitle: "Qty", priceTitle: "Price",
     subtotalTitle: "Total", addItem: "+ Add Item", subtotal: "Subtotal:", discount: "Discount:",
     tax: "VAT (%):", payStatus: "Payment Status:", grandTotal: "Grand Total:", saveInv: "Save Invoice",
-    sendWhatsApp: "WhatsApp 💬", print: "Print 🖨️", invHistory: "Cloud Invoice Logs", addProduct: "Add Product",
+    sendWhatsApp: "WhatsApp 💬", print: "Print ️", invHistory: "Cloud Invoice Logs", addProduct: "Add Product",
     pName: "Product Name", pPrice: "Selling Price", pCost: "Cost Price", pStock: "Stock Quantity", saveProduct: "Save Product",
     productList: "Stocked Items", clientDb: "Client Accounts", addExpense: "Add Expense",
     expTitle: "Expense Category", expAmount: "Amount", saveExpense: "Record Expense", expList: "Expense Log",
@@ -344,39 +343,6 @@ function clearAuthMsgs() {
   if (authError) authError.classList.add('hidden');
   if (authSuccess) authSuccess.classList.add('hidden');
 }
-
-// معالجة النتيجة القادمة من re-direct بمرونة وتجنب خطأ missing initial state
-getRedirectResult(auth).then(async (result) => {
-  if (result && result.user) {
-    const u = result.user;
-    const userRef = doc(db, "licenses", u.uid);
-    try {
-      const docSnap = await getDoc(userRef);
-      if (!docSnap.exists()) {
-        await setDoc(userRef, {
-          email: u.email,
-          storeName: u.displayName ? u.displayName : "نشاط جديد",
-          isActive: true,
-          role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
-          createdAt: new Date().toISOString()
-        });
-      }
-    } catch (e) {
-      console.warn("Redirect License Check Error:", e);
-    }
-  }
-}).catch((err) => {
-  // تجاهل خطأ فقدان الجلسة في البيئات المقيدة بدلاً من تجميد التطبيق
-  if (err.code === 'auth/missing-initial-state' || err.code === 'auth/redirect-cancelled-by-user') {
-    console.warn("Ignored Partitioned Redirect State Issue:", err.message);
-  } else {
-    console.error("Redirect Error:", err);
-    if (authError) {
-      authError.textContent = `تنبيه: تعذر إكمال الدخول عبر التوجيه (${err.code ? err.code : err.message}). يرجى استخدام النافذة المنبثقة.`;
-      authError.classList.remove('hidden');
-    }
-  }
-});
 
 onAuthStateChanged(auth, async (user) => {
   const adminBtn = document.getElementById('admin-btn');
@@ -598,7 +564,7 @@ if (loginForm) {
   });
 }
 
-// حل مشكلة الدخول بواسطة Google بالاعتماد المباشر على Popup وتجنب Redirect المسبب لفقدان الـ State
+// حل نهائي وآمن لتسجيل الدخول بواسطة Google باستخدام النافذة المنبثقة (Popup) فقط دون أي Redirect
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
@@ -619,16 +585,9 @@ if (googleLoginBtn) {
       }
     } catch (err) {
       console.error("Google Auth Error:", err);
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-        if (authError) {
-          authError.textContent = "يرجى السماح بالنوافذ المنبثقة (Popups) لتسجيل الدخول بواسطة Google.";
-          authError.classList.remove('hidden');
-        }
-      } else {
-        if (authError) {
-          authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code ? err.code : 'خطأ غير معروف'})`;
-          authError.classList.remove('hidden');
-        }
+      if (authError) {
+        authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code || 'خطأ غير معروف'})`;
+        authError.classList.remove('hidden');
       }
     }
   });
@@ -661,7 +620,7 @@ if (registerForm) {
     } catch (err) {
       if (authError) {
         authError.textContent = err.message.includes('email-already-in-use') ? "البريد مستخدم بالفعل" : "خطأ في التسجيل";
-        authError.classList.remove('hidden');
+        authError.classList.add('hidden');
       }
     }
   });
@@ -2886,7 +2845,6 @@ if (importJsonInput) {
   });
 }
 
-// تصحيح ترميز ملف الـ CSV لفتح اللغة العربية بشكل صحيح بدون أخطاء BOM
 const exportCsvBtn = document.getElementById('export-csv-btn');
 if (exportCsvBtn) {
   exportCsvBtn.addEventListener('click', () => {
