@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "753885709520-aabreleaseclienthashplaceholder.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "io.github.karamegy.Ton2",
+            "certificate_hash": "3f47eddc6a7b006f2e6ca1b85e036d5578e0b913aeeecf8970a75c26e0d1a213"
+          }
+        },
+        {
           "client_id": "753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com",
           "client_type": 3
         }
