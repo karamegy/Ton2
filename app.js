@@ -596,7 +596,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// التعديل الهندسي النهائي والآمن لزر جوجل لمنع خطأ missing initial state في أندرويد و PWA
+// زر تسجيل الدخول بجوجل المباشر والمنظف من أي حظر أو رسائل تقييد
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -620,23 +620,14 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. التحقق من تشغيل التطبيق داخل تطبيق أندرويد أصلي (WebView) لمنع فشل الـ Redirect وخطأ الـ State
-      if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform()) {
-        if (authError) {
-          authError.textContent = "⚠️ تسجيل الدخول بجوجل غير متاح مباشرة داخل تطبيق الأندرويد الداخلي. يرجى الدخول باستخدام البريد الإلكتروني وكلمة المرور بكل سهولة.";
-          authError.classList.remove('hidden');
-        }
-        return;
-      }
-
-      // 3. متصفح الويب العادي و PWA
+      // 2. التشغيل المباشر لتسجيل الدخول بدون أي رسائل حظر أو قيود
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
       await signInWithRedirect(auth, googleProvider);
 
     } catch (err) {
       console.error("Google Auth Error:", err);
       if (authError) {
-        authError.textContent = "يرجى استخدام البريد الإلكتروني وكلمة المرور للدخول الفوري والدائم.";
+        authError.textContent = "حدث خطأ أثناء الاتصال بخدمة جوجل. يرجى التأكد من الإنترنت والمحاولة مرة أخرى.";
         authError.classList.remove('hidden');
       }
     }
@@ -1811,7 +1802,7 @@ if (ledgerPrintBtn) {
       <div class="print-header">
         ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
         <h1>كشف حساب عميل</h1>
-        <h2>${storeProfile.name}</h2>
+        2>${storeProfile.name}</h2>
         <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
         <p>${storeProfile.address ? storeProfile.address : ''}</p>
         <hr>
