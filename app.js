@@ -596,7 +596,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// الحل الهندسي النهائي والآمن لتسجيل الدخول بـ Google دون أخطاء الـ State (تعديل لـ Redirect)
+// التعديل الهندسي النهائي والآمن لزر جوجل لمنع خطأ missing initial state في أندرويد و PWA
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -620,14 +620,23 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. استخدام Redirect الآمن بدلاً من Popup لمنع خطأ missing initial state نهائياً في WebView و PWA
+      // 2. التحقق من تشغيل التطبيق داخل تطبيق أندرويد أصلي (WebView) لمنع فشل الـ Redirect وخطأ الـ State
+      if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform()) {
+        if (authError) {
+          authError.textContent = "⚠️ تسجيل الدخول بجوجل غير متاح مباشرة داخل تطبيق الأندرويد الداخلي. يرجى الدخول باستخدام البريد الإلكتروني وكلمة المرور بكل سهولة.";
+          authError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      // 3. متصفح الويب العادي و PWA
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
       await signInWithRedirect(auth, googleProvider);
 
     } catch (err) {
       console.error("Google Auth Error:", err);
       if (authError) {
-        authError.textContent = "تعذر إكمال المصادقة. يرجى استخدام البريد الإلكتروني وكلمة المرور للدخول الفوري.";
+        authError.textContent = "يرجى استخدام البريد الإلكتروني وكلمة المرور للدخول الفوري والدائم.";
         authError.classList.remove('hidden');
       }
     }
