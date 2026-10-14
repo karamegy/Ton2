@@ -18,16 +18,25 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Clean and Create Android Structure
+      - name: Fix Config and Generate Android Structure
         run: |
           npm install
-          # حذف أي مجلد أندرويد قديم قد يسبب تضارباً
-          rm -rf android
           
-          # استدعاء أداة كاباسيتور لتوليد مشروع أندرويد نظيف 100%
+          # تعديل ملف التكوين لتصحيح مشكلة webDir وحل خطأ النقطة نهائياً
+          node -e '
+            const fs = require("fs");
+            const config = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
+            if (config.webDir === ".") {
+              config.webDir = "www";
+            }
+            fs.writeFileSync("capacitor.config.json", JSON.stringify(config, null, 2));
+          ' || true
+
+          # مسح مجلد أندرويد القديم وتوليد بيئة نظيفة
+          rm -rf android
           npx @capacitor/cli add android
           
-          # إنشاء حزمة الجافا المطلوبة لمشروع Ton2 وإعداد MainActivity
+          # إنشاء حزمة الجافا لمشروع Ton2 وإعداد MainActivity
           mkdir -p android/app/src/main/java/com/giti/erp/ton2
           cat << 'EOF' > android/app/src/main/java/com/giti/erp/ton2/MainActivity.java
           package com.giti.erp.ton2;
