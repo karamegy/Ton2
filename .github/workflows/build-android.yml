@@ -52,7 +52,10 @@ jobs:
           public class MainActivity extends BridgeActivity {}
           EOF
 
-          # 5. مزامنة المشروع
+          # 5. تطبيق ملف AndroidManifest.xml المعدل بالأذونات والبصمة
+          cp AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+
+          # 6. مزامنة المشروع
           npx cap sync android
 
       - name: Set up JDK 17
