@@ -78,7 +78,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, signInWithCredential,
+  GoogleAuthProvider, signInWithPopup, signInWithCredential, signInWithRedirect,
   signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
@@ -587,7 +587,7 @@ if (loginForm) {
 }
 
 // =========================================================
-// الحل الجذري والنهائي لتسجيل الدخول بـ Google عبر المكتبة الأصلية (Native Google Auth)
+// الحل الجذري والنهائي لتسجيل الدخول بـ Google دون أخطاء Session
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -595,7 +595,7 @@ if (googleLoginBtn) {
     clearAuthMsgs();
     
     try {
-      // 1. الدخول عبر المكتبة الأصلية في التطبيق المثبت على الأندرويد لتجنب مشاكل المتصفح نهائياً
+      // 1. إذا كان التطبيق يعمل كـ Native على الأندرويد، استدعاء الـ Plugin الأصلي مباشرة
       if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         try {
           const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
@@ -607,14 +607,13 @@ if (googleLoginBtn) {
             return;
           }
         } catch (nativeErr) {
-          console.warn("Native GoogleAuth plugin error, falling back to popup:", nativeErr);
+          console.warn("Native GoogleAuth fallback error:", nativeErr);
         }
       }
 
-      // 2. بديل الويب الآمن (إذا كان يتم التجربة على متصفح عادي)
+      // 2. استخدام Redirect بدلاً من Popup لتجنب مشكلة الـ Session Storage المفقودة على الهواتف
       await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
-      const result = await signInWithPopup(auth, googleProvider);
-      await ensureUserLicense(result.user);
+      await signInWithRedirect(auth, googleProvider);
 
     } catch (err) {
       console.error("Google Auth Error:", err);
@@ -622,7 +621,7 @@ if (googleLoginBtn) {
         if (err.code === 'auth/popup-closed-by-user') {
           authError.textContent = "تم إغلاق نافذة تسجيل الدخول قبل الإكمال.";
         } else if (err.code === 'auth/popup-blocked') {
-          authError.textContent = "يرجى السماح بفتح النوافذ المنبثقة (Popups) لإكمال التوثيق.";
+          authError.textContent = "يرجى السماح بفتح النوافذ المنبثقة لإكمال التوثيق.";
         } else {
           authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.message ? err.message : 'خطأ في الجلسة'})`;
         }
