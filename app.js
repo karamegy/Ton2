@@ -54,29 +54,6 @@ function initCapacitorBridge() {
   }
 }
 
-// دالة المصادقة ببصمة الأصبع / الوجه (Biometric Integration)
-async function authenticateWithBiometrics() {
-  try {
-    if (window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) {
-      console.log("Biometric hardware available on Web/Native.");
-      return true;
-    }
-    if (isCapacitorNative && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric) {
-      const result = await window.Capacitor.Plugins.NativeBiometric.verifyIdentity({
-        reason: "يرجى تأكيد الهوية بواسطة البصمة للوصول للبيانات",
-        title: "توثيق البصمة",
-        subtitle: "تأكيد الهوية",
-        description: "ضع أُصبعك على المستشعر للتأكيد"
-      });
-      return result && result.verified;
-    }
-    return true;
-  } catch (err) {
-    console.warn("Biometric authentication error or fallback:", err);
-    return false;
-  }
-}
-
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initCapacitorBridge);
 } else {
@@ -321,16 +298,20 @@ async function ensureUserLicense(user) {
   try {
     const docSnap = await getDoc(userRef);
     if (!docSnap.exists()) {
-      await setDoc(userRef, {
+      const defaultLicense = {
         email: user.email,
         storeName: user.displayName ? user.displayName : "نشاط تجاري جديد",
         isActive: true,
         role: user.email === 'haretg@gmail.com' ? "admin_master" : "user",
         createdAt: new Date().toISOString()
-      });
+      };
+      await setDoc(userRef, defaultLicense);
+      localStorage.setItem(`giti_license_${user.uid}`, JSON.stringify(defaultLicense));
+    } else {
+      localStorage.setItem(`giti_license_${user.uid}`, JSON.stringify(docSnap.data()));
     }
   } catch (e) {
-    console.warn("License registration error:", e);
+    console.warn("License registration error or offline:", e);
   }
 }
 
@@ -346,10 +327,10 @@ if (openPrivacySettingsBtn) openPrivacySettingsBtn.addEventListener('click', () 
 });
 
 const closePrivacyBtn = document.getElementById('close-privacy-btn');
-if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.remove('hidden'); });
+if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.add('hidden'); });
 
 const acceptPrivacyBtn = document.getElementById('accept-privacy-btn');
-if (acceptPrivacyBtn) acceptPrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.remove('hidden'); });
+if (acceptPrivacyBtn) acceptPrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.add('hidden'); });
 
 const tabLoginBtn = document.getElementById('tab-login-btn');
 if (tabLoginBtn) {
@@ -400,6 +381,11 @@ onAuthStateChanged(auth, async (user) => {
     const userUidTag = document.getElementById('user-uid-tag');
     if (userUidTag) userUidTag.textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
     
+    // التخطي الفوري للعمل دون انترنت واعتماد البيانات المحلية فوراً
+    if (lockScreen) lockScreen.classList.add('hidden');
+    if (mainApp) mainApp.classList.remove('hidden');
+    loadDataLocallyAndSync(user.uid);
+
     const userRef = doc(db, "licenses", user.uid);
 
     if (licenseUnsubscriber) {
@@ -407,57 +393,28 @@ onAuthStateChanged(auth, async (user) => {
       licenseUnsubscriber = null;
     }
 
+    // محاولة جلب حالة الترخيص عبر الشبكة في الخلفية دون تعطيل واجهة المستخدم
+    try {
+      const cachedLicenseStr = localStorage.getItem(`giti_license_${user.uid}`);
+      if (cachedLicenseStr) {
+        const licenseData = JSON.parse(cachedLicenseStr);
+        applyLicenseData(licenseData);
+      }
+    } catch (e) {}
+
     licenseUnsubscriber = onSnapshot(userRef, async (snapshot) => {
       if (!snapshot.exists()) {
-        if (!navigator.onLine) {
-          if (lockScreen) lockScreen.classList.add('hidden');
-          if (mainApp) mainApp.classList.remove('hidden');
-          loadDataLocallyAndSync(user.uid);
-          return;
-        }
         await ensureUserLicense(user);
         return;
       }
 
       const licenseData = snapshot.data();
       if (licenseData) {
-        const adminNote = licenseData.adminNotes || licenseData.note || licenseData.notification;
-        const notifContentEl = document.getElementById('notification-content-text');
-        const notifBadgeEl = document.getElementById('notification-badge');
-        
-        if (notifContentEl) {
-          if (adminNote) {
-            notifContentEl.textContent = adminNote;
-            const isRead = currentUser ? localStorage.getItem(`giti_${currentUser.uid}_notif_read`) : null;
-            if (!isRead && notifBadgeEl) {
-              notifBadgeEl.classList.remove('hidden');
-            }
-          } else {
-            notifContentEl.textContent = "لا توجد ملاحظات جديدة من الإدارة حالياً.";
-            if (notifBadgeEl) {
-              notifBadgeEl.classList.add('hidden');
-            }
-          }
-        }
-      }
-
-      if (licenseData.isActive !== false) {
-        if (lockScreen) lockScreen.classList.add('hidden');
-        if (mainApp) mainApp.classList.remove('hidden');
-        loadDataLocallyAndSync(user.uid);
-        triggerAds();
-      } else {
-        if (mainApp) mainApp.classList.add('hidden');
-        if (lockScreen) lockScreen.classList.remove('hidden');
-        detachCloudSync();
+        localStorage.setItem(`giti_license_${user.uid}`, JSON.stringify(licenseData));
+        applyLicenseData(licenseData);
       }
     }, (err) => {
-      console.warn("License Snapshot Offline Fallback Error:", err);
-      if (currentUser) {
-        if (mainApp) mainApp.classList.remove('hidden');
-        if (lockScreen) lockScreen.classList.add('hidden');
-        loadDataLocallyAndSync(currentUser.uid);
-      }
+      console.warn("License Snapshot Offline Fallback (Using Local Cache):", err);
     });
 
   } else {
@@ -478,6 +435,37 @@ onAuthStateChanged(auth, async (user) => {
     if (loginScreen) loginScreen.classList.remove('hidden');
   }
 });
+
+function applyLicenseData(licenseData) {
+  const adminNote = licenseData.adminNotes || licenseData.note || licenseData.notification;
+  const notifContentEl = document.getElementById('notification-content-text');
+  const notifBadgeEl = document.getElementById('notification-badge');
+  
+  if (notifContentEl) {
+    if (adminNote) {
+      notifContentEl.textContent = adminNote;
+      const isRead = currentUser ? localStorage.getItem(`giti_${currentUser.uid}_notif_read`) : null;
+      if (!isRead && notifBadgeEl) {
+        notifBadgeEl.classList.remove('hidden');
+      }
+    } else {
+      notifContentEl.textContent = "لا توجد ملاحظات جديدة من الإدارة حالياً.";
+      if (notifBadgeEl) {
+        notifBadgeEl.classList.add('hidden');
+      }
+    }
+  }
+
+  if (licenseData.isActive !== false) {
+    if (lockScreen) lockScreen.classList.add('hidden');
+    if (mainApp) mainApp.classList.remove('hidden');
+    triggerAds();
+  } else {
+    if (mainApp) mainApp.classList.add('hidden');
+    if (lockScreen) lockScreen.classList.remove('hidden');
+    detachCloudSync();
+  }
+}
 
 function loadDataLocallyAndSync(uid) {
   detachCloudSync();
@@ -590,13 +578,12 @@ if (loginForm) {
   });
 }
 
- const googleLoginBtn = document.getElementById('google-login-btn');
+const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
     clearAuthMsgs();
     
     try {
-      // 1. إذا كان التطبيق يعمل على تطبيق أندرويد (Native)، نستخدم البلاجن الأصلي حصرياً
       if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         try {
           const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
@@ -612,7 +599,6 @@ if (googleLoginBtn) {
         }
       }
 
-      // 2. إذا كان يعمل على المتصفح (Web)، نستخدم الـ Popup مع معالجة الأخطاء لتجنب مشاكل الـ state
       const result = await signInWithPopup(auth, googleProvider);
       if (result && result.user) {
         await ensureUserLicense(result.user);
@@ -641,13 +627,15 @@ if (registerForm) {
 
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, "licenses", cred.user.uid), {
+      const newLicense = {
         email: email,
         storeName: storeName,
         isActive: true,
         role: email === 'haretg@gmail.com' ? "admin_master" : "user",
         createdAt: new Date().toISOString()
-      });
+      };
+      await setDoc(doc(db, "licenses", cred.user.uid), newLicense);
+      localStorage.setItem(`giti_license_${cred.user.uid}`, JSON.stringify(newLicense));
       if (authSuccess) {
         authSuccess.textContent = "تم إنشاء وتفعيل حسابك المجاني بنجاح!";
         authSuccess.classList.remove('hidden');
