@@ -18,29 +18,28 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Complete Android Environment
+      - name: Prepare Clean Environment and Generate Android Project
         run: |
           npm install
+
+          # 1. تهيئة مجلد www وتحديث ملف التكوين
+          mkdir -p www
+          cp -r * www/ 2>/dev/null || true
           
-          # ضبط ملف التكوين لتصحيح مشكلة webDir وحل خطأ النقطة نهائياً
           node -e '
             const fs = require("fs");
-            const config = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
-            if (config.webDir === ".") {
-              config.webDir = "www";
-            }
-            fs.writeFileSync("capacitor.config.json", JSON.stringify(config, null, 2));
-          ' || true
+            let cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
+            cfg.webDir = "www";
+            fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
+          '
 
-          # إنشاء مجلد www ونسخ ملف الـ index إليه لتجنب أخطاء المسارات
-          mkdir -p www
-          cp index.html www/ 2>/dev/null || true
+          # 2. مسح مجلد أندرويد الجزئي لإجبار الكاباسيتور على توليد gradlew وملفات البناء بالكامل
+          rm -rf android
 
-          # توليد بيئة الأندرويد وملفات الـ Gradle والـ settings المطلوبة بالكامل
-          npx @capacitor/cli add android || true
-          npx cap sync android || true
-
-          # ضبط مسار ملف MainActivity والتأكد من وجوده بدقة
+          # 3. إنشاء منصة أندرويد نظيفة
+          npx @capacitor/cli add android
+          
+          # 4. زرع حزمة com.giti.erp.ton2 وملف MainActivity
           mkdir -p android/app/src/main/java/com/giti/erp/ton2
           cat << 'EOF' > android/app/src/main/java/com/giti/erp/ton2/MainActivity.java
           package com.giti.erp.ton2;
@@ -50,6 +49,9 @@ jobs:
 
           public class MainActivity extends BridgeActivity {}
           EOF
+
+          # 5. مزامنة المشروع
+          npx cap sync android
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
