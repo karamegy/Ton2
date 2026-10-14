@@ -22,7 +22,7 @@ jobs:
         run: |
           npm install
           
-          # ضبط ملف التكوين ليتوافق مع بناء الـ APK و AAB
+          # ضبط ملف التكوين لتصحيح مشكلة webDir وحل خطأ النقطة نهائياً
           node -e '
             const fs = require("fs");
             const config = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
@@ -32,26 +32,24 @@ jobs:
             fs.writeFileSync("capacitor.config.json", JSON.stringify(config, null, 2));
           ' || true
 
-          # إنشاء مجلد www محلياً لضمان عدم وجود أخطاء في الـ sync
+          # إنشاء مجلد www ونسخ ملف الـ index إليه لتجنب أخطاء المسارات
           mkdir -p www
           cp index.html www/ 2>/dev/null || true
 
-          # توليد منصة الأندرويد وملفات الـ Gradle بالكامل على السيرفر
+          # توليد بيئة الأندرويد وملفات الـ Gradle والـ settings المطلوبة بالكامل
           npx @capacitor/cli add android || true
           npx cap sync android || true
 
-          # التأكد من وجود ملف MainActivity في مكانه الصحيح
+          # ضبط مسار ملف MainActivity والتأكد من وجوده بدقة
           mkdir -p android/app/src/main/java/com/giti/erp/ton2
-          if [ ! -f android/app/src/main/java/com/giti/erp/ton2/MainActivity.java ]; then
-            cat << 'EOF' > android/app/src/main/java/com/giti/erp/ton2/MainActivity.java
-            package com.giti.erp.ton2;
+          cat << 'EOF' > android/app/src/main/java/com/giti/erp/ton2/MainActivity.java
+          package com.giti.erp.ton2;
 
-            import android.os.Bundle;
-            import com.getcapacitor.BridgeActivity;
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
 
-            public class MainActivity extends BridgeActivity {}
-            EOF
-          fi
+          public class MainActivity extends BridgeActivity {}
+          EOF
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
