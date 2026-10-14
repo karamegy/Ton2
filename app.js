@@ -69,8 +69,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { 
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  GoogleAuthProvider, signInWithPopup, getRedirectResult, 
-  signOut, onAuthStateChanged, setPersistence, browserLocalPersistence 
+  GoogleAuthProvider, signInWithPopup, signInWithCredential,
+  signOut, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -93,9 +93,11 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app);
 auth.languageCode = 'ar';
 
-// ضبط الدوامة وتخزين الجلسة محلياً لتجنب فقدانها عند إغلاق التطبيق
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Auth Persistence Error:", error);
+// ضبط التخزين عبر IndexedDB لتفادي حظر كوكيز الطرف الثالث وفقدان الشفرة المبدئية على GitHub Pages
+setPersistence(auth, indexedDBLocalPersistence).catch(() => {
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error("Auth Persistence Error:", error);
+  });
 });
 
 const googleProvider = new GoogleAuthProvider();
@@ -346,31 +348,6 @@ function clearAuthMsgs() {
   if (authSuccess) authSuccess.classList.add('hidden');
 }
 
-// التزام صامت بتجاهل أي أخطاء سابقة ناجمة عن استخدام signInWithRedirect في البيئات المقيدة
-getRedirectResult(auth).then(async (result) => {
-  if (result && result.user) {
-    const u = result.user;
-    const userRef = doc(db, "licenses", u.uid);
-    try {
-      const docSnap = await getDoc(userRef);
-      if (!docSnap.exists()) {
-        await setDoc(userRef, {
-          email: u.email,
-          storeName: u.displayName ? u.displayName : "نشاط جديد",
-          isActive: true,
-          role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
-          createdAt: new Date().toISOString()
-        });
-      }
-    } catch (e) {
-      console.warn("Redirect License Check Warning:", e);
-    }
-  }
-}).catch((err) => {
-  // كتم أخطاء فقدان الجلسة في WebView تماماً لعدم إظهار الشاشة البيضاء
-  console.warn("Ignored Redirect Result check:", err.code || err.message);
-});
-
 onAuthStateChanged(auth, async (user) => {
   const adminBtn = document.getElementById('admin-btn');
 
@@ -591,13 +568,35 @@ if (loginForm) {
   });
 }
 
-// اعتماد حاصري ومستقر على signInWithPopup لتجنب الانحراف إلى صفحة missing initial state
+// معالجة تسجيل الدخول بـ Google وحل مشكلة missing initial state بـ IndexedDB & Native Fallback
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
     clearAuthMsgs();
     
     try {
+      // 1. الدخول المباشر إذا كان التطبيق يعمل داخل بيئة Capacitor Native
+      if (isCapacitorNative && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+        const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
+        const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+        const result = await signInWithCredential(auth, credential);
+        const u = result.user;
+        const userRef = doc(db, "licenses", u.uid);
+        const docSnap = await getDoc(userRef);
+        if (!docSnap.exists()) {
+          await setDoc(userRef, {
+            email: u.email,
+            storeName: u.displayName ? u.displayName : "نشاط جديد",
+            isActive: true,
+            role: u.email === 'haretg@gmail.com' ? "admin_master" : "user",
+            createdAt: new Date().toISOString()
+          });
+        }
+        return;
+      }
+
+      // 2. الدخول عبر GitHub Pages مع تأكيد التخزين الدائم لحل missing initial state
+      await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
       const result = await signInWithPopup(auth, googleProvider);
       const u = result.user;
       const userRef = doc(db, "licenses", u.uid);
@@ -618,8 +617,10 @@ if (googleLoginBtn) {
           authError.textContent = "تم إغلاق نافذة تسجيل الدخول قبل الإكمال.";
         } else if (err.code === 'auth/popup-blocked') {
           authError.textContent = "يرجى السماح بفتح النوافذ المنبثقة (Popups) لإكمال التوثيق.";
+        } else if (err.code === 'auth/cancelled-popup-request') {
+          authError.textContent = "تم إلغاء الطلب السابق، يرجى المحاولة مرة أخرى.";
         } else {
-          authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code ? err.code : 'خطأ غير معروف'})`;
+          authError.textContent = `تعذر تسجيل الدخول بواسطة Google (${err.code ? err.code : 'خطأ في الجلسة والتخزين'})`;
         }
         authError.classList.remove('hidden');
       }
@@ -2208,7 +2209,7 @@ if (ledgerSupplierPrintBtn) {
       <div class="print-header">
         ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
         <h1>كشف حساب مورد</h1>
-        <h2>${storeProfile.name}</h2>
+        2>${storeProfile.name}</h2>
         <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
         <p>${storeProfile.address ? storeProfile.address : ''}</p>
         <hr>
