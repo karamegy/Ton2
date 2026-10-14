@@ -586,7 +586,7 @@ if (loginForm) {
   });
 }
 // =========================================================
-// الحل الجذري والنهائي لتسجيل الدخول بـ Google دون أخطاء Session
+// الحل الإجباري النهائي لتسجيل الدخول بـ Google على الأندرويد
 // =========================================================
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
@@ -594,8 +594,8 @@ if (googleLoginBtn) {
     clearAuthMsgs();
     
     try {
-      // 1. إذا كان التطبيق يعمل كـ Native على الأندرويد، استدعاء الـ Plugin الأصلي مباشرة
-      if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+      // 1. المحاولة الإجبارية عبر البلاجن الأصلي لأندرويد (Native Google Auth)
+      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         try {
           const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
           const idToken = googleUser && googleUser.authentication ? googleUser.authentication.idToken : (googleUser ? googleUser.idToken : null);
@@ -606,12 +606,12 @@ if (googleLoginBtn) {
             return;
           }
         } catch (nativeErr) {
-          console.warn("Native GoogleAuth fallback error:", nativeErr);
+          console.warn("Native GoogleAuth warning:", nativeErr);
         }
       }
 
-      // 2. استخدام Popup الآمن بدلاً من Redirect الذي يسبب خطأ missing initial state تماماً
-      await setPersistence(auth, indexedDBLocalPersistence).catch(() => {});
+      // 2. إذا لم يكن البلاجن متوفراً، نجبر النظام على استخدام الـ Popup مع ضبط الـ Persistence لمنع فقدان الـ State
+      await setPersistence(auth, indexedDBLocalPersistence);
       const result = await signInWithPopup(auth, googleProvider);
       await ensureUserLicense(result.user);
 
@@ -620,10 +620,10 @@ if (googleLoginBtn) {
       if (authError) {
         if (err.code === 'auth/popup-closed-by-user') {
           authError.textContent = "تم إغلاق نافذة تسجيل الدخول قبل الإكمال.";
-        } else if (err.code === 'auth/popup-blocked') {
-          authError.textContent = "يرجى السماح بفتح النوافذ المنبثقة لإكمال التوثيق.";
+        } else if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+          authError.textContent = "تم حظر نافذة تسجيل الدخول المنبثقة. يرجى استخدام البريد الإلكتروني وكلمة المرور أدناه لتسجيل الدخول الفوري دون مشاكل.";
         } else {
-          authError.textContent = "تعذر إكمال المصادقة. يفضل استخدام تسجيل الدخول بالبريد الإلكتروني وكلمة المرور أدناه لضمان الدخول الفوري دون عقبات.";
+          authError.textContent = "تعذر إكمال المصادقة بـ Google على هذا المتصفح الداخلي. يفضل استخدام تسجيل الدخول بالبريد الإلكتروني وكلمة المرور.";
         }
         authError.classList.remove('hidden');
       }
@@ -666,7 +666,7 @@ if (registerForm) {
 
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) logoutBtn.addEventListener('click', async () => {
-  if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
     try { await window.Capacitor.Plugins.GoogleAuth.signOut(); } catch (e) {}
   }
   signOut(auth);
@@ -674,7 +674,7 @@ if (logoutBtn) logoutBtn.addEventListener('click', async () => {
 
 const logoutLockBtn = document.getElementById('logout-lock-btn');
 if (logoutLockBtn) logoutLockBtn.addEventListener('click', async () => {
-  if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
     try { await window.Capacitor.Plugins.GoogleAuth.signOut(); } catch (e) {}
   }
   signOut(auth);
@@ -689,6 +689,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     if (targetTab) targetTab.classList.add('active');
   });
 });
+
 
 function applyTheme(themeName) {
   document.documentElement.setAttribute('data-theme', themeName);
