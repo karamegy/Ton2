@@ -1,4 +1,4 @@
-const CACHE_NAME = 'giti-invoices-v61';
+const CACHE_NAME = 'giti-invoices-v62';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -8,10 +8,6 @@ const ASSETS_TO_CACHE = [
   './style.css',
   './app.js',
   './capacitor-bridge.js',
-  './firebase-config.js',
-  './invoices-inventory.js',
-  './ledgers.js',
-  './settings-sync.js',
   './manifest.json',
   './logo.png',
   './sitemap.xml',
