@@ -268,6 +268,9 @@
               <button id="export-json-btn" class="btn-sm">💾 نسخة احتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
               
+              <!-- زر أرشفة الفواتير القديمة -->
+              <button id="open-archive-modal-btn" class="btn-sm" style="background-color: var(--warning); color: #fff;" title="أرشيف الفواتير القديمة">📦 الأرشيف</button>
+
               <label for="import-json-input" class="btn-sm" style="cursor: pointer; background-color: #10b981; color: white; display: inline-flex; align-items: center; gap: 4px;" title="استيراد ملف نسخة احتياطية سابقة">
                 📂 استيراد
               </label>
@@ -487,6 +490,29 @@
         </div>
       </div>
     </section>
+  </div>
+
+  <!-- Modal أَرْشَفَة الفواتير القديمة -->
+  <div id="archive-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>📦 أرشيف الفواتير القديمة</h3>
+        <button id="close-archive-modal-btn" class="btn-close">✕</button>
+      </div>
+      <div style="padding: 10px 0;">
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">
+          هنا يتم حفظ الفواتير المؤرشفة لتخفيف العبء عن القائمة الرئيسية مع الاحتفاظ الكامل ببياناتها للإطلاع عليها أو طباعتها.
+        </p>
+        <div class="search-box" style="margin-bottom: 10px;">
+          <input type="text" id="search-archive-input" placeholder="بحث في الأرشيف...">
+        </div>
+        <div class="list-container" style="max-height: 300px;">
+          <ul id="archive-invoices-container">
+            <p style="text-align: center; color: var(--text-muted); padding: 20px;">لا توجد فواتير مؤرشفة حالياً.</p>
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Modal كشف حساب عميل مجمع والتسديد -->
