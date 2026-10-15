@@ -258,6 +258,7 @@ const authSuccess = document.getElementById('auth-success');
 
 let currentUser = null;
 let invoicesDB = [];
+let archivedInvoicesDB = []; // 📦 مصفوفة الأرشيف الجديدة
 let clientsDB = [];
 let suppliersDB = [];
 let purchasesDB = [];
@@ -381,7 +382,6 @@ onAuthStateChanged(auth, async (user) => {
     const userUidTag = document.getElementById('user-uid-tag');
     if (userUidTag) userUidTag.textContent = `UID: ${user.uid} ${isAdmin ? ' (ADMIN MASTER)' : ''}`;
     
-    // التخطي الفوري للعمل دون انترنت واعتماد البيانات المحلية فوراً
     if (lockScreen) lockScreen.classList.add('hidden');
     if (mainApp) mainApp.classList.remove('hidden');
     loadDataLocallyAndSync(user.uid);
@@ -393,7 +393,6 @@ onAuthStateChanged(auth, async (user) => {
       licenseUnsubscriber = null;
     }
 
-    // محاولة جلب حالة الترخيص عبر الشبكة في الخلفية دون تعطيل واجهة المستخدم
     try {
       const cachedLicenseStr = localStorage.getItem(`giti_license_${user.uid}`);
       if (cachedLicenseStr) {
@@ -471,17 +470,20 @@ function loadDataLocallyAndSync(uid) {
   detachCloudSync();
 
   invoicesDB = getLocalData(uid, 'invoices', []);
+  archivedInvoicesDB = getLocalData(uid, 'archived_invoices', []); // 📦 تحميل الأرشيف محلياً
   clientsDB = getLocalData(uid, 'clients', []);
   suppliersDB = getLocalData(uid, 'suppliers', []);
   purchasesDB = getLocalData(uid, 'purchases', []);
   productsDB = getLocalData(uid, 'products', []);
   expensesDB = getLocalData(uid, 'expenses', []);
+  
   const localProfile = getLocalData(uid, 'profile', null);
   if (localProfile) {
     storeProfile = Object.assign({}, storeProfile, localProfile);
     updateHeaderUI();
   }
   invoicesDB.sort((a, b) => b.id - a.id);
+  archivedInvoicesDB.sort((a, b) => b.id - a.id);
   purchasesDB.sort((a, b) => b.id - a.id);
   updateNextInvoiceNumber();
   renderAllModules();
@@ -513,6 +515,13 @@ async function fetchAllDataFromCloud() {
     invSnap.forEach(d => invoicesDB.push(d.data()));
     invoicesDB.sort((a, b) => b.id - a.id);
     saveLocalData(uid, 'invoices', invoicesDB);
+
+    // 📦 جلب الأرشيف من السحابة أيضاً
+    const archSnap = await getDocs(collection(db, "users", uid, "archive"));
+    archivedInvoicesDB = [];
+    archSnap.forEach(d => archivedInvoicesDB.push(d.data()));
+    archivedInvoicesDB.sort((a, b) => b.id - a.id);
+    saveLocalData(uid, 'archived_invoices', archivedInvoicesDB);
 
     const clientSnap = await getDocs(collection(db, "users", uid, "clients"));
     clientsDB = [];
@@ -1321,6 +1330,7 @@ function renderSavedInvoices(filter = '') {
         <div class="inv-actions" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;" onclick="event.stopPropagation();">
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.viewInvoiceById(${inv.id})">👁️ معاينة</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editInvoiceById(${inv.id})">✏️ تعديل</button>
+          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.archiveInvoice(${inv.id})" title="أرشفة الفاتورة لتخفيف القائمة">📦 أرشفة</button>
           <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendWhatsAppById(${inv.id})">💬 واتساب</button>
           <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨 طباعة</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
@@ -1330,6 +1340,110 @@ function renderSavedInvoices(filter = '') {
     </li>
   `).join('');
 }
+
+// ==========================================
+// 📦 دوال نظام أرشفة الفواتير الجديدة
+// ==========================================
+const openArchiveModalBtn = document.getElementById('open-archive-modal-btn');
+const archiveModal = document.getElementById('archive-modal');
+const closeArchiveModalBtn = document.getElementById('close-archive-modal-btn');
+
+if (openArchiveModalBtn) {
+  openArchiveModalBtn.addEventListener('click', () => {
+    if (archiveModal) archiveModal.classList.remove('hidden');
+    renderArchivedInvoices();
+  });
+}
+
+if (closeArchiveModalBtn) {
+  closeArchiveModalBtn.addEventListener('click', () => {
+    if (archiveModal) archiveModal.classList.add('hidden');
+  });
+}
+
+function renderArchivedInvoices(filter = '') {
+  const container = document.getElementById('archive-invoices-container');
+  if (!container) return;
+
+  const f = (filter ? filter : '').toLowerCase();
+  const filtered = archivedInvoicesDB.filter(inv => {
+    const clientMatch = (inv.client ? inv.client : '').toLowerCase().includes(f);
+    const idMatch = (inv.id ? inv.id : '').toString().includes(f);
+    return clientMatch || idMatch;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">لا توجد فواتير مؤرشفة مطابقة.</p>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(inv => `
+    <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px;">
+      <div>
+        <strong>#${inv.id} - ${inv.client}</strong>
+        <br><small style="color:var(--text-muted);">📅 ${inv.date} • ${(inv.items ? inv.items : []).length} أصناف - ${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</small>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.viewArchivedInvoice(${inv.id})">👁️ معاينة</button>
+        <button class="btn-sm" style="background:var(--success); color:#fff" onclick="window.restoreInvoice(${inv.id})">📂 استرجاع</button>
+      </div>
+    </li>
+  `).join('');
+}
+
+const searchArchiveInput = document.getElementById('search-archive-input');
+if (searchArchiveInput) {
+  searchArchiveInput.addEventListener('input', (e) => renderArchivedInvoices(e.target.value));
+}
+
+window.viewArchivedInvoice = (id) => {
+  const inv = archivedInvoicesDB.find(i => i.id === id);
+  if (inv) openInvoicePreview(inv);
+};
+
+window.archiveInvoice = async (id) => {
+  if (!confirm('هل تريد أرشفة هذه الفاتورة؟ (ستنتقل لقائمة الأرشيف لتخفيف القائمة الحية مع الاحتفاظ الكامل ببياناتها)')) return;
+  
+  const invIndex = invoicesDB.findIndex(i => i.id === id);
+  if (invIndex !== -1) {
+    const invToArchive = invoicesDB.splice(invIndex, 1)[0];
+    archivedInvoicesDB.unshift(invToArchive);
+
+    if (currentUser) {
+      saveLocalData(currentUser.uid, 'invoices', invoicesDB);
+      saveLocalData(currentUser.uid, 'archived_invoices', archivedInvoicesDB);
+      setDoc(doc(db, "users", currentUser.uid, "archive", String(invToArchive.id)), invToArchive).catch(() => {});
+      deleteDoc(doc(db, "users", currentUser.uid, "invoices", String(id))).catch(() => {});
+    }
+
+    renderSavedInvoices();
+    renderArchivedInvoices();
+    alert('✅ تم أرشفة الفاتورة بنجاح!');
+  }
+};
+
+window.restoreInvoice = async (id) => {
+  if (!confirm('هل تريد استرجاع هذه الفاتورة إلى الفواتير الحية؟')) return;
+
+  const archIndex = archivedInvoicesDB.findIndex(i => i.id === id);
+  if (archIndex !== -1) {
+    const invToRestore = archivedInvoicesDB.splice(archIndex, 1)[0];
+    invoicesDB.unshift(invToRestore);
+    invoicesDB.sort((a, b) => b.id - a.id);
+
+    if (currentUser) {
+      saveLocalData(currentUser.uid, 'invoices', invoicesDB);
+      saveLocalData(currentUser.uid, 'archived_invoices', archivedInvoicesDB);
+      setDoc(doc(db, "users", currentUser.uid, "invoices", String(invToRestore.id)), invToRestore).catch(() => {});
+      deleteDoc(doc(db, "users", currentUser.uid, "archive", String(id))).catch(() => {});
+    }
+
+    renderSavedInvoices();
+    renderArchivedInvoices();
+    alert('✅ تم استرجاع الفاتورة إلى القائمة الرئيسية بنجاح!');
+  }
+};
+// ==========================================
 
 window.viewInvoiceById = (id) => {
   const inv = invoicesDB.find(i => i.id === id);
@@ -2799,7 +2913,7 @@ function updateDashboardStats() {
 const exportJsonBtn = document.getElementById('export-json-btn');
 if (exportJsonBtn) {
   exportJsonBtn.addEventListener('click', () => {
-    const data = { invoices: invoicesDB, clients: clientsDB, suppliers: suppliersDB, purchases: purchasesDB, products: productsDB, expenses: expensesDB, storeProfile };
+    const data = { invoices: invoicesDB, archived_invoices: archivedInvoicesDB, clients: clientsDB, suppliers: suppliersDB, purchases: purchasesDB, products: productsDB, expenses: expensesDB, storeProfile };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -2830,6 +2944,11 @@ if (importJsonInput) {
             invoicesDB = importedData.invoices;
             saveLocalData(uid, 'invoices', invoicesDB);
             if (currentUser) invoicesDB.forEach(inv => setDoc(doc(db, "users", uid, "invoices", String(inv.id)), inv).catch(() => {}));
+          }
+          if (Array.isArray(importedData.archived_invoices)) {
+            archivedInvoicesDB = importedData.archived_invoices;
+            saveLocalData(uid, 'archived_invoices', archivedInvoicesDB);
+            if (currentUser) archivedInvoicesDB.forEach(inv => setDoc(doc(db, "users", uid, "archive", String(inv.id)), inv).catch(() => {}));
           }
           if (Array.isArray(importedData.clients)) {
             clientsDB = importedData.clients;
@@ -2966,6 +3085,7 @@ if (saveSettingsBtn) {
 
 function renderAllModules() {
   renderSavedInvoices();
+  renderArchivedInvoices(); // 📦 تحديث نافذة الأرشيف أيضاً
   renderProducts();
   renderClients();
   renderSuppliers();
