@@ -1,1 +1,55 @@
-1
+{
+  "project_info": {
+    "project_number": "753885709520",
+    "project_id": "giti-68750",
+    "storage_bucket": "giti-68750.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:753885709520:android:7c8a4f92322d0077f48ad5",
+        "android_client_info": {
+          "package_name": "io.github.karamegy.Ton2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "753885709520-bfb1qa5b8o3dkluhnjtgiv4o9ooshkth.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "io.github.karamegy.Ton2",
+            "certificate_hash": "66ba9fbc290a60948b5ff43b76f90062b5ea8619"
+          }
+        },
+        {
+          "client_id": "753885709520-g4elnu4ui76khimq8qtfihds9b6ubreq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "io.github.karamegy.Ton2",
+            "certificate_hash": "0ffee6ab832a1a51e8c1d1ff65c62375fd71bf1614a8e31bb32d54747b0dcbde"
+          }
+        },
+        {
+          "client_id": "753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUL_MRgDC17h1zoAp5Dwa9R8-yQFOmYaw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
