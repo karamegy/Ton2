@@ -7,26 +7,26 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:753885709520:android:06f0a23441ac8ebdf48ad5",
+        "mobilesdk_app_id": "1:753885709520:android:7c8a4f92322d0077f48ad5",
         "android_client_info": {
           "package_name": "io.github.karamegy.Ton2"
         }
       },
       "oauth_client": [
         {
+          "client_id": "753885709520-bfb1qa5b8o3dkluhnjtgiv4o9ooshkth.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "io.github.karamegy.Ton2",
+            "certificate_hash": "66ba9fbc290a60948b5ff43b76f90062b5ea8619"
+          }
+        },
+        {
           "client_id": "753885709520-g4elnu4ui76khimq8qtfihds9b6ubreq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "io.github.karamegy.Ton2",
-            "certificate_hash": "0FFEE6AB832A1A51E8C1D1FF65C62375FD71BF1614A8E31BB32D54747B0DCBDE"
-          }
-        },
-        {
-          "client_id": "753885709520-aabreleaseclienthashplaceholder.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "io.github.karamegy.Ton2",
-            "certificate_hash": "66BA9FBC290A60948B5FF43B76F90062B5EA8619"
+            "certificate_hash": "0ffee6ab832a1a51e8c1d1ff65c62375fd71bf1614a8e31bb32d54747b0dcbde"
           }
         },
         {
