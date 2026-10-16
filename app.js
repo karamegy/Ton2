@@ -593,6 +593,7 @@ if (googleLoginBtn) {
     clearAuthMsgs();
     
     try {
+      // 1. محاولة تسجيل الدخول عبر Capacitor Native Google Auth (مناسب لتطبيق الأندرويد)
       if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         try {
           const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
@@ -604,10 +605,11 @@ if (googleLoginBtn) {
             return;
           }
         } catch (nativeErr) {
-          console.warn("Native GoogleAuth signin failed:", nativeErr);
+          console.warn("Native GoogleAuth signin failed, falling back to web popup:", nativeErr);
         }
       }
 
+      // 2. استخدام signInWithPopup للويب والنسخ التجريبية
       const result = await signInWithPopup(auth, googleProvider);
       if (result && result.user) {
         await ensureUserLicense(result.user);
@@ -616,7 +618,7 @@ if (googleLoginBtn) {
     } catch (err) {
       console.error("Google Auth Error:", err);
       if (authError) {
-        authError.textContent = "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى أو التأكد من اتصال الإنترنت.";
+        authError.textContent = "فشل تسجيل الدخول. تأكد من إعدادات البصمة والنطاق في فايربيس.";
         authError.classList.remove('hidden');
       }
     }
