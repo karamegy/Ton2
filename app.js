@@ -586,14 +586,13 @@ if (loginForm) {
     }
   });
 }
-
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
     clearAuthMsgs();
     
     try {
-      // 1. محاولة تسجيل الدخول عبر Capacitor Native Google Auth (مناسب لتطبيق الأندرويد)
+      // التحقق الصارم من تشغيل التطبيق داخل بيئة أندرويد الأصلية
       if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         try {
           const googleUser = await window.Capacitor.Plugins.GoogleAuth.signIn();
@@ -605,20 +604,25 @@ if (googleLoginBtn) {
             return;
           }
         } catch (nativeErr) {
-          console.warn("Native GoogleAuth signin failed, falling back to web popup:", nativeErr);
+          console.error("Native GoogleAuth signin failed:", nativeErr);
+          if (authError) {
+            authError.textContent = "فشل تسجيل الدخول عبر Google Auth الأصلية. يرجى التأكد من إعدادات البصمة SHA-256 في Firebase.";
+            authError.classList.remove('hidden');
+          }
+          return;
         }
-      }
-
-      // 2. استخدام signInWithPopup للويب والنسخ التجريبية
-      const result = await signInWithPopup(auth, googleProvider);
-      if (result && result.user) {
-        await ensureUserLicense(result.user);
+      } else {
+        // هذه الطريقة تعمل فقط في متصفحات الويب العادية ولا تُنفذ داخل تطبيق الأندرويد المحمول لمنع خطأ الـ sessionStorage
+        const result = await signInWithPopup(auth, googleProvider);
+        if (result && result.user) {
+          await ensureUserLicense(result.user);
+        }
       }
 
     } catch (err) {
       console.error("Google Auth Error:", err);
       if (authError) {
-        authError.textContent = "فشل تسجيل الدخول. تأكد من إعدادات البصمة والنطاق في فايربيس.";
+        authError.textContent = "فشل تسجيل الدخول. تأكد من اتصال الإنترنت وإعدادات النطاق.";
         authError.classList.remove('hidden');
       }
     }
