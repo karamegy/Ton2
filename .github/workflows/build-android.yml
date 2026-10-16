@@ -27,6 +27,10 @@ jobs:
           java-version: '17'
 
       - name: Build Android App
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           # 1. إعداد مجلد الويب وتحديث ملف التكوين لتثبيت اسم الحزمة وإعدادات GoogleAuth
           mkdir -p www
@@ -116,19 +120,19 @@ jobs:
           </resources>
           EOF
 
-          # 6. نسخ ملف التوقيع الحقيقي
+          # 6. نسخ ملف التوقيع الحقيقي الموجود في المستودع إلى مسار الأندرويد مباشرة
           cp signing.keystore android/app/ || true
 
-          # 7. حقن إعدادات بناء الـ Gradle وتكوين الإصدار ورقم البناء التلقائي
-          cat << 'EOF' >> android/app/build.gradle
+          # 7. حقن إعدادات بناء الـ Gradle وقراءة الأسرار الآمنة مع تحديث الإصدارات المطلوبة
+          cat << EOF >> android/app/build.gradle
 
           android {
               defaultConfig {
                   applicationId "io.github.karamegy.Ton2"
-                  minSdk 23
-                  targetSdk 34
-                  versionCode ${{ github.run_number }}
-                  versionName "1.0.${{ github.run_number }}"
+                  minSdk 24
+                  targetSdk 36
+                  versionCode 80000
+                  versionName "8.0.0.0"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -137,9 +141,9 @@ jobs:
               signingConfigs {
                   release {
                       storeFile file('signing.keystore')
-                      storePassword 'Gamef90IIwmB'
-                      keyAlias 'my-key-alias'
-                      keyPassword 'Gamef90IIwmB'
+                      storePassword '$KEYSTORE_PASSWORD'
+                      keyAlias '$KEY_ALIAS'
+                      keyPassword '$KEY_PASSWORD'
                   }
               }
               buildTypes {
