@@ -26,13 +26,21 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Decode Keystore File
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 || secrets.KEYSTORE_FILE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > signing.keystore
+          fi
+
       - name: Build Android App
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          # 1. إعداد مجلد الويب وتحديث ملف التكوين لتثبيت اسم الحزمة وإعدادات GoogleAuth
+          # 1. إعداد مجلد الويب وتحديث ملف التكوين
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
@@ -45,7 +53,7 @@ jobs:
             cfg.plugins = cfg.plugins || {};
             cfg.plugins.GoogleAuth = {
               scopes: ["profile", "email"],
-              serverClientId: "753885709520-web.apps.googleusercontent.com",
+              serverClientId: "753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com",
               forceCodeForRefreshToken: true
             };
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
@@ -58,7 +66,12 @@ jobs:
           rm -rf android
           npx cap add android
 
-          # 4. تحديث ملف AndroidManifest.xml بالأذونات وواجهات النماذج المطلوبة
+          # 4. نسخ ملف google-services.json إلى مشروع الأندرويد
+          if [ -f "google-services.json" ]; then
+            cp google-services.json android/app/
+          fi
+
+          # 5. تحديث ملف AndroidManifest.xml
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -107,7 +120,7 @@ jobs:
           </manifest>
           EOF
 
-          # 5. حقن ملف strings.xml مع معرف Google Login
+          # 6. حقن ملف strings.xml المعالج مع المعرف الصحيح
           mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
@@ -116,14 +129,18 @@ jobs:
               <string name="title_activity_main">Ton2 ERP</string>
               <string name="package_name">io.github.karamegy.Ton2</string>
               <string name="custom_url_scheme">io.github.karamegy.Ton2</string>
-              <string name="server_client_id">753885709520-web.apps.googleusercontent.com</string>
+              <string name="server_client_id">753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com</string>
           </resources>
           EOF
 
-          # 6. نسخ ملف التوقيع الحقيقي الموجود في المستودع إلى مسار الأندرويد مباشرة
-          cp signing.keystore android/app/ || true
+          # 7. نسخ ملف التوقيع المستخرج
+          if [ -f "signing.keystore" ]; then
+            cp signing.keystore android/app/
+          fi
 
-          # 7. حقن إعدادات بناء الـ Gradle وقراءة الأسرار الآمنة مع تحديث الإصدارات المطلوبة
+          # 8. إضافة إعدادات Gradle وتفعيل تطبيق إضافات google-services
+          sed -i '1i apply plugin: "com.google.gms.google-services"' android/app/build.gradle 2>/dev/null || true
+
           cat << EOF >> android/app/build.gradle
 
           android {
@@ -155,7 +172,7 @@ jobs:
           }
           EOF
 
-          # 8. مزامنة المشروع وبناء الـ AAB والـ APK
+          # 9. المزامنة والبناء
           npx cap sync android
           cd android
           chmod +x gradlew
