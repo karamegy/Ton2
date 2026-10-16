@@ -138,7 +138,15 @@ jobs:
             cp signing.keystore android/app/
           fi
 
-          # 8. إضافة إعدادات Gradle وتفعيل تطبيق إضافات google-services
+          # 8. إعداد إضافة google-services بشكل كامل في ملفات Gradle
+          node -e '
+            const fs = require("fs");
+            let rootGradle = fs.readFileSync("android/build.gradle", "utf8");
+            if (!rootGradle.includes("com.google.gms:google-services")) {
+              rootGradle = rootGradle.replace(/dependencies\s*\{/, "dependencies {\n        classpath \"com.google.gms:google-services:4.4.1\"");
+              fs.writeFileSync("android/build.gradle", rootGradle);
+            }
+          '
           sed -i '1i apply plugin: "com.google.gms.google-services"' android/app/build.gradle 2>/dev/null || true
 
           cat << EOF >> android/app/build.gradle
