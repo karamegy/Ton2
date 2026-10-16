@@ -129,7 +129,7 @@ jobs:
           android {
               defaultConfig {
                   applicationId "io.github.karamegy.Ton2"
-                  minSdk 24
+                  minSdk 25
                   targetSdk 36
                   versionCode 80000
                   versionName "8.0.0.0"
