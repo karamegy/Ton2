@@ -1,11 +1,12 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "io.github.karamegy.Ton2",
       "sha256_cert_fingerprints": [
-        "DD:51:46:CA:F5:80:8D:0F:4A:E9:8B:3F:0D:E3:DE:EF:A5:4D:99:7F:66:FD:3D:84:7F:E9:F6:47:7F:30:5E:30",
         "0F:EE:E6:AB:83:2A:1A:51:E8:C1:D1:FF:65:C6:23:75:FD:71:BF:16:14:A8:E3:1B:B3:2D:54:74:7B:0D:CB:DE"
       ]
     }
