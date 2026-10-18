@@ -51,19 +51,25 @@ jobs:
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 2. تثبيت أدوات الكاباسيتور الأساسية ومكتبة Google Auth
-          npm install @capacitor/cli @capacitor/core @codetrix-studio/capacitor-google-auth --save
+          # 2. تثبيت أدوات الكاباسيتور الأساسية ومكتبات الأيقونات
+          npm install @capacitor/cli @capacitor/core @codetrix-studio/capacitor-google-auth @capacitor/assets --save-dev
 
           # 3. إعادة إنشاء منصة أندرويد نظيفة
           rm -rf android
           npx cap add android
 
-          # 4. نسخ ملف google-services.json إلى مشروع الأندرويد إذا وجد
+          # 4. تجهيز الأيقونة وتوليد أحجام mipmap لأندرويد
+          mkdir -p assets
+          cp logo.png assets/icon-only.png 2>/dev/null || cp logo.png assets/icon.png
+          cp logo.png assets/icon.png
+          npx @capacitor/assets generate --android
+
+          # 5. نسخ ملف google-services.json إلى مشروع الأندرويد إذا وجد
           if [ -f "google-services.json" ]; then
             cp google-services.json android/app/
           fi
 
-          # 5. تحديث ملف AndroidManifest.xml
+          # 6. تحديث ملف AndroidManifest.xml
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -112,7 +118,7 @@ jobs:
           </manifest>
           EOF
 
-          # 6. حقن ملف strings.xml مع المعرف الصحيح
+          # 7. حقن ملف strings.xml مع المعرف الصحيح
           mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
@@ -125,12 +131,12 @@ jobs:
           </resources>
           EOF
 
-          # 7. نسخ ملف التوقيع الموجود في جذر المستودع مباشرة
+          # 8. نسخ ملف التوقيع الموجود في جذر المستودع مباشرة
           if [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
           fi
 
-          # 8. إعداد Gradle للتوقيع وربط خدمات Google
+          # 9. إعداد Gradle للتوقيع وربط خدمات Google
           cat << EOF >> android/app/build.gradle
 
           android {
@@ -162,7 +168,7 @@ jobs:
           }
           EOF
 
-          # 9. المزامنة والبناء
+          # 10. المزامنة والبناء
           npx cap sync android
           cd android
           chmod +x gradlew
