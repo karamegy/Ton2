@@ -124,7 +124,7 @@ jobs:
           <?xml version='1.0' encoding='utf-8'?>
           <resources>
               <string name="app_name">Giti ERP</string>
-              <string name="title_activity_main">Ton2 ERP</string>
+              <string name="title_activity_main">Giti فواتير</string>
               <string name="package_name">io.github.karamegy.Ton2</string>
               <string name="custom_url_scheme">io.github.karamegy.Ton2</string>
               <string name="server_client_id">753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com</string>
