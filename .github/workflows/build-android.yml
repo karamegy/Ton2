@@ -41,7 +41,7 @@ jobs:
             let cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
             cfg.webDir = "www";
             cfg.appId = "io.github.karamegy.Ton2";
-            cfg.appName = "Ton2 ERP";
+            cfg.appName = "Giti فواتير";
             cfg.plugins = cfg.plugins || {};
             cfg.plugins.GoogleAuth = {
               scopes: ["profile", "email"],
