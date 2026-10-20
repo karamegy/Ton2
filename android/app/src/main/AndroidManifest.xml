@@ -43,7 +43,7 @@
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
-            android:name=".MainActivity"
+            android:name="io.github.karamegy.Ton2.MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
@@ -68,7 +68,7 @@
         <!-- موفر الملفات لمنع انهيار التطبيق عند مشاركة وحفظ الصور والفواتير -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
+            android:authorities="io.github.karamegy.Ton2.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
