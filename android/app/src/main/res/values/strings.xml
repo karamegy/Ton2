@@ -8,4 +8,8 @@
 
     <!-- المعرف الخاص بتسجيل الدخول بـ Google (Web Client ID) -->
     <string name="server_client_id">753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com</string>
+    <string name="default_web_client_id">753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com</string>
+
+    <!-- مسار موفر الملفات لمشاركة وتنزيل الصور والفواتير -->
+    <string name="file_provider_authority">io.github.karamegy.Ton2.fileprovider</string>
 </resources>
