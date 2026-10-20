@@ -15,7 +15,9 @@
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   
+  <!-- مكتبات المعالجة وتوليد PDF والباركوود -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6651309355082807" crossorigin="anonymous"></script>
@@ -125,7 +127,6 @@
         <button id="open-settings-btn" class="btn-icon">⚙️</button>
         <button id="fetch-cloud-btn" class="btn-icon" title="جلب وتحديث البيانات من السحابة">☁️</button>
         
-        <!-- أيقونة الإشعارات بجوار زر الباب -->
         <button id="notification-btn" class="btn-icon" title="الإشعارات والملاحظات الإدارية" style="position: relative;">
           🔔
           <span id="notification-badge" class="hidden" style="position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; background: var(--danger); border-radius: 50%; box-shadow: 0 0 6px var(--danger);"></span>
@@ -257,7 +258,7 @@
           <div class="form-actions">
             <button id="save-btn" class="btn-primary" data-i18n="saveInv">💾 حفظ الفاتورة بالحسابات</button>
             <button id="whatsapp-btn" class="btn-whatsapp" data-i18n="sendWhatsApp">💬 واتساب</button>
-            <button id="print-btn" class="btn-success" data-i18n="print">🖨️ طباعة الفاتورة</button>
+            <button id="print-btn" class="btn-success" data-i18n="print">🖨️ طباعة / PDF</button>
           </div>
         </section>
 
@@ -267,8 +268,6 @@
             <div class="backup-btns" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
               <button id="export-json-btn" class="btn-sm">💾 نسخة احتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
-              
-              <!-- زر أرشفة الفواتير القديمة -->
               <button id="open-archive-modal-btn" class="btn-sm" style="background-color: var(--warning); color: #fff;" title="أرشيف الفواتير القديمة">📦 الأرشيف</button>
 
               <label for="import-json-input" class="btn-sm" style="cursor: pointer; background-color: #10b981; color: white; display: inline-flex; align-items: center; gap: 4px;" title="استيراد ملف نسخة احتياطية سابقة">
@@ -323,11 +322,9 @@
       </div>
     </section>
 
-    <!-- تبويب الموردين والشركات المطور بالكامل -->
+    <!-- تبويب الموردين والشركات المطور -->
     <section id="tab-suppliers" class="tab-content">
       <div class="dashboard-grid">
-        
-        <!-- إضافة وتعديل مورد جديد -->
         <div class="card">
           <div class="card-header">
             <h3>🏭 إضافة / تعديل بيانات مورد</h3>
@@ -349,7 +346,6 @@
           </form>
         </div>
 
-        <!-- سجل الموردين المجمع -->
         <div class="card">
           <div class="card-header">
             <h3>سجل الموردين والدفاتر</h3>
@@ -360,7 +356,6 @@
           </div>
         </div>
 
-        <!-- تسجيل فاتورة مشتريات / توريد من مورد -->
         <div class="card" style="grid-column: 1 / -1;">
           <div class="card-header">
             <h3>📦 تسجيل فاتورة مشتريات / توريد بضاعة جديدة من مورد</h3>
@@ -418,7 +413,6 @@
           </form>
         </div>
 
-        <!-- سجل فواتير المشتريات -->
         <div class="card" style="grid-column: 1 / -1;">
           <div class="card-header">
             <h3>📋 سجل فواتير المشتريات من الموردين</h3>
@@ -523,7 +517,7 @@
         <button id="close-ledger-btn" class="btn-close">✕</button>
       </div>
       
-      <div id="ledger-printable-card" style="padding: 4px; border-radius: 12px;">
+      <div id="ledger-printable-card" style="padding: 10px; border-radius: 12px; background: var(--bg-card, #111827);">
         <div class="ledger-summary-card">
           <div>
             <span>إجمالي التعاملات:</span>
@@ -558,7 +552,7 @@
       <div class="modal-actions-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
         <button id="ledger-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
         <button id="ledger-download-btn" class="btn-primary">صورة 🖼</button>
-        <button id="ledger-print-btn" class="btn-success">طباعة 🖨️</button>
+        <button id="ledger-print-btn" class="btn-success">طباعة / PDF 🖨️</button>
       </div>
     </div>
   </div>
@@ -571,7 +565,7 @@
         <button id="close-supplier-ledger-btn" class="btn-close">✕</button>
       </div>
       
-      <div id="supplier-ledger-printable-card" style="padding: 4px; border-radius: 12px;">
+      <div id="supplier-ledger-printable-card" style="padding: 10px; border-radius: 12px; background: var(--bg-card, #111827);">
         <div class="ledger-summary-card">
           <div>
             <span>إجمالي المشتريات:</span>
@@ -606,7 +600,7 @@
       <div class="modal-actions-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
         <button id="ledger-supplier-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
         <button id="ledger-supplier-download-btn" class="btn-primary">صورة 🖼️</button>
-        <button id="ledger-supplier-print-btn" class="btn-success">طباعة 🖨️</button>
+        <button id="ledger-supplier-print-btn" class="btn-success">طباعة / PDF 🖨️</button>
       </div>
     </div>
   </div>
@@ -618,7 +612,7 @@
         <h3 data-i18n="previewTitle">👁️ معاينة الفاتورة الإلكترونية</h3>
         <button id="close-view-btn" class="btn-close">✕</button>
       </div>
-      <div id="invoice-card-preview" class="invoice-card-preview">
+      <div id="invoice-card-preview" class="invoice-card-preview" style="background:#090d16; color:#fff; padding:15px; border-radius:12px;">
         <div class="preview-header">
           <img id="v-logo" class="preview-logo hidden" alt="Logo">
           <h2 id="v-store-name">اسم المحل</h2>
@@ -657,7 +651,7 @@
       </div>
       <div class="modal-actions-row">
         <button id="download-img-btn" class="btn-primary" data-i18n="downloadImg">تحميل كصورة 🖼️</button>
-        <button id="print-view-btn" class="btn-success" data-i18n="print">طباعة 🖨️</button>
+        <button id="print-view-btn" class="btn-success" data-i18n="print">طباعة / PDF 🖨️</button>
       </div>
     </div>
   </div>
@@ -669,7 +663,7 @@
         <h3>👁️ معاينة فاتورة مشتريات المورد</h3>
         <button id="close-supplier-view-btn" class="btn-close">✕</button>
       </div>
-      <div id="supplier-invoice-card-preview" class="invoice-card-preview">
+      <div id="supplier-invoice-card-preview" class="invoice-card-preview" style="background:#090d16; color:#fff; padding:15px; border-radius:12px;">
         <div class="preview-header">
           <img id="sv-logo" class="preview-logo hidden" alt="Logo">
           <h2 id="sv-store-name">اسم المحل</h2>
@@ -705,12 +699,12 @@
       </div>
       <div class="modal-actions-row">
         <button id="supplier-download-img-btn" class="btn-primary">تحميل كصورة 🖼️</button>
-        <button id="supplier-print-view-btn" class="btn-success">طباعة 🖨️</button>
+        <button id="supplier-print-view-btn" class="btn-success">طباعة / PDF 🖨️</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal الإعدادات السحابية والتنظيمية -->
+  <!-- Modal الإعدادات السحابية -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
@@ -764,7 +758,7 @@
     </div>
   </div>
 
-  <!-- Modal عرض الملاحظات الإدارية للإشعارات -->
+  <!-- Modal الإشعارات -->
   <div id="notification-modal" class="modal hidden">
     <div class="modal-content" style="max-width: 380px; text-align: right;">
       <div class="modal-header">
@@ -780,11 +774,11 @@
     </div>
   </div>
 
-  <!-- قالب الطباعة الحراري المعياري -->
+  <!-- قالب الطباعة -->
   <div id="print-template" class="print-only"></div>
 
-  <!-- استدعاء جسر كاباسيتور ثم محرك التطبيق -->
+  <!-- استدعاء جسر كاباسيتور والأنظمة -->
   <script src="capacitor.js"></script>
   <script type="module" src="app.js"></script>
 </body>
-                </html>
+</html>
