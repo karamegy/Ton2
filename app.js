@@ -13,7 +13,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ==========================================
-// Capacitor Native Bridge Integration
+// Capacitor Native Bridge & System Integration
 // ==========================================
 const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
 
@@ -21,6 +21,7 @@ function initCapacitorBridge() {
   if (isCapacitorNative) {
     console.log("Capacitor Native Bridge Connected Successfully.");
     
+    // تهيئة مكتبة Google Auth الأصلية باستخدام Web Client ID المعتمد
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
       window.Capacitor.Plugins.GoogleAuth.initialize({
         clientId: '753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com',
@@ -30,6 +31,7 @@ function initCapacitorBridge() {
       }).catch(err => console.warn("GoogleAuth init warning:", err));
     }
     
+    // التعامل مع زر الرجوع للخلف لأجهزة الأندرويد
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
       window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
         const activeModals = document.querySelectorAll('.modal:not(.hidden)');
@@ -43,6 +45,7 @@ function initCapacitorBridge() {
       });
     }
 
+    // إخفاء شاشة البدء (SplashScreen)
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen) {
       setTimeout(() => {
         window.Capacitor.Plugins.SplashScreen.hide();
@@ -55,73 +58,6 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initCapacitorBridge);
 } else {
   initCapacitorBridge();
-}
-
-// ==========================================
-// Native Android Utilities (File Save, Share & Print)
-// ==========================================
-
-// دالة عامة لحفظ ومشاركة الملفات (JSON / CSV / Images) داخل الأندرويد والويب
-async function saveAndShareFile(dataContent, fileName, mimeType, shareTitle) {
-  if (isCapacitorNative && window.Capacitor?.Plugins?.Filesystem && window.Capacitor?.Plugins?.Share) {
-    try {
-      let base64Data = '';
-      
-      if (dataContent.startsWith('data:')) {
-        base64Data = dataContent.split(',')[1];
-      } else {
-        const encoder = new TextEncoder();
-        const uint8 = encoder.encode(dataContent);
-        let binary = '';
-        for (let i = 0; i < uint8.byteLength; i++) {
-          binary += String.fromCharCode(uint8[i]);
-        }
-        base64Data = btoa(binary);
-      }
-
-      const savedFile = await window.Capacitor.Plugins.Filesystem.writeFile({
-        path: fileName,
-        data: base64Data,
-        directory: 'CACHE'
-      });
-
-      await window.Capacitor.Plugins.Share.share({
-        title: shareTitle || fileName,
-        url: savedFile.uri,
-        dialogTitle: shareTitle || 'حفظ أو مشاركة الملف'
-      });
-      return;
-    } catch (err) {
-      console.warn("Native Save/Share Error:", err);
-    }
-  }
-
-  // Web Fallback
-  const blob = dataContent.startsWith('data:') 
-    ? await (await fetch(dataContent)).blob()
-    : new Blob(["\ufeff" + dataContent], { type: mimeType });
-    
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-// دالة الطباعة المتوافقة مع الأندرويد والويب
-async function executePrint(htmlContent) {
-  if (isCapacitorNative && window.Capacitor?.Plugins?.Printer) {
-    try {
-      await window.Capacitor.Plugins.Printer.print({ content: htmlContent });
-      return;
-    } catch (e) {
-      console.warn("Native Printer Plugin failed, using fallback:", e);
-    }
-  }
-  window.print();
 }
 
 // ==========================================
@@ -147,6 +83,7 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app);
 auth.languageCode = 'ar';
 
+// ضبط التخزين عبر IndexedDB لتفادي فقدان الجلسة
 setPersistence(auth, indexedDBLocalPersistence).catch(() => {
   setPersistence(auth, browserLocalPersistence).catch((error) => {
     console.error("Auth Persistence Error:", error);
@@ -154,9 +91,7 @@ setPersistence(auth, indexedDBLocalPersistence).catch(() => {
 });
 
 const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 function triggerAds() {
   setTimeout(() => {
@@ -173,6 +108,9 @@ function triggerAds() {
   }, 300);
 }
 
+// ==========================================
+// Translations & UI State Management
+// ==========================================
 const translations = {
   ar: {
     login: "تسجيل الدخول", register: "حساب جديد", googleAuth: "متابعة بواسطة Google",
@@ -265,6 +203,9 @@ if (dismissNotificationBtn) {
   });
 }
 
+// ==========================================
+// ZATCA QR Code & Helpers
+// ==========================================
 function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAmount) {
   function getTlvTag(tag, value) {
     const encoder = new TextEncoder();
@@ -310,6 +251,9 @@ function renderQrCode(containerId, dataText) {
   }
 }
 
+// ==========================================
+// Application Core Variables
+// ==========================================
 const loginScreen = document.getElementById('login-screen');
 const lockScreen = document.getElementById('lock-screen');
 const mainApp = document.getElementById('main-app');
@@ -425,6 +369,9 @@ function clearAuthMsgs() {
   if (authSuccess) authSuccess.classList.add('hidden');
 }
 
+// ==========================================
+// Authentication State Observer
+// ==========================================
 onAuthStateChanged(auth, async (user) => {
   const adminBtn = document.getElementById('admin-btn');
 
@@ -435,11 +382,8 @@ onAuthStateChanged(auth, async (user) => {
     const isAdmin = user.email === 'haretg@gmail.com';
     
     if (adminBtn) {
-      if (isAdmin) {
-        adminBtn.classList.remove('hidden');
-      } else {
-        adminBtn.classList.add('hidden');
-      }
+      if (isAdmin) adminBtn.classList.remove('hidden');
+      else adminBtn.classList.add('hidden');
     }
 
     const userUidTag = document.getElementById('user-uid-tag');
@@ -476,15 +420,12 @@ onAuthStateChanged(auth, async (user) => {
         applyLicenseData(licenseData);
       }
     }, (err) => {
-      console.warn("License Snapshot Offline Fallback (Using Local Cache):", err);
+      console.warn("License Snapshot Offline Fallback:", err);
     });
 
   } else {
     currentUser = null;
-    
-    if (adminBtn) {
-      adminBtn.classList.add('hidden');
-    }
+    if (adminBtn) adminBtn.classList.add('hidden');
 
     if (licenseUnsubscriber) {
       licenseUnsubscriber();
@@ -507,14 +448,10 @@ function applyLicenseData(licenseData) {
     if (adminNote) {
       notifContentEl.textContent = adminNote;
       const isRead = currentUser ? localStorage.getItem(`giti_${currentUser.uid}_notif_read`) : null;
-      if (!isRead && notifBadgeEl) {
-        notifBadgeEl.classList.remove('hidden');
-      }
+      if (!isRead && notifBadgeEl) notifBadgeEl.classList.remove('hidden');
     } else {
       notifContentEl.textContent = "لا توجد ملاحظات جديدة من الإدارة حالياً.";
-      if (notifBadgeEl) {
-        notifBadgeEl.classList.add('hidden');
-      }
+      if (notifBadgeEl) notifBadgeEl.classList.add('hidden');
     }
   }
 
@@ -598,7 +535,7 @@ async function fetchAllDataFromCloud() {
     const purchaseSnap = await getDocs(collection(db, "users", uid, "purchases"));
     purchasesDB = [];
     purchaseSnap.forEach(d => purchasesDB.push(d.data()));
-    purchaseSnap.sort((a, b) => b.id - a.id);
+    purchasesDB.sort((a, b) => b.id - a.id);
     saveLocalData(uid, 'purchases', purchasesDB);
 
     const prodSnap = await getDocs(collection(db, "users", uid, "products"));
@@ -628,9 +565,7 @@ async function fetchAllDataFromCloud() {
 }
 
 const fetchCloudBtn = document.getElementById('fetch-cloud-btn');
-if (fetchCloudBtn) {
-  fetchCloudBtn.addEventListener('click', fetchAllDataFromCloud);
-}
+if (fetchCloudBtn) fetchCloudBtn.addEventListener('click', fetchAllDataFromCloud);
 
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
@@ -648,11 +583,11 @@ if (loginForm) {
     }
   });
 }
+
 const googleLoginBtn = document.getElementById('google-login-btn');
 if (googleLoginBtn) {
   googleLoginBtn.addEventListener('click', async () => {
     clearAuthMsgs();
-    
     try {
       if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
         try {
@@ -667,18 +602,15 @@ if (googleLoginBtn) {
         } catch (nativeErr) {
           console.error("Native GoogleAuth signin failed:", nativeErr);
           if (authError) {
-            authError.textContent = "فشل تسجيل الدخول عبر Google Auth الأصلية. يرجى التأكد من إعدادات البصمة SHA-256 في Firebase.";
+            authError.textContent = "فشل تسجيل الدخول عبر Google Auth. يرجى التأكد من إعدادات SHA-256 في Firebase.";
             authError.classList.remove('hidden');
           }
           return;
         }
       } else {
         const result = await signInWithPopup(auth, googleProvider);
-        if (result && result.user) {
-          await ensureUserLicense(result.user);
-        }
+        if (result && result.user) await ensureUserLicense(result.user);
       }
-
     } catch (err) {
       console.error("Google Auth Error:", err);
       if (authError) {
@@ -776,6 +708,9 @@ function updateHeaderUI() {
   }
 }
 
+// ==========================================
+// Sales Invoices System Engine
+// ==========================================
 const itemsBody = document.getElementById('items-body');
 const discountInput = document.getElementById('discount-input');
 const taxInput = document.getElementById('tax-input');
@@ -936,9 +871,7 @@ window.handleItemInput = (index, val) => {
   showItemDropdown(index, val);
 };
 
-window.handleItemFocus = (index, val) => {
-  showItemDropdown(index, val);
-};
+window.handleItemFocus = (index, val) => showItemDropdown(index, val);
 
 window.selectProductItem = (index, name, price) => {
   if (activeItems[index]) {
@@ -1071,20 +1004,12 @@ async function saveInvoiceData() {
 
   if (!clientObj) {
     assignedClientId = Date.now();
-    clientObj = { 
-      id: assignedClientId, 
-      name: clientName, 
-      phone: clientPhone ? clientPhone : '', 
-      openingBalance: 0, 
-      payments: [] 
-    };
+    clientObj = { id: assignedClientId, name: clientName, phone: clientPhone ? clientPhone : '', openingBalance: 0, payments: [] };
     clientsDB.push(clientObj);
   } else {
     if (!clientObj.id) clientObj.id = Date.now();
     assignedClientId = clientObj.id;
-    if (clientPhone) {
-      clientObj.phone = clientPhone;
-    }
+    if (clientPhone) clientObj.phone = clientPhone;
   }
 
   const totals = calculateTotals();
@@ -1260,28 +1185,85 @@ if (closeViewBtn) {
 }
 
 // ==========================================
-// تنزيل ومشاركة الفاتورة الرئيسية كصورة (متوافق مع أندرويد والويب)
+// Image Render & Export Engine (Capacitor Native Compliant)
 // ==========================================
 const downloadImgBtn = document.getElementById('download-img-btn');
 if (downloadImgBtn) {
-  downloadImgBtn.addEventListener('click', () => {
+  downloadImgBtn.addEventListener('click', async () => {
     const previewCard = document.getElementById('invoice-card-preview');
-    if (previewCard && typeof html2canvas !== 'undefined') {
-      html2canvas(previewCard, { 
+    if (!previewCard) return;
+
+    if (typeof html2canvas === 'undefined') {
+      alert('مكتبة معالجة الصور جاري تحميلها، يرجى إعادة المحاولة.');
+      return;
+    }
+
+    try {
+      downloadImgBtn.disabled = true;
+      downloadImgBtn.textContent = 'جاري التجهيز... ⏳';
+
+      const canvas = await html2canvas(previewCard, { 
         scale: 2, 
         useCORS: true, 
         allowTaint: true, 
+        backgroundColor: '#090d16',
         logging: false 
-      }).then(async canvas => {
-        const dataUrl = canvas.toDataURL('image/png');
-        const fileName = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
-        await saveAndShareFile(dataUrl, fileName, 'image/png', 'الفاتورة الإلكترونية');
-      }).catch(err => {
-        console.error("html2canvas error:", err);
-        alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر "طباعة" وحفظ الفاتورة.');
       });
-    } else {
-      alert('مكتبة معالجة الصور غير جاهزة، يمكنك استخدام زر الطباعة.');
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const fileName = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
+
+      if (navigator.share && isCapacitorNative) {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'الفاتورة الإلكترونية',
+              text: `فاتورة رقم #${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : ''}`
+            });
+            return;
+          }
+        } catch (sErr) {
+          console.warn("Native Share fallback:", sErr);
+        }
+      }
+
+      const newWin = window.open();
+      if (newWin) {
+        newWin.document.write(`
+          <html dir="rtl">
+            <head>
+              <title>${fileName}</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
+                img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
+                .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
+              </style>
+            </head>
+            <body>
+              <img src="${dataUrl}" alt="Invoice Image" />
+              <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
+            </body>
+          </html>
+        `);
+      } else {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+    } catch (err) {
+      console.error("HTML2Canvas Render Error:", err);
+      alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر "طباعة" وحفظ الفاتورة كـ PDF.');
+    } finally {
+      downloadImgBtn.disabled = false;
+      downloadImgBtn.textContent = 'تحميل كصورة 🖼️';
     }
   });
 }
@@ -1348,7 +1330,9 @@ function printInvoice(inv) {
 
   renderQrCode('print-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
 
-  executePrint(printTemplate.innerHTML);
+  setTimeout(() => {
+    window.print();
+  }, 250);
 }
 
 window.editInvoiceById = (id) => {
@@ -1408,7 +1392,7 @@ function renderSavedInvoices(filter = '') {
         <div class="inv-actions" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;" onclick="event.stopPropagation();">
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.viewInvoiceById(${inv.id})">👁️ معاينة</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editInvoiceById(${inv.id})">✏️ تعديل</button>
-          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.archiveInvoice(${inv.id})" title="أرشفة الفاتورة لتخفيف القائمة">📦 أرشفة</button>
+          <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.archiveInvoice(${inv.id})" title="أرشفة الفاتورة">📦 أرشفة</button>
           <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendWhatsAppById(${inv.id})">💬 واتساب</button>
           <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨 طباعة</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
@@ -1420,7 +1404,7 @@ function renderSavedInvoices(filter = '') {
 }
 
 // ==========================================
-// دوال نظام أرشفة الفواتير
+// Invoices Archive Module
 // ==========================================
 const openArchiveModalBtn = document.getElementById('open-archive-modal-btn');
 const archiveModal = document.getElementById('archive-modal');
@@ -1480,7 +1464,7 @@ window.viewArchivedInvoice = (id) => {
 };
 
 window.archiveInvoice = async (id) => {
-  if (!confirm('هل تريد أرشفة هذه الفاتورة؟ (ستنتقل لقائمة الأرشيف لتخفيف القائمة الحية مع الاحتفاظ الكامل ببياناتها)')) return;
+  if (!confirm('هل تريد أرشفة هذه الفاتورة؟ (ستنتقل لقائمة الأرشيف لتخفيف القائمة الحية)')) return;
   
   const invIndex = invoicesDB.findIndex(i => i.id === id);
   if (invIndex !== -1) {
@@ -1555,6 +1539,9 @@ window.deleteInvoice = async (id) => {
 const searchInput = document.getElementById('search-input');
 if (searchInput) searchInput.addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
+// ==========================================
+// Inventory / Products Management
+// ==========================================
 const productForm = document.getElementById('product-form');
 if (productForm) {
   productForm.addEventListener('submit', async (e) => {
@@ -1674,6 +1661,9 @@ window.deleteProduct = async (idx) => {
   }
 };
 
+// ==========================================
+// Clients & Ledger Management
+// ==========================================
 const clientForm = document.getElementById('client-form');
 if (clientForm) {
   clientForm.addEventListener('submit', async (e) => {
@@ -1946,24 +1936,67 @@ if (ledgerWhatsappBtn) {
   });
 }
 
-// ==========================================
-// تنزيل ومشاركة كشف حساب عميل كصورة (متوافق مع الأندرويد والويب)
-// ==========================================
 const ledgerDownloadBtn = document.getElementById('ledger-download-btn');
 if (ledgerDownloadBtn) {
-  ledgerDownloadBtn.addEventListener('click', () => {
+  ledgerDownloadBtn.addEventListener('click', async () => {
     const ledgerCard = document.getElementById('ledger-printable-card');
     if (ledgerCard && typeof html2canvas !== 'undefined') {
-      html2canvas(ledgerCard, { 
-        scale: 2, 
-        backgroundColor: '#111827', 
-        useCORS: true, 
-        allowTaint: true 
-      }).then(async canvas => {
+      try {
+        const canvas = await html2canvas(ledgerCard, { 
+          scale: 2, 
+          backgroundColor: '#111827', 
+          useCORS: true, 
+          allowTaint: true 
+        });
+
         const dataUrl = canvas.toDataURL('image/png');
         const fileName = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
-        await saveAndShareFile(dataUrl, fileName, 'image/png', 'كشف حساب عميل');
-      });
+
+        if (navigator.share && isCapacitorNative) {
+          try {
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], fileName, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'كشف حساب عميل',
+                text: `كشف حساب العميل: ${activeLedgerClientName}`
+              });
+              return;
+            }
+          } catch (e) {}
+        }
+
+        const newWin = window.open();
+        if (newWin) {
+          newWin.document.write(`
+            <html dir="rtl">
+              <head>
+                <title>${fileName}</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                  body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
+                  img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
+                  .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
+                </style>
+              </head>
+              <body>
+                <img src="${dataUrl}" alt="Ledger Image" />
+                <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
+              </body>
+            </html>
+          `);
+        } else {
+          const a = document.createElement('a');
+          a.download = fileName;
+          a.href = dataUrl;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      } catch (err) {
+        console.error("Ledger Image Error:", err);
+      }
     }
   });
 }
@@ -2024,7 +2057,9 @@ if (ledgerPrintBtn) {
       </table>
     `;
 
-    executePrint(printTemplate.innerHTML);
+    setTimeout(() => {
+      window.print();
+    }, 250);
   });
 }
 
@@ -2052,6 +2087,9 @@ if (submitPaymentBtn) {
   });
 }
 
+// ==========================================
+// Suppliers & Purchasing Engine
+// ==========================================
 const supplierForm = document.getElementById('supplier-form');
 if (supplierForm) {
   supplierForm.addEventListener('submit', async (e) => {
@@ -2276,9 +2314,7 @@ window.openSupplierLedger = (supplierName) => {
     }
 
     const ledgerModal = document.getElementById('supplier-ledger-modal');
-    if (ledgerModal) {
-      ledgerModal.classList.remove('hidden');
-    }
+    if (ledgerModal) ledgerModal.classList.remove('hidden');
   } catch (err) {
     console.error("Error in openSupplierLedger:", err);
     alert('حدث خطأ أثناء فتح كشف الحساب: ' + err.message);
@@ -2376,24 +2412,67 @@ if (ledgerSupplierWhatsappBtn) {
   });
 }
 
-// ==========================================
-// تنزيل ومشاركة كشف حساب مورد كصورة (متوافق مع الأندرويد والويب)
-// ==========================================
 const ledgerSupplierDownloadBtn = document.getElementById('ledger-supplier-download-btn');
 if (ledgerSupplierDownloadBtn) {
-  ledgerSupplierDownloadBtn.addEventListener('click', () => {
+  ledgerSupplierDownloadBtn.addEventListener('click', async () => {
     const ledgerCard = document.getElementById('supplier-ledger-printable-card');
     if (ledgerCard && typeof html2canvas !== 'undefined') {
-      html2canvas(ledgerCard, { 
-        scale: 2, 
-        backgroundColor: '#111827', 
-        useCORS: true, 
-        allowTaint: true 
-      }).then(async canvas => {
+      try {
+        const canvas = await html2canvas(ledgerCard, { 
+          scale: 2, 
+          backgroundColor: '#111827', 
+          useCORS: true, 
+          allowTaint: true 
+        });
+
         const dataUrl = canvas.toDataURL('image/png');
         const fileName = `كشف_حساب_مورد_${activeLedgerSupplierName}_${Date.now()}.png`;
-        await saveAndShareFile(dataUrl, fileName, 'image/png', 'كشف حساب مورد');
-      });
+
+        if (navigator.share && isCapacitorNative) {
+          try {
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], fileName, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'كشف حساب مورد',
+                text: `كشف حساب المورد: ${activeLedgerSupplierName}`
+              });
+              return;
+            }
+          } catch (e) {}
+        }
+
+        const newWin = window.open();
+        if (newWin) {
+          newWin.document.write(`
+            <html dir="rtl">
+              <head>
+                <title>${fileName}</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                  body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
+                  img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
+                  .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
+                </style>
+              </head>
+              <body>
+                <img src="${dataUrl}" alt="Supplier Ledger Image" />
+                <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
+              </body>
+            </html>
+          `);
+        } else {
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } catch (err) {
+        console.error("Supplier Ledger Image Error:", err);
+      }
     }
   });
 }
@@ -2454,7 +2533,9 @@ if (ledgerSupplierPrintBtn) {
       </table>
     `;
 
-    executePrint(printTemplate.innerHTML);
+    setTimeout(() => {
+      window.print();
+    }, 250);
   });
 }
 
@@ -2808,24 +2889,68 @@ if (closeSupplierViewBtn) {
   });
 }
 
-// ==========================================
-// تنزيل ومشاركة فاتورة المشتريات كصورة (متوافق مع الأندرويد والويب)
-// ==========================================
 const supplierDownloadImgBtn = document.getElementById('supplier-download-img-btn');
 if (supplierDownloadImgBtn) {
-  supplierDownloadImgBtn.addEventListener('click', () => {
+  supplierDownloadImgBtn.addEventListener('click', async () => {
     const previewCard = document.getElementById('supplier-invoice-card-preview');
     if (previewCard && typeof html2canvas !== 'undefined') {
-      html2canvas(previewCard, { 
-        scale: 2, 
-        useCORS: true, 
-        allowTaint: true, 
-        logging: false 
-      }).then(async canvas => {
+      try {
+        const canvas = await html2canvas(previewCard, { 
+          scale: 2, 
+          useCORS: true, 
+          allowTaint: true, 
+          backgroundColor: '#090d16',
+          logging: false 
+        });
+
         const dataUrl = canvas.toDataURL('image/png');
         const fileName = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.png`;
-        await saveAndShareFile(dataUrl, fileName, 'image/png', 'فاتورة مشتريات');
-      });
+
+        if (navigator.share && isCapacitorNative) {
+          try {
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], fileName, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'فاتورة مشتريات',
+                text: 'فاتورة مشتريات وتوريد'
+              });
+              return;
+            }
+          } catch (e) {}
+        }
+
+        const newWin = window.open();
+        if (newWin) {
+          newWin.document.write(`
+            <html dir="rtl">
+              <head>
+                <title>${fileName}</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                  body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
+                  img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
+                  .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
+                </style>
+              </head>
+              <body>
+                <img src="${dataUrl}" alt="Supplier Invoice Image" />
+                <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
+              </body>
+            </html>
+          `);
+        } else {
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } catch (err) {
+        console.error("Supplier Image Error:", err);
+      }
     }
   });
 }
@@ -2882,7 +3007,9 @@ function printPurchaseInvoice(pur) {
 
   renderQrCode('print-supplier-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
   
-  executePrint(printTemplate.innerHTML);
+  setTimeout(() => {
+    window.print();
+  }, 250);
 }
 
 function sendSupplierWhatsApp(pur) {
@@ -2935,6 +3062,9 @@ window.deletePurchase = async (id) => {
   }
 };
 
+// ==========================================
+// Treasury & Expenses Engine
+// ==========================================
 const expenseForm = document.getElementById('expense-form');
 if (expenseForm) {
   expenseForm.addEventListener('submit', async (e) => {
@@ -3010,24 +3140,74 @@ function updateDashboardStats() {
 }
 
 // ==========================================
-// أزرار تصدير النسخة الاحتياطية و CSV (متوافق مع الأندرويد والويب)
+// Backup, Import & CSV/Excel Export (Native Capacitor Ready)
 // ==========================================
 const exportJsonBtn = document.getElementById('export-json-btn');
 if (exportJsonBtn) {
   exportJsonBtn.addEventListener('click', async () => {
-    const data = { 
-      invoices: invoicesDB, 
-      archived_invoices: archivedInvoicesDB, 
-      clients: clientsDB, 
-      suppliers: suppliersDB, 
-      purchases: purchasesDB, 
-      products: productsDB, 
-      expenses: expensesDB, 
-      storeProfile 
-    };
-    const jsonStr = JSON.stringify(data, null, 2);
-    const fileName = `backup_cloud_${Date.now()}.json`;
-    await saveAndShareFile(jsonStr, fileName, 'application/json', 'تصدير النسخة الاحتياطية');
+    try {
+      const data = { 
+        invoices: invoicesDB, 
+        archived_invoices: archivedInvoicesDB, 
+        clients: clientsDB, 
+        suppliers: suppliersDB, 
+        purchases: purchasesDB, 
+        products: productsDB, 
+        expenses: expensesDB, 
+        storeProfile 
+      };
+      
+      const jsonString = JSON.stringify(data, null, 2);
+      const fileName = `backup_cloud_${Date.now()}.json`;
+
+      if (navigator.share && isCapacitorNative) {
+        try {
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const file = new File([blob], fileName, { type: 'application/json' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'النسخة الاحتياطية',
+              text: 'ملف النسخة الاحتياطية للبيانات'
+            });
+            return;
+          }
+        } catch (sErr) {
+          console.warn("Native share fallback for JSON:", sErr);
+        }
+      }
+
+      const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonString);
+      const newWin = window.open();
+      if (newWin) {
+        newWin.document.write(`
+          <html dir="rtl">
+            <head>
+              <title>${fileName}</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body { margin:0; background:#111827; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; text-align:center; padding:20px; }
+                .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; margin-top:15px; }
+              </style>
+            </head>
+            <body>
+              <h3>💾 النسخة الاحتياطية جاهزة للتحميل</h3>
+              <a href="${dataUrl}" download="${fileName}" class="btn">اضغط هنا لتحميل الملف على الجهاز</a>
+            </body>
+          </html>
+        `);
+      } else {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err) {
+      console.error("Export JSON Error:", err);
+      alert("حدث خطأ أثناء استخراج النسخة الاحتياطية.");
+    }
   });
 }
 
@@ -3109,15 +3289,69 @@ if (importJsonInput) {
 const exportCsvBtn = document.getElementById('export-csv-btn');
 if (exportCsvBtn) {
   exportCsvBtn.addEventListener('click', async () => {
-    let csv = 'رقم الفاتورة,العميل,الهاتف,الحالة,التاريخ,الإجمالي\n';
-    invoicesDB.forEach(inv => {
-      csv += `${inv.id},"${inv.client}","${inv.phone ? inv.phone : ''}",${inv.status},${inv.date},${inv.grandTotal}\n`;
-    });
-    const fileName = `sales_report_${Date.now()}.csv`;
-    await saveAndShareFile(csv, fileName, 'text/csv;charset=utf-8;', 'تصدير تقرير Excel');
+    try {
+      let csv = 'رقم الفاتورة,العميل,الهاتف,الحالة,التاريخ,الإجمالي\n';
+      invoicesDB.forEach(inv => {
+        csv += `${inv.id},"${inv.client}","${inv.phone ? inv.phone : ''}",${inv.status},${inv.date},${inv.grandTotal}\n`;
+      });
+
+      const fileName = `sales_report_${Date.now()}.csv`;
+      const csvContent = "\ufeff" + csv;
+
+      if (navigator.share && isCapacitorNative) {
+        try {
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const file = new File([blob], fileName, { type: 'text/csv' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'تقرير المبيعات Excel',
+              text: 'تقرير فواتير المبيعات بصيغة CSV/Excel'
+            });
+            return;
+          }
+        } catch (sErr) {
+          console.warn("Native share fallback for CSV:", sErr);
+        }
+      }
+
+      const dataUrl = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+      const newWin = window.open();
+      if (newWin) {
+        newWin.document.write(`
+          <html dir="rtl">
+            <head>
+              <title>${fileName}</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body { margin:0; background:#111827; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; text-align:center; padding:20px; }
+                .btn { background:#16a34a; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; margin-top:15px; }
+              </style>
+            </head>
+            <body>
+              <h3>📊 تقرير المبيعات جاهز للتحميل</h3>
+              <a href="${dataUrl}" download="${fileName}" class="btn">اضغط هنا لتحميل تقرير Excel</a>
+            </body>
+          </html>
+        `);
+      } else {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err) {
+      console.error("Export CSV Error:", err);
+      alert("حدث خطأ أثناء استخراج التقرير.");
+    }
   });
 }
 
+// ==========================================
+// System Settings & UI Modals
+// ==========================================
 const settingsModal = document.getElementById('settings-modal');
 const openSettingsBtn = document.getElementById('open-settings-btn');
 if (openSettingsBtn) {
@@ -3201,6 +3435,9 @@ function renderAllModules() {
   updateDashboardStats();
 }
 
+// ==========================================
+// Application Bootstrapping
+// ==========================================
 applyTheme(localStorage.getItem('app_theme') ? localStorage.getItem('app_theme') : 'dark');
 applyLanguage(currentLang);
 
