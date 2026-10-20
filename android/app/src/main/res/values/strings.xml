@@ -1,15 +1,15 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml dir="rtl" encoding='utf-8'?>
 <resources>
-    <!-- اسم التطبيق والعنوان -->
+    <!-- اسم التطبيق والعنوان الموحد -->
     <string name="app_name">GITI Enterprise ERP</string>
     <string name="title_activity_main">GITI Enterprise ERP</string>
     <string name="package_name">io.github.karamegy.Ton2</string>
     <string name="custom_url_scheme">io.github.karamegy.Ton2</string>
 
-    <!-- المعرف الخاص بتسجيل الدخول بـ Google (Web Client ID) -->
+    <!-- معرفات Google Auth -->
     <string name="server_client_id">753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com</string>
     <string name="default_web_client_id">753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com</string>
 
-    <!-- مسار موفر الملفات لمشاركة وتنزيل الصور والفواتير -->
+    <!-- سلطة موفر الملفات للمشاركة -->
     <string name="file_provider_authority">io.github.karamegy.Ton2.fileprovider</string>
 </resources>
