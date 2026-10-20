@@ -1,4 +1,4 @@
-<?xml dir="rtl" encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- اسم التطبيق والعنوان الموحد -->
     <string name="app_name">GITI Enterprise ERP</string>
