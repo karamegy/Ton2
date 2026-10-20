@@ -35,11 +35,12 @@ jobs:
           cp -r * www/ 2>/dev/null || true
           
           node -e '
-            const fs = require("fs");
+          const fs = require("fs");
+          if (fs.existsSync("capacitor.config.json")) {
             let cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
             cfg.webDir = "www";
             cfg.appId = "io.github.karamegy.Ton2";
-            cfg.appName = "Giti فواتير";
+            cfg.appName = "GITI Enterprise ERP";
             cfg.plugins = cfg.plugins || {};
             cfg.plugins.GoogleAuth = {
               scopes: ["profile", "email"],
@@ -47,27 +48,37 @@ jobs:
               forceCodeForRefreshToken: true
             };
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
+          }
           '
 
-          # 2. تثبيت أدوات الكاباسيتور الأساسية ومكتبات الأيقونات
+          # 2. تثبيت أدوات الكاباسيتور
           npm install @capacitor/cli @capacitor/core @codetrix-studio/capacitor-google-auth @capacitor/assets --save-dev
 
-          # 3. إعادة إنشاء منصة أندرويد نظيفة
+          # 3. إعادة إنشاء منصة أندرويد
           rm -rf android
           npx cap add android
 
-          # 4. تجهيز الأيقونة وتوليد أحجام mipmap لأندرويد
+          # 4. تجهيز الأيقونات وتوليدها
           mkdir -p assets
-          cp logo.png assets/icon-only.png 2>/dev/null || cp logo.png assets/icon.png
-          cp logo.png assets/icon.png
-          npx @capacitor/assets generate --android
+          if [ -f "logo.png" ]; then
+            cp logo.png assets/icon-only.png 2>/dev/null || true
+            cp logo.png assets/icon.png 2>/dev/null || true
+            npx @capacitor/assets generate --android || true
+          fi
 
-          # 5. نسخ ملف google-services.json إلى مشروع الأندرويد إذا وجد
+          # 5. مزامنة الكاباسيتور
+          npx cap sync android
+
+          # 6. نسخ ملفات التثبيت والتوقيع
           if [ -f "google-services.json" ]; then
             cp google-services.json android/app/
           fi
+          if [ -f "signing.keystore" ]; then
+            cp signing.keystore android/app/
+          fi
 
-          # 6. تحديث ملف AndroidManifest.xml بالنسخة المحدثة (مع أذونات الواتساب والصور)
+          # 7. إنشاء ملف AndroidManifest.xml المحدث شاملاً FileProvider وأذونات الواتساب
+          mkdir -p android/app/src/main
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -130,18 +141,28 @@ jobs:
                       </intent-filter>
                   </activity>
 
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="${applicationId}.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
+
               </application>
 
           </manifest>
           EOF
 
-          # 7. حقن ملف strings.xml مع القيم المحدثة (مفاتيح Google Auth و FileProvider)
-          mkdir -p android/app/src/main/res/values/
+          # 8. إنشاء ملف strings.xml
+          mkdir -p android/app/src/main/res/values
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
-          <?xml version='1.0' encoding='utf-8'?>
+          <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <string name="app_name">Giti ERP</string>
-              <string name="title_activity_main">Giti فواتير</string>
+              <string name="app_name">GITI Enterprise ERP</string>
+              <string name="title_activity_main">GITI Enterprise ERP</string>
               <string name="package_name">io.github.karamegy.Ton2</string>
               <string name="custom_url_scheme">io.github.karamegy.Ton2</string>
               <string name="server_client_id">753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com</string>
@@ -150,19 +171,25 @@ jobs:
           </resources>
           EOF
 
-          # 8. نسخ ملف التوقيع الموجود في جذر المستودع مباشرة
-          if [ -f "signing.keystore" ]; then
-            cp signing.keystore android/app/
-          fi
+          # 9. إنشاء ملف file_paths.xml للمشاركة
+          mkdir -p android/app/src/main/res/xml
+          cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <paths xmlns:android="http://schemas.android.com/apk/res/android">
+              <external-path name="external_files" path="." />
+              <cache-path name="cache_files" path="." />
+              <files-path name="internal_files" path="." />
+          </paths>
+          EOF
 
-          # 9. إعداد Gradle للتوقيع وربط خدمات Google
+          # 10. إعداد Gradle للتوقيع وخدمات Google
           cat << EOF >> android/app/build.gradle
 
           android {
               defaultConfig {
                   applicationId "io.github.karamegy.Ton2"
-                  minSdk 24
-                  targetSdk 36
+                  minSdkVersion 24
+                  targetSdkVersion 36
                   versionCode 80003
                   versionName "8.0.0.3"
               }
@@ -185,10 +212,12 @@ jobs:
                   }
               }
           }
+          if (file("google-services.json").exists()) {
+              apply plugin: 'com.google.gms.google-services'
+          }
           EOF
 
-          # 10. المزامنة والبناء
-          npx cap sync android
+          # 11. تنفيذ عملية التجميع وبناء الحزم
           cd android
           chmod +x gradlew
           ./gradlew bundleRelease --no-daemon
