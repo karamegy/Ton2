@@ -103,7 +103,7 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
 }
 
 /**
- * دالة تصدير وطباعة الـ PDF الموحدة
+ * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية
  */
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
@@ -115,7 +115,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
       margin:       [5, 5, 5, 5],
       filename:     fileName,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, logging: false },
+      html2canvas:  { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -127,10 +127,10 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
     }
   }
 
-  // 2. Fallback إلى صورة عالية الدقة
+  // 2. Fallback إلى صورة عالية الدقة بخلفية بيضاء
   if (typeof html2canvas !== 'undefined') {
     try {
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#090d16' });
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
       return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
     } catch (e) {
@@ -1310,7 +1310,7 @@ if (downloadImgBtn) {
         scale: 2, 
         useCORS: true, 
         allowTaint: false, 
-        backgroundColor: '#090d16',
+        backgroundColor: '#ffffff',
         logging: false 
       });
 
@@ -1984,7 +1984,7 @@ if (ledgerDownloadBtn) {
       try {
         const canvas = await html2canvas(ledgerCard, { 
           scale: 2, 
-          backgroundColor: '#111827', 
+          backgroundColor: '#ffffff', 
           useCORS: true, 
           allowTaint: false 
         });
@@ -2377,7 +2377,7 @@ if (ledgerSupplierDownloadBtn) {
       try {
         const canvas = await html2canvas(ledgerCard, { 
           scale: 2, 
-          backgroundColor: '#111827', 
+          backgroundColor: '#ffffff', 
           useCORS: true, 
           allowTaint: false 
         });
@@ -2762,7 +2762,7 @@ if (supplierDownloadImgBtn) {
           scale: 2, 
           useCORS: true, 
           allowTaint: false, 
-          backgroundColor: '#090d16',
+          backgroundColor: '#ffffff',
           logging: false 
         });
 
