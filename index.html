@@ -15,8 +15,9 @@
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- استدعاء المكتبات محلياً للعمل بدون إنترنت -->
+  <script src="html2canvas.min.js"></script>
+  <script src="qrcode.min.js"></script>
   
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6651309355082807" crossorigin="anonymous"></script>
 </head>
@@ -84,7 +85,7 @@
       <div id="auth-success" class="auth-msg success hidden"></div>
 
       <div style="margin-top: 15px; text-align: center;">
-        <a href="privacy.html" target="_blank" style="font-size: 0.75rem; text-decoration: underline; color: var(--text-muted); display: inline-block; background: transparent; border: none; cursor: pointer;">🔒 سياسة الخصوصية (Privacy Policy)</a>
+        <button type="button" id="open-privacy-auth-btn" style="font-size: 0.75rem; text-decoration: underline; color: var(--text-muted); display: inline-block; background: transparent; border: none; cursor: pointer;">🔒 سياسة الخصوصية (Privacy Policy)</button>
       </div>
     </div>
   </div>
@@ -125,7 +126,6 @@
         <button id="open-settings-btn" class="btn-icon">⚙️</button>
         <button id="fetch-cloud-btn" class="btn-icon" title="جلب وتحديث البيانات من السحابة">☁️</button>
         
-        <!-- أيقونة الإشعارات بجوار زر الباب -->
         <button id="notification-btn" class="btn-icon" title="الإشعارات والملاحظات الإدارية" style="position: relative;">
           🔔
           <span id="notification-badge" class="hidden" style="position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; background: var(--danger); border-radius: 50%; box-shadow: 0 0 6px var(--danger);"></span>
@@ -267,8 +267,6 @@
             <div class="backup-btns" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
               <button id="export-json-btn" class="btn-sm">💾 نسخة احتياطية</button>
               <button id="export-csv-btn" class="btn-sm">📊 Excel</button>
-              
-              <!-- زر أرشفة الفواتير القديمة -->
               <button id="open-archive-modal-btn" class="btn-sm" style="background-color: var(--warning); color: #fff;" title="أرشيف الفواتير القديمة">📦 الأرشيف</button>
 
               <label for="import-json-input" class="btn-sm" style="cursor: pointer; background-color: #10b981; color: white; display: inline-flex; align-items: center; gap: 4px;" title="استيراد ملف نسخة احتياطية سابقة">
@@ -323,11 +321,10 @@
       </div>
     </section>
 
-    <!-- تبويب الموردين والشركات المطور بالكامل -->
+    <!-- تبويب الموردين والشركات -->
     <section id="tab-suppliers" class="tab-content">
       <div class="dashboard-grid">
         
-        <!-- إضافة وتعديل مورد جديد -->
         <div class="card">
           <div class="card-header">
             <h3>🏭 إضافة / تعديل بيانات مورد</h3>
@@ -349,7 +346,6 @@
           </form>
         </div>
 
-        <!-- سجل الموردين المجمع -->
         <div class="card">
           <div class="card-header">
             <h3>سجل الموردين والدفاتر</h3>
@@ -360,7 +356,6 @@
           </div>
         </div>
 
-        <!-- تسجيل فاتورة مشتريات / توريد من مورد -->
         <div class="card" style="grid-column: 1 / -1;">
           <div class="card-header">
             <h3>📦 تسجيل فاتورة مشتريات / توريد بضاعة جديدة من مورد</h3>
@@ -418,7 +413,6 @@
           </form>
         </div>
 
-        <!-- سجل فواتير المشتريات -->
         <div class="card" style="grid-column: 1 / -1;">
           <div class="card-header">
             <h3>📋 سجل فواتير المشتريات من الموردين</h3>
@@ -759,8 +753,27 @@
       <button id="save-settings-btn" class="btn-primary" style="margin-top: 15px;" data-i18n="saveSettings">حفظ التغييرات السحابية</button>
       
       <div style="margin-top: 15px; border-top: 1px dashed var(--border-color); padding-top: 12px; text-align: center;">
-        <a href="privacy.html" target="_blank" class="btn-secondary" style="display: block; width: 100%; text-align: center; text-decoration: none; line-height: 38px;">🔒 عرض سياسة الخصوصية</a>
+        <button type="button" id="open-privacy-settings-btn" class="btn-secondary" style="display: block; width: 100%; text-align: center; text-decoration: none; line-height: 38px; cursor: pointer; border: none; background: transparent;">🔒 عرض سياسة الخصوصية</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal سياسة الخصوصية -->
+  <div id="privacy-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 500px; text-align: right; max-height: 80vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h3 style="margin: 0; font-size: 1.1rem;">🔒 سياسة الخصوصية وشروط الاستخدام</h3>
+        <button id="close-privacy-btn" class="btn-close">✕</button>
+      </div>
+      <div style="padding: 15px 0; font-size: 0.88rem; line-height: 1.6; color: var(--text-main);">
+        <p>نحن في منظومة <strong>GITI Enterprise ERP</strong> نولي أهمية قصوى لخصوصية بياناتك وأمانها:</p>
+        <ul>
+          <li><strong>تخزين البيانات:</strong> يتم تشفير وحفظ فواتيرك وحساباتك سحابياً باستخدام بيئة Firebase الآمنة، مع حفظ نسخة محلية على جهازك لضمان السرعة والعمل بدون إنترنت.</li>
+          <li><strong>استخدام المعلومات:</strong> لا يتم مشاركة بيانات نشاطك التجاري أو عملائك أو مبيعاتك مع أي طرف ثالث تحت أي ظرف.</li>
+          <li><strong>صلاحيات الحساب:</strong> للوصول إلى بياناتك من أجهزة متعددة يتم الربط الآمن عبر البريد الإلكتروني أو حساب Google.</li>
+        </ul>
+      </div>
+      <button id="accept-privacy-btn" class="btn-primary" style="width: 100%; margin-top: 5px;">موافقة وإغلاق</button>
     </div>
   </div>
 
