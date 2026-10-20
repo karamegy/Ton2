@@ -13,30 +13,60 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ==========================================
-// Universal Native File Saving & Sharing Helper
+// Universal Native File Saving & Sharing Helper (Fixed & Tested for Android APK)
 // ==========================================
-/**
- * دالة موحدة للتعامل مع حفظ وتنزيل ومشاركة الملفات والصور في Capacitor والأندرويد
- */
 async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle) {
   try {
+    let base64Data;
     let blob;
-    let dataUrl;
 
     if (typeof fileDataUrlOrBlob === 'string' && fileDataUrlOrBlob.startsWith('data:')) {
-      dataUrl = fileDataUrlOrBlob;
+      base64Data = fileDataUrlOrBlob;
       const res = await fetch(fileDataUrlOrBlob);
       blob = await res.blob();
     } else if (fileDataUrlOrBlob instanceof Blob) {
       blob = fileDataUrlOrBlob;
-      dataUrl = URL.createObjectURL(blob);
+      base64Data = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
     } else {
       throw new Error("تنسيق بيانات الملف غير مدعوم");
     }
 
-    // التحميل المباشر والآمن داخل بيئة WebView لأندرويد لتفادي توقف الأزرار
+    // التحقق مما إذا كان التطبيق يعمل كـ Native APK على أندرويد
+    const isNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+    
+    if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Share) {
+      try {
+        const base64Clean = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+        
+        if (window.Capacitor.Plugins.Filesystem) {
+          // كتابة الملف في التخزين المؤقت المؤهل للمشاركة أو الحفظ
+          const savedFile = await window.Capacitor.Plugins.Filesystem.writeFile({
+            path: fileName,
+            data: base64Clean,
+            directory: 'CACHE'
+          });
+          
+          // استدعاء نافذة المشاركة الأصلية لنظام أندرويد (تتيح الحفظ أو المشاركة عبر الواتساب/البريد/الملفات)
+          await window.Capacitor.Plugins.Share.share({
+            title: shareTitle || 'مشاركة مستند',
+            text: 'إليك المستند الصادر من منظومة GITI ERP',
+            url: savedFile.uri,
+            dialogTitle: shareTitle
+          });
+          return true;
+        }
+      } catch (nativeShareErr) {
+        console.warn("Native Share plugin warning, falling back to web download:", nativeShareErr);
+      }
+    }
+
+    // الطريقة البديلة للمتصفح والـ WebView العادي
     const a = document.createElement('a');
-    a.href = dataUrl;
+    a.href = base64Data;
     a.download = fileName;
     a.style.display = 'none';
     document.body.appendChild(a);
@@ -44,28 +74,13 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
     
     setTimeout(() => {
       document.body.removeChild(a);
-      if (!(fileDataUrlOrBlob instanceof Blob)) {
-        URL.revokeObjectURL(dataUrl);
-      }
     }, 1500);
 
     return true;
   } catch (err) {
-    console.warn("File saving fallback triggered:", err);
-    // طريقة بديلة أخيرة للتنزيل المباشر
-    try {
-      const a = document.createElement('a');
-      a.href = typeof fileDataUrlOrBlob === 'string' ? fileDataUrlOrBlob : URL.createObjectURL(fileDataUrlOrBlob);
-      a.download = fileName;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => document.body.removeChild(a), 1500);
-      return true;
-    } catch (e) {
-      alert("⚠️ تعذر التحميل المباشر. يمكنك استخدام زر 'طباعة / PDF' للحفظ المباشر.");
-      return false;
-    }
+    console.error("File saving critical error:", err);
+    alert("⚠️ تعذر التحميل المباشر. يمكنك استخدام زر 'طباعة / PDF' كبديل فوري.");
+    return false;
   }
 }
 
