@@ -103,7 +103,7 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
 }
 
 /**
- * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية (معدلة لتجنب الصفحات البيضاء)
+ * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية
  */
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
@@ -113,6 +113,10 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   if (element.classList.contains('hidden') || getComputedStyle(element).display === 'none') {
     element.style.display = 'block';
   }
+
+  // إخفاء أزرار الإجراءات المؤقتة غير المخصصة للطباعة إن وجدت
+  const noPrints = element.querySelectorAll('.no-print');
+  noPrints.forEach(el => el.style.display = 'none');
 
   // انتظار بسيط لضمان رندر العناصر ورسومات QR كود والخطوط
   await new Promise(resolve => setTimeout(resolve, 300));
@@ -136,6 +140,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
 
     try {
       const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      noPrints.forEach(el => el.style.display = '');
       if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
       return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
     } catch (e) {
@@ -154,6 +159,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
         scrollY: 0
       });
       const imgData = canvas.toDataURL('image/png');
+      noPrints.forEach(el => el.style.display = '');
       if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
       return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
     } catch (e) {
@@ -162,6 +168,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   }
 
   // 3. طباعة المتصفح التقليدية
+  noPrints.forEach(el => el.style.display = '');
   window.print();
   return true;
 }
@@ -1788,6 +1795,7 @@ function renderClients() {
 
   container.innerHTML = filtered.map((c, index) => {
     const stats = getClientCalculatedLedger(c);
+    const safeName = (c.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
     return `
       <li>
         <div style="flex: 1;">
@@ -1798,7 +1806,7 @@ function renderClients() {
           <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
             ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
           </span>
-          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openClientLedger('${c.name.replace(/'/g, "\\'")}')">كشف 📄</button>
+          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openClientLedger('${safeName}')">كشف 📄</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editClient(${index})" title="تعديل العميل">✏️</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteClient(${index})" title="حذف العميل">🗑️</button>
         </div>
@@ -1884,6 +1892,30 @@ window.openClientLedger = (clientName) => {
   activeLedgerClientName = clientObj.name;
   const stats = getClientCalculatedLedger(clientObj);
 
+  // تحديث رأس كشف الحساب
+  const clLogo = document.getElementById('cl-logo');
+  if (clLogo) {
+    if (storeProfile.logo) {
+      clLogo.src = storeProfile.logo;
+      clLogo.classList.remove('hidden');
+    } else {
+      clLogo.classList.add('hidden');
+    }
+  }
+  const clStoreName = document.getElementById('cl-store-name');
+  if (clStoreName) clStoreName.textContent = storeProfile.name;
+  const clStorePhone = document.getElementById('cl-store-phone');
+  if (clStorePhone) clStorePhone.textContent = storeProfile.phone;
+  const clStoreVat = document.getElementById('cl-store-vat');
+  if (clStoreVat) clStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+  const clDate = document.getElementById('cl-date');
+  if (clDate) clDate.textContent = `التاريخ: ${new Date().toLocaleDateString('ar-EG')}`;
+  
+  const clClientName = document.getElementById('cl-client-name');
+  if (clClientName) clClientName.textContent = clientObj.name;
+  const clClientPhone = document.getElementById('cl-client-phone');
+  if (clClientPhone) clClientPhone.textContent = clientObj.phone || '-';
+
   const ledgerTitle = document.getElementById('ledger-client-title');
   if (ledgerTitle) ledgerTitle.textContent = `👤 كشف حساب: ${clientObj.name}`;
   const ledgerTotalSales = document.getElementById('ledger-total-sales');
@@ -1893,35 +1925,51 @@ window.openClientLedger = (clientName) => {
   const ledgerBalance = document.getElementById('ledger-balance');
   if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency}`;
 
-  const historyUl = document.getElementById('client-ledger-history');
-  if (!historyUl) return;
-  let historyHtml = '';
+  const tableBody = document.getElementById('client-ledger-table-body');
+  if (!tableBody) return;
+  let rowsHtml = '';
+
+  if (clientObj.openingBalance > 0) {
+    rowsHtml += `
+      <tr>
+        <td>-</td>
+        <td><strong>رصيد افتتاح مديونية سابقة</strong></td>
+        <td><strong style="color:#dc2626 !important;">${clientObj.openingBalance.toFixed(2)} ${storeProfile.currency}</strong></td>
+        <td><span style="color:#dc2626 !important; font-weight: bold;">مديونية</span></td>
+      </tr>
+    `;
+  }
 
   stats.clientInvoices.forEach(inv => {
-    historyHtml += `
-      <li style="border-right: 4px solid var(--accent)">
-        <div>فاتورة #${inv.id} (${inv.date})<br><small>${(inv.items ? inv.items : []).length} أصناف - ${inv.status}</small></div>
-        <strong>${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</strong>
-      </li>
+    rowsHtml += `
+      <tr>
+        <td>${inv.date || '-'}</td>
+        <td>فاتورة مبيعات #${inv.id} (${(inv.items ? inv.items.length : 0)} أصناف)</td>
+        <td><strong>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong></td>
+        <td><span style="color:${inv.status === 'مدفوعة' ? '#059669' : '#dc2626'} !important; font-weight: bold;">${inv.status}</span></td>
+      </tr>
     `;
   });
 
   stats.payments.forEach((p, pIndex) => {
-    historyHtml += `
-      <li style="border-right: 4px solid var(--success); display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div>دفعة سداد 💵 (${p.date})</div>
-          <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
-        </div>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editClientPayment('${clientObj.name.replace(/'/g, "\\'")}', ${pIndex})">✏️</button>
-          <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteClientPayment('${clientObj.name.replace(/'/g, "\\'")}', ${pIndex})">🗑️</button>
-        </div>
-      </li>
+    const safeClientName = (clientObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+    rowsHtml += `
+      <tr style="background-color: #f0fdf4 !important;">
+        <td>${p.date || '-'}</td>
+        <td>
+          دفعة سداد نقدي 💵 
+          <span style="float: left;" class="no-print">
+            <button class="btn-sm" style="background:#f59e0b; color:#fff; padding:2px 6px; font-size:0.75rem;" onclick="window.editClientPayment('${safeClientName}', ${pIndex})">✏️</button>
+            <button class="btn-sm" style="background:#ef4444; color:#fff; padding:2px 6px; font-size:0.75rem;" onclick="window.deleteClientPayment('${safeClientName}', ${pIndex})">🗑️</button>
+          </span>
+        </td>
+        <td><strong style="color:#059669 !important;">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong></td>
+        <td><span style="color:#059669 !important; font-weight: bold;">مسددة</span></td>
+      </tr>
     `;
   });
 
-  historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
+  tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" style="text-align:center; color:#6b7280 !important;">لا توجد معاملات مسجلة</td></tr>';
   const ledgerModal = document.getElementById('client-ledger-modal');
   if (ledgerModal) ledgerModal.classList.remove('hidden');
 };
@@ -2241,6 +2289,30 @@ window.openSupplierLedger = (supplierName) => {
     activeLedgerSupplierName = supplierObj.name;
     const stats = getSupplierCalculatedLedger(supplierObj);
 
+    // تحديث رأس كشف الحساب
+    const slLogo = document.getElementById('sl-logo');
+    if (slLogo) {
+      if (storeProfile.logo) {
+        slLogo.src = storeProfile.logo;
+        slLogo.classList.remove('hidden');
+      } else {
+        slLogo.classList.add('hidden');
+      }
+    }
+    const slStoreName = document.getElementById('sl-store-name');
+    if (slStoreName) slStoreName.textContent = storeProfile.name;
+    const slStorePhone = document.getElementById('sl-store-phone');
+    if (slStorePhone) slStorePhone.textContent = storeProfile.phone;
+    const slStoreVat = document.getElementById('sl-store-vat');
+    if (slStoreVat) slStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+    const slDate = document.getElementById('sl-date');
+    if (slDate) slDate.textContent = `التاريخ: ${new Date().toLocaleDateString('ar-EG')}`;
+
+    const slSupplierName = document.getElementById('sl-supplier-name');
+    if (slSupplierName) slSupplierName.textContent = supplierObj.name;
+    const slSupplierPhone = document.getElementById('sl-supplier-phone');
+    if (slSupplierPhone) slSupplierPhone.textContent = supplierObj.phone || '-';
+
     const ledgerTitle = document.getElementById('ledger-supplier-title');
     if (ledgerTitle) ledgerTitle.textContent = `🏭 كشف حساب مورد: ${supplierObj.name}`;
     
@@ -2253,36 +2325,51 @@ window.openSupplierLedger = (supplierName) => {
     const ledgerBalance = document.getElementById('ledger-supplier-balance');
     if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
 
-    const historyUl = document.getElementById('supplier-ledger-history');
-    if (historyUl) {
-      let historyHtml = '';
+    const tableBody = document.getElementById('supplier-ledger-table-body');
+    if (tableBody) {
+      let rowsHtml = '';
+
+      if (supplierObj.openingBalance > 0) {
+        rowsHtml += `
+          <tr>
+            <td>-</td>
+            <td><strong>رصيد افتتاح (مستحق سابقة للمورد)</strong></td>
+            <td><strong style="color:#dc2626 !important;">${supplierObj.openingBalance.toFixed(2)} ${storeProfile.currency}</strong></td>
+            <td><span style="color:#dc2626 !important; font-weight: bold;">مستحق للمورد</span></td>
+          </tr>
+        `;
+      }
 
       (stats.supplierPurchases || []).forEach(pur => {
-        historyHtml += `
-          <li style="border-right: 4px solid var(--accent)">
-            <div>فاتورة توريد #${pur.id} (${pur.date || ''})<br><small>${(pur.items ? pur.items : []).length} أصناف - ${pur.status || ''}</small></div>
-            <strong>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
-          </li>
+        rowsHtml += `
+          <tr>
+            <td>${pur.date || '-'}</td>
+            <td>فاتورة توريد #${pur.id} (${(pur.items ? pur.items.length : 0)} أصناف)</td>
+            <td><strong>${(pur.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong></td>
+            <td><span style="color:${pur.status === 'مدفوعة' ? '#059669' : '#dc2626'} !important; font-weight: bold;">${pur.status || ''}</span></td>
+          </tr>
         `;
       });
 
       (stats.payments || []).forEach((p, pIndex) => {
         const safeSupplierName = (supplierObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        historyHtml += `
-          <li style="border-right: 4px solid var(--success); display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div>دفعة سداد للمورد 💵 (${p.date || ''})</div>
-              <strong class="text-success">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
-            </div>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editSupplierPayment('${safeSupplierName}', ${pIndex})">✏️</button>
-              <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteSupplierPayment('${safeSupplierName}', ${pIndex})">🗑️</button>
-            </div>
-          </li>
+        rowsHtml += `
+          <tr style="background-color: #f0fdf4 !important;">
+            <td>${p.date || '-'}</td>
+            <td>
+              دفعة سداد للمورد 💵 
+              <span style="float: left;" class="no-print">
+                <button class="btn-sm" style="background:#f59e0b; color:#fff; padding:2px 6px; font-size:0.75rem;" onclick="window.editSupplierPayment('${safeSupplierName}', ${pIndex})">✏️</button>
+                <button class="btn-sm" style="background:#ef4444; color:#fff; padding:2px 6px; font-size:0.75rem;" onclick="window.deleteSupplierPayment('${safeSupplierName}', ${pIndex})">🗑️</button>
+              </span>
+            </td>
+            <td><strong style="color:#059669 !important;">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong></td>
+            <td><span style="color:#059669 !important; font-weight: bold;">مسددة للمورد</span></td>
+          </tr>
         `;
       });
 
-      historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted); padding: 10px;">لا توجد معاملات مسجلة للمورد</p>';
+      tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" style="text-align:center; color:#6b7280 !important; padding: 10px;">لا توجد معاملات مسجلة للمورد</td></tr>';
     }
 
     const ledgerModal = document.getElementById('supplier-ledger-modal');
