@@ -397,7 +397,7 @@ button {
 
 .form-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 16px; }
 
-/* Lists & Modals */
+/* Lists & Modals Overlay */
 .list-container { max-height: 420px; overflow-y: auto; }
 #invoices-container, #products-list-container, #clients-list-container, #expenses-list-container { list-style: none; }
 li {
@@ -415,7 +415,9 @@ li:hover {
 .badge-unpaid { background: rgba(244, 63, 94, 0.15); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.3); }
 .badge-partial { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-/* Modal Architecture */
+/* ==========================================================
+   إعادة هيكلة النوافذ المنبثقة (Flexbox Modal Architecture)
+   ========================================================== */
 .modal { 
   position: fixed; 
   inset: 0; 
@@ -431,7 +433,10 @@ li:hover {
   transform: translateZ(0); 
 }
 
-.modal-content { 
+/* ضبط إطار النافذة المنبثقة الخارجي ليكون ثابتاً في ارتفاعه */
+.modal-content,
+.ledger-modal-content,
+.preview-modal-content { 
   background: var(--card-bg); 
   padding: 22px; 
   border-radius: 18px; 
@@ -439,24 +444,33 @@ li:hover {
   max-width: 480px; 
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-  max-height: 90vh; 
-  overflow-y: auto; 
+  max-height: 88vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
+  display: flex !important;
+  flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
+  overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+.ledger-modal-content { max-width: 750px !important; }
+.preview-modal-content { max-width: 520px !important; }
 
 @keyframes modalPop {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
-.preview-modal-content { max-width: 520px; }
+/* تثبيت العناصر الخارجية لمنع اختفائها أو حركتها عند التمرير */
+.modal-header,
+.pay-section,
+.pay-section-modal,
+.modal-actions-row { 
+  flex-shrink: 0 !important; 
+}
 
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .btn-close { background: transparent; color: var(--text-muted); font-size: 1.2rem; min-height: auto; padding: 4px; }
 .btn-close:hover { color: var(--danger); }
 
-.invoice-card-preview { background: var(--preview-bg); color: var(--preview-text); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 15px; }
 .preview-header { text-align: center; margin-bottom: 12px; }
 .preview-logo { max-height: 60px; max-width: 150px; object-fit: contain; margin-bottom: 8px; }
 .preview-table { width: 100%; margin: 12px 0; border-collapse: collapse; }
@@ -585,6 +599,12 @@ li:hover {
   box-shadow: none !important;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
+  
+  /* تفعيل التمرير العمودي فقط داخل الكرت الناصع البياض */
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ضبط ألوان النصوص الأساسية واستثناء الألوان التنبيهية (الأخضر والأحمر) */
@@ -634,17 +654,27 @@ li:hover {
    إعدادات الطباعة وتصدير الـ PDF بمقاس A4 لجميع الأقسام
    ========================================================== */
 @media print {
-  /* 1. إجبار المتصفح على مقاس ورقة A4 وهامش منتظم */
   @page {
     size: A4 portrait;
     margin: 10mm 12mm;
+  }
+
+  /* إلغاء قيود التمرير والارتفاع عند الطباعة لتظهر جميع الفواتير كاملة */
+  .modal-content,
+  .ledger-modal-content,
+  .preview-modal-content,
+  .printable-white-card,
+  .invoice-card-preview {
+    max-height: none !important;
+    overflow: visible !important;
+    height: auto !important;
   }
 
   body * {
     visibility: hidden !important;
   }
   
-  /* 2. إظهار بطاقات المعاينة المطبوعة فقط (عملاء / موردين / فواتير) */
+  /* إظهار بطاقات المعاينة المطبوعة فقط (عملاء / موردين / فواتير) */
   .modal:not(.hidden) .printable-white-card, 
   .modal:not(.hidden) .printable-white-card *,
   .modal:not(.hidden) .invoice-card-preview,
@@ -652,7 +682,7 @@ li:hover {
     visibility: visible !important;
   }
 
-  /* 3. ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
+  /* ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
   .modal:not(.hidden) .printable-white-card,
   .modal:not(.hidden) .invoice-card-preview {
     position: absolute !important;
@@ -666,12 +696,13 @@ li:hover {
     border: none !important;
   }
 
-  /* 4. إخفاء الأزرار وعناصر التحكم أثناء التصدير */
+  /* إخفاء الأزرار وعناصر التحكم أثناء التصدير والطباعة */
   .no-print,
   button,
   .modal-header,
   .modal-actions-row,
   .pay-section,
+  .pay-section-modal,
   .btn-close {
     display: none !important;
   }
