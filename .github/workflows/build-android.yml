@@ -67,7 +67,17 @@ jobs:
             cp google-services.json android/app/
           fi
 
-          # 6. تحديث ملف AndroidManifest.xml بالنسخة المحدثة (مع أذونات الواتساب والصور)
+          # 6. تجهيز مسارات موفر الملفات والـ AndroidManifest
+          mkdir -p android/app/src/main/res/xml/
+          cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <paths xmlns:android="http://schemas.android.com/apk/res/android">
+              <external-path name="external_files" path="." />
+              <cache-path name="cache_files" path="." />
+              <files-path name="files_path" path="." />
+          </paths>
+          EOF
+
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -130,12 +140,22 @@ jobs:
                       </intent-filter>
                   </activity>
 
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="io.github.karamegy.Ton2.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
+
               </application>
 
           </manifest>
           EOF
 
-          # 7. حقن ملف strings.xml مع القيم المحدثة (مفاتيح Google Auth و FileProvider)
+          # 7. حقن ملف strings.xml مع القيم المحدثة
           mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
@@ -150,7 +170,7 @@ jobs:
           </resources>
           EOF
 
-          # 8. نسخ ملف التوقيع الموجود في جذر المستودع مباشرة
+          # 8. نسخ ملف التوقيع الموجود في جذر المستودع
           if [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
           fi
@@ -163,8 +183,8 @@ jobs:
                   applicationId "io.github.karamegy.Ton2"
                   minSdk 24
                   targetSdk 36
-                  versionCode 80003
-                  versionName "8.0.0.3"
+                  versionCode 80004
+                  versionName "8.0.0.4"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
