@@ -52,7 +52,7 @@ jobs:
           '
 
           # 2. تثبيت أدوات الكاباسيتور والإضافات الأصلية للطباعة والمشاركة والملفات
-          npm install @capacitor/cli @capacitor/core @codetrix-studio/capacitor-google-auth @capacitor/assets @capacitor/filesystem @capacitor/share @capacitor-community/printer --save-dev
+          npm install @capacitor/cli @capacitor/core @capacitor/app @capacitor/splash-screen @codetrix-studio/capacitor-google-auth @capacitor/assets @capacitor/filesystem @capacitor/share @capacitor-community/printer --save-dev
 
           # 3. إعادة إنشاء منصة أندرويد
           rm -rf android
@@ -83,10 +83,7 @@ jobs:
             cp signing.keystore android/app/
           fi
 
-          # 6. مزامنة الإضافات مع مجلد أندرويد
-          npx cap sync android
-
-          # 7. إنشاء ملف AndroidManifest.xml المحدث
+          # 6. إنشاء ملف AndroidManifest.xml المحدث
           mkdir -p android/app/src/main
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -165,7 +162,7 @@ jobs:
           </manifest>
           EOF
 
-          # 8. إنشاء ملف strings.xml المصحح
+          # 7. إنشاء ملف strings.xml المصحح
           mkdir -p android/app/src/main/res/values
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -180,7 +177,7 @@ jobs:
           </resources>
           EOF
 
-          # 9. إنشاء ملف file_paths.xml المعتمد لمشاركة الملفات والـ PDF
+          # 8. إنشاء ملف file_paths.xml المعتمد لمشاركة الملفات والـ PDF
           mkdir -p android/app/src/main/res/xml
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -190,6 +187,9 @@ jobs:
               <files-path name="internal_files" path="." />
           </paths>
           EOF
+
+          # 9. مزامنة الإضافات والملفات المحدثة مع مجلد أندرويد
+          npx cap sync android
 
           # 10. إعداد Gradle للتوقيع وخدمات Google وتحديد الإصدار المستقر
           node -e '
