@@ -13,60 +13,45 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ==========================================
-// Universal Native File Saving & Sharing Helper (Fixed & Tested for Android APK)
+// Universal Native File Saving & Sharing Helper
 // ==========================================
+/**
+ * دالة موحدة ومعالجة للتعامل مع حفظ وتنزيل ومشاركة الملفات والصور في Capacitor وأندرويد
+ */
 async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle) {
   try {
-    let base64Data;
     let blob;
 
     if (typeof fileDataUrlOrBlob === 'string' && fileDataUrlOrBlob.startsWith('data:')) {
-      base64Data = fileDataUrlOrBlob;
       const res = await fetch(fileDataUrlOrBlob);
       blob = await res.blob();
     } else if (fileDataUrlOrBlob instanceof Blob) {
       blob = fileDataUrlOrBlob;
-      base64Data = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
     } else {
       throw new Error("تنسيق بيانات الملف غير مدعوم");
     }
 
-    // التحقق مما إذا كان التطبيق يعمل كـ Native APK على أندرويد
-    const isNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
-    
-    if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Share) {
+    const file = new File([blob], fileName, { type: mimeType || blob.type || 'application/octet-stream' });
+
+    // 1. استخدام Web Share API المباشر لأندرويد (يفتح نافذة حفظ الملفات والتنزيل فوراً)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
-        const base64Clean = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
-        
-        if (window.Capacitor.Plugins.Filesystem) {
-          // كتابة الملف في التخزين المؤقت المؤهل للمشاركة أو الحفظ
-          const savedFile = await window.Capacitor.Plugins.Filesystem.writeFile({
-            path: fileName,
-            data: base64Clean,
-            directory: 'CACHE'
-          });
-          
-          // استدعاء نافذة المشاركة الأصلية لنظام أندرويد (تتيح الحفظ أو المشاركة عبر الواتساب/البريد/الملفات)
-          await window.Capacitor.Plugins.Share.share({
-            title: shareTitle || 'مشاركة مستند',
-            text: 'إليك المستند الصادر من منظومة GITI ERP',
-            url: savedFile.uri,
-            dialogTitle: shareTitle
-          });
-          return true;
-        }
-      } catch (nativeShareErr) {
-        console.warn("Native Share plugin warning, falling back to web download:", nativeShareErr);
+        await navigator.share({
+          files: [file],
+          title: shareTitle || fileName,
+          text: shareTitle || fileName
+        });
+        return true;
+      } catch (shareErr) {
+        if (shareErr.name === 'AbortError') return true;
+        console.warn("Web Share API fallback triggered:", shareErr);
       }
     }
 
-    // الطريقة البديلة للمتصفح والـ WebView العادي
+    // 2. المحاولة عبر إنشاء عنصر تنزيل أوتوماتيكي
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = base64Data;
+    a.href = blobUrl;
     a.download = fileName;
     a.style.display = 'none';
     document.body.appendChild(a);
@@ -74,16 +59,16 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
     
     setTimeout(() => {
       document.body.removeChild(a);
-    }, 1500);
+      URL.revokeObjectURL(blobUrl);
+    }, 2000);
 
     return true;
   } catch (err) {
-    console.error("File saving critical error:", err);
-    alert("⚠️ تعذر التحميل المباشر. يمكنك استخدام زر 'طباعة / PDF' كبديل فوري.");
+    console.warn("File save/share error:", err);
+    alert("⚠️ تعذر التنزيل المباشر من المتصفح.");
     return false;
   }
 }
-
 
 // ==========================================
 // Capacitor Native Bridge & System Integration
@@ -391,23 +376,6 @@ async function ensureUserLicense(user) {
   }
 }
 
-const privacyModal = document.getElementById('privacy-modal');
-const openPrivacyAuthBtn = document.getElementById('open-privacy-auth-btn');
-if (openPrivacyAuthBtn) openPrivacyAuthBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.remove('hidden'); });
-
-const openPrivacySettingsBtn = document.getElementById('open-privacy-settings-btn');
-if (openPrivacySettingsBtn) openPrivacySettingsBtn.addEventListener('click', () => {
-  const settingsModalEl = document.getElementById('settings-modal');
-  if (settingsModalEl) settingsModalEl.classList.add('hidden');
-  if (privacyModal) privacyModal.classList.remove('hidden');
-});
-
-const closePrivacyBtn = document.getElementById('close-privacy-btn');
-if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.add('hidden'); });
-
-const acceptPrivacyBtn = document.getElementById('accept-privacy-btn');
-if (acceptPrivacyBtn) acceptPrivacyBtn.addEventListener('click', () => { if (privacyModal) privacyModal.classList.add('hidden'); });
-
 const tabLoginBtn = document.getElementById('tab-login-btn');
 if (tabLoginBtn) {
   tabLoginBtn.addEventListener('click', () => {
@@ -670,7 +638,7 @@ if (googleLoginBtn) {
         } catch (nativeErr) {
           console.error("Native GoogleAuth signin failed:", nativeErr);
           if (authError) {
-            authError.textContent = "فشل تسجيل الدخول عبر Google Auth. يرجى التأكد من إعدادات SHA-256 في Firebase.";
+            authError.textContent = "فشل تسجيل الدخول عبر Google Auth.";
             authError.classList.remove('hidden');
           }
           return;
@@ -682,7 +650,7 @@ if (googleLoginBtn) {
     } catch (err) {
       console.error("Google Auth Error:", err);
       if (authError) {
-        authError.textContent = "فشل تسجيل الدخول. تأكد من اتصال الإنترنت وإعدادات النطاق.";
+        authError.textContent = "فشل تسجيل الدخول. تأكد من اتصال الإنترنت.";
         authError.classList.remove('hidden');
       }
     }
@@ -1064,8 +1032,7 @@ async function saveInvoiceData() {
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
   if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل وتحديد الكمية والسعر'); return null; }
 
-  const uid = currentUser ? currentUser.uid : null;
-  if (!uid) { alert('يرجى تسجيل الدخول أولاً'); return null; }
+  const uid = currentUser ? currentUser.uid : 'local';
 
   let clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase());
   let assignedClientId = null;
@@ -1132,18 +1099,20 @@ async function saveInvoiceData() {
   resetForm();
   renderAllModules();
 
-  try {
-    setDoc(doc(db, "users", uid, "invoices", String(invoice.id)), invoice).catch(() => {});
-    setDoc(doc(db, "users", uid, "clients", String(clientObj.id)), clientObj).catch(() => {});
-    validItems.forEach(soldItem => {
-      const cleanSoldName = (soldItem.name || '').trim().toLowerCase();
-      const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanSoldName);
-      if (prod) {
-        setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
-      }
-    });
-  } catch (err) {
-    console.warn("Background sync queued offline:", err);
+  if (currentUser) {
+    try {
+      setDoc(doc(db, "users", uid, "invoices", String(invoice.id)), invoice).catch(() => {});
+      setDoc(doc(db, "users", uid, "clients", String(clientObj.id)), clientObj).catch(() => {});
+      validItems.forEach(soldItem => {
+        const cleanSoldName = (soldItem.name || '').trim().toLowerCase();
+        const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanSoldName);
+        if (prod) {
+          setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
+        }
+      });
+    } catch (err) {
+      console.warn("Background sync queued offline:", err);
+    }
   }
 
   return invoice;
@@ -1153,7 +1122,7 @@ const saveBtn = document.getElementById('save-btn');
 if (saveBtn) {
   saveBtn.addEventListener('click', async () => {
     const inv = await saveInvoiceData();
-    if (inv) alert('تم حفظ الفاتورة وتحديث المخزن والحسابات بنجاح');
+    if (inv) alert('✅ تم حفظ الفاتورة وتحديث المخزن والحسابات بنجاح!');
   });
 }
 
@@ -1273,7 +1242,7 @@ if (downloadImgBtn) {
       const canvas = await html2canvas(previewCard, { 
         scale: 2, 
         useCORS: true, 
-        allowTaint: true, 
+        allowTaint: false, 
         backgroundColor: '#090d16',
         logging: false 
       });
@@ -1288,7 +1257,7 @@ if (downloadImgBtn) {
       alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر "طباعة" وحفظ الفاتورة كـ PDF.');
     } finally {
       downloadImgBtn.disabled = false;
-      downloadImgBtn.textContent = translations[currentLang].downloadImg || 'حفظ كصورة 🖼️';
+      downloadImgBtn.textContent = translations[currentLang]?.downloadImg || 'حفظ كصورة 🖼️';
     }
   });
 }
@@ -1356,8 +1325,13 @@ function printInvoice(inv) {
   renderQrCode('print-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
 
   setTimeout(() => {
-    window.print();
-  }, 250);
+    try {
+      window.print();
+    } catch (e) {
+      console.warn("window.print error:", e);
+      alert("يمكنك تحميل الفاتورة كصورة من خلال زر 'تحميل كصورة'.");
+    }
+  }, 300);
 }
 
 window.editInvoiceById = (id) => {
@@ -1489,16 +1463,18 @@ window.viewArchivedInvoice = (id) => {
 };
 
 window.archiveInvoice = async (id) => {
-  if (!confirm('هل تريد أرشفة هذه الفاتورة؟ (ستنتقل لقائمة الأرشيف لتخفيف القائمة الحية)')) return;
+  if (!confirm('هل تريد أرشفة هذه الفاتورة؟')) return;
   
   const invIndex = invoicesDB.findIndex(i => i.id === id);
   if (invIndex !== -1) {
     const invToArchive = invoicesDB.splice(invIndex, 1)[0];
     archivedInvoicesDB.unshift(invToArchive);
 
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'invoices', invoicesDB);
+    saveLocalData(uid, 'archived_invoices', archivedInvoicesDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'invoices', invoicesDB);
-      saveLocalData(currentUser.uid, 'archived_invoices', archivedInvoicesDB);
       setDoc(doc(db, "users", currentUser.uid, "archive", String(invToArchive.id)), invToArchive).catch(() => {});
       deleteDoc(doc(db, "users", currentUser.uid, "invoices", String(id))).catch(() => {});
     }
@@ -1518,9 +1494,11 @@ window.restoreInvoice = async (id) => {
     invoicesDB.unshift(invToRestore);
     invoicesDB.sort((a, b) => b.id - a.id);
 
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'invoices', invoicesDB);
+    saveLocalData(uid, 'archived_invoices', archivedInvoicesDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'invoices', invoicesDB);
-      saveLocalData(currentUser.uid, 'archived_invoices', archivedInvoicesDB);
       setDoc(doc(db, "users", currentUser.uid, "invoices", String(invToRestore.id)), invToRestore).catch(() => {});
       deleteDoc(doc(db, "users", currentUser.uid, "archive", String(id))).catch(() => {});
     }
@@ -1550,8 +1528,10 @@ window.deleteInvoice = async (id) => {
   if (!confirm('تأكيد حذف الفاتورة؟')) return;
   try {
     invoicesDB = invoicesDB.filter(i => i.id !== id);
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'invoices', invoicesDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'invoices', invoicesDB);
       deleteDoc(doc(db, "users", currentUser.uid, "invoices", String(id))).catch(() => {});
     }
     updateNextInvoiceNumber();
@@ -1596,7 +1576,7 @@ if (productForm) {
       editingProductId = null;
       
       const submitBtn = productForm.querySelector('button[type="submit"]');
-      if (submitBtn) submitBtn.textContent = translations[currentLang].saveProduct || 'حفظ المنتج';
+      if (submitBtn) submitBtn.textContent = translations[currentLang]?.saveProduct || 'حفظ المنتج';
       
       const cancelBtn = document.getElementById('cancel-edit-prod-btn');
       if (cancelBtn) cancelBtn.remove();
@@ -1605,8 +1585,10 @@ if (productForm) {
       productsDB.push(prodToSave);
     }
 
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'products', productsDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'products', productsDB);
       setDoc(doc(db, "users", currentUser.uid, "products", String(prodToSave.id)), prodToSave).catch(() => {});
     }
     e.target.reset();
@@ -1662,7 +1644,7 @@ window.editProduct = (index) => {
     cancelBtn.onclick = () => {
       editingProductId = null;
       if (productForm) productForm.reset();
-      if (submitBtn) submitBtn.textContent = translations[currentLang].saveProduct || 'حفظ المنتج';
+      if (submitBtn) submitBtn.textContent = translations[currentLang]?.saveProduct || 'حفظ المنتج';
       cancelBtn.remove();
     };
     productForm.appendChild(cancelBtn);
@@ -1676,8 +1658,10 @@ window.deleteProduct = async (idx) => {
   if (!p || !confirm('⚠️ هل أنت متأكد من حذف هذا المنتج من المخزن؟')) return;
   try {
     productsDB.splice(idx, 1);
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'products', productsDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'products', productsDB);
       deleteDoc(doc(db, "users", currentUser.uid, "products", String(p.id))).catch(() => {});
     }
     renderAllModules();
@@ -1708,8 +1692,11 @@ if (clientForm) {
 
     const newClient = { id: Date.now(), name, phone, openingBalance, payments: [] };
     clientsDB.push(newClient);
+
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'clients', clientsDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'clients', clientsDB);
       setDoc(doc(db, "users", currentUser.uid, "clients", String(newClient.id)), newClient).catch(() => {});
     }
     e.target.reset();
@@ -1819,8 +1806,10 @@ window.editClient = async (index) => {
     openingBalance: newBalance
   });
 
+  const uid = currentUser ? currentUser.uid : 'local';
+  saveLocalData(uid, 'clients', clientsDB);
+
   if (currentUser) {
-    saveLocalData(currentUser.uid, 'clients', clientsDB);
     setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[index].id)), clientsDB[index]).catch(() => {});
   }
   renderAllModules();
@@ -1835,8 +1824,10 @@ window.deleteClient = async (index) => {
 
   try {
     clientsDB.splice(index, 1);
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'clients', clientsDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'clients', clientsDB);
       deleteDoc(doc(db, "users", currentUser.uid, "clients", String(client.id))).catch(() => {});
     }
     renderAllModules();
@@ -1899,8 +1890,10 @@ window.deleteClientPayment = async (clientName, paymentIndex) => {
   const idx = clientsDB.findIndex(c => c.name.toLowerCase() === clientName.toLowerCase());
   if (idx !== -1 && clientsDB[idx].payments) {
     clientsDB[idx].payments.splice(paymentIndex, 1);
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'clients', clientsDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'clients', clientsDB);
       setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(() => {});
     }
     window.openClientLedger(clientName);
@@ -1917,8 +1910,10 @@ window.editClientPayment = async (clientName, paymentIndex) => {
       const newAmount = parseFloat(newAmountStr);
       if (!isNaN(newAmount) && newAmount > 0) {
         clientsDB[idx].payments[paymentIndex].amount = newAmount;
+        const uid = currentUser ? currentUser.uid : 'local';
+        saveLocalData(uid, 'clients', clientsDB);
+
         if (currentUser) {
-          saveLocalData(currentUser.uid, 'clients', clientsDB);
           setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(() => {});
         }
         window.openClientLedger(clientName);
@@ -1971,7 +1966,7 @@ if (ledgerDownloadBtn) {
           scale: 2, 
           backgroundColor: '#111827', 
           useCORS: true, 
-          allowTaint: true 
+          allowTaint: false 
         });
 
         const dataUrl = canvas.toDataURL('image/png');
@@ -2042,7 +2037,7 @@ if (ledgerPrintBtn) {
     `;
 
     setTimeout(() => {
-      window.print();
+      try { window.print(); } catch (e) {}
     }, 250);
   });
 }
@@ -2063,8 +2058,10 @@ if (submitPaymentBtn) {
       window.openClientLedger(activeLedgerClientName);
       renderAllModules();
 
+      const uid = currentUser ? currentUser.uid : 'local';
+      saveLocalData(uid, 'clients', clientsDB);
+
       if (currentUser) {
-        saveLocalData(currentUser.uid, 'clients', clientsDB);
         setDoc(doc(db, "users", currentUser.uid, "clients", String(clientsDB[idx].id)), clientsDB[idx]).catch(() => {});
       }
     }
@@ -2113,8 +2110,10 @@ if (supplierForm) {
       suppliersDB.push(supplierToSave);
     }
 
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'suppliers', suppliersDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
       setDoc(doc(db, "users", currentUser.uid, "suppliers", String(supplierToSave.id)), supplierToSave).catch(() => {});
     }
     e.target.reset();
@@ -2232,8 +2231,10 @@ window.deleteSupplier = async (index) => {
 
   try {
     suppliersDB.splice(index, 1);
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'suppliers', suppliersDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
       deleteDoc(doc(db, "users", currentUser.uid, "suppliers", String(supplier.id))).catch(() => {});
     }
     renderAllModules();
@@ -2329,8 +2330,10 @@ if (submitSupplierPaymentBtn) {
       window.openSupplierLedger(activeLedgerSupplierName);
       renderAllModules();
 
+      const uid = currentUser ? currentUser.uid : 'local';
+      saveLocalData(uid, 'suppliers', suppliersDB);
+
       if (currentUser) {
-        saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
         setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(() => {});
       }
     }
@@ -2342,8 +2345,10 @@ window.deleteSupplierPayment = async (supplierName, paymentIndex) => {
   const idx = suppliersDB.findIndex(s => s.name.toLowerCase() === supplierName.toLowerCase());
   if (idx !== -1 && suppliersDB[idx].payments) {
     suppliersDB[idx].payments.splice(paymentIndex, 1);
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'suppliers', suppliersDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
       setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(() => {});
     }
     window.openSupplierLedger(supplierName);
@@ -2360,8 +2365,10 @@ window.editSupplierPayment = async (supplierName, paymentIndex) => {
       const newAmount = parseFloat(newAmountStr);
       if (!isNaN(newAmount) && newAmount > 0) {
         suppliersDB[idx].payments[paymentIndex].amount = newAmount;
+        const uid = currentUser ? currentUser.uid : 'local';
+        saveLocalData(uid, 'suppliers', suppliersDB);
+
         if (currentUser) {
-          saveLocalData(currentUser.uid, 'suppliers', suppliersDB);
           setDoc(doc(db, "users", currentUser.uid, "suppliers", String(suppliersDB[idx].id)), suppliersDB[idx]).catch(() => {});
         }
         window.openSupplierLedger(supplierName);
@@ -2406,7 +2413,7 @@ if (ledgerSupplierDownloadBtn) {
           scale: 2, 
           backgroundColor: '#111827', 
           useCORS: true, 
-          allowTaint: true 
+          allowTaint: false 
         });
 
         const dataUrl = canvas.toDataURL('image/png');
@@ -2477,7 +2484,7 @@ if (ledgerSupplierPrintBtn) {
     `;
 
     setTimeout(() => {
-      window.print();
+      try { window.print(); } catch (e) {}
     }, 250);
   });
 }
@@ -2661,8 +2668,7 @@ if (purchaseForm) {
     if (!supplierName) { alert('يرجى كتابة أو اختيار اسم المورد'); return; }
     if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل بفاتورة المشتريات'); return; }
 
-    const uid = currentUser ? currentUser.uid : null;
-    if (!uid) { alert('يرجى تسجيل الدخول أولاً'); return; }
+    const uid = currentUser ? currentUser.uid : 'local';
 
     let supplierObj = suppliersDB.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
     if (!supplierObj) {
@@ -2731,13 +2737,15 @@ if (purchaseForm) {
     renderPurchaseItemsTable();
     renderAllModules();
 
-    try {
-      setDoc(doc(db, "users", uid, "purchases", String(purchaseInvoice.id)), purchaseInvoice).catch(() => {});
-      setDoc(doc(db, "users", uid, "suppliers", String(supplierObj.id)), supplierObj).catch(() => {});
-      modifiedProducts.forEach(prod => {
-        setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
-      });
-    } catch (err) {}
+    if (currentUser) {
+      try {
+        setDoc(doc(db, "users", uid, "purchases", String(purchaseInvoice.id)), purchaseInvoice).catch(() => {});
+        setDoc(doc(db, "users", uid, "suppliers", String(supplierObj.id)), supplierObj).catch(() => {});
+        modifiedProducts.forEach(prod => {
+          setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
+        });
+      } catch (err) {}
+    }
 
     alert('✅ تم حفظ فاتورة المشتريات، وتحديث الحسابات والمخزن بنجاح!');
   });
@@ -2841,7 +2849,7 @@ if (supplierDownloadImgBtn) {
         const canvas = await html2canvas(previewCard, { 
           scale: 2, 
           useCORS: true, 
-          allowTaint: true, 
+          allowTaint: false, 
           backgroundColor: '#090d16',
           logging: false 
         });
@@ -2910,7 +2918,7 @@ function printPurchaseInvoice(pur) {
   renderQrCode('print-supplier-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
   
   setTimeout(() => {
-    window.print();
+    try { window.print(); } catch (e) {}
   }, 250);
 }
 
@@ -2954,8 +2962,10 @@ window.deletePurchase = async (id) => {
   if (!confirm('تأكيد حذف فاتورة المشتريات؟')) return;
   try {
     purchasesDB = purchasesDB.filter(p => p.id !== id);
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'purchases', purchasesDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'purchases', purchasesDB);
       deleteDoc(doc(db, "users", currentUser.uid, "purchases", String(id))).catch(() => {});
     }
     renderAllModules();
@@ -2978,8 +2988,11 @@ if (expenseForm) {
 
     const newExp = { id: Date.now(), title, amount, date: new Date().toLocaleDateString('ar-EG') };
     expensesDB.push(newExp);
+
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'expenses', expensesDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'expenses', expensesDB);
       setDoc(doc(db, "users", currentUser.uid, "expenses", String(newExp.id)), newExp).catch(() => {});
     }
     e.target.reset();
@@ -3010,8 +3023,10 @@ window.deleteExpense = async (idx) => {
   if (!exp) return;
   try {
     expensesDB.splice(idx, 1);
+    const uid = currentUser ? currentUser.uid : 'local';
+    saveLocalData(uid, 'expenses', expensesDB);
+
     if (currentUser) {
-      saveLocalData(currentUser.uid, 'expenses', expensesDB);
       deleteDoc(doc(db, "users", currentUser.uid, "expenses", String(exp.id))).catch(() => {});
     }
     renderAllModules();
@@ -3063,7 +3078,14 @@ if (exportJsonBtn) {
       const fileName = `backup_cloud_${Date.now()}.json`;
       const blob = new Blob([jsonString], { type: 'application/json' });
 
-      await saveOrShareFile(blob, fileName, 'application/json', 'النسخة الاحتياطية للبيانات');
+      const success = await saveOrShareFile(blob, fileName, 'application/json', 'النسخة الاحتياطية للبيانات');
+      
+      if (!success) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(jsonString);
+          alert('📋 تم نسخ بيانات النسخة الاحتياطية للحافظة بنجاح!');
+        }
+      }
     } catch (err) {
       console.error("Export JSON Error:", err);
       alert("حدث خطأ أثناء استخراج النسخة الاحتياطية.");
@@ -3086,7 +3108,7 @@ if (importJsonInput) {
           throw new Error('ملف التنسيق غير صالح');
         }
 
-        if (confirm('⚠️ هل أنت متأكد من استيراد هذه النسخة الاحتياطية؟ سيتم دمج البيانات وتحديثها في حسابك فوراً.')) {
+        if (confirm('⚠️ هل أنت متأكد من استيراد هذه النسخة الاحتياطية؟ سيتم دمج البيانات وتحديثها فوراً.')) {
           const uid = currentUser ? currentUser.uid : 'local';
 
           if (Array.isArray(importedData.invoices)) {
@@ -3220,10 +3242,12 @@ if (saveSettingsBtn) {
         currency: currencySelect && currencySelect.value ? currencySelect.value : "ج.م",
         logo: logoBase64 !== null ? logoBase64 : storeProfile.logo
       };
+      const uid = currentUser ? currentUser.uid : 'local';
+      saveLocalData(uid, 'profile', storeProfile);
+
       if (currentUser) {
-        saveLocalData(currentUser.uid, 'profile', storeProfile);
+        await syncDocToCloud('profile', storeProfile);
       }
-      await syncDocToCloud('profile', storeProfile);
       updateHeaderUI();
       renderAllModules();
       if (settingsModal) settingsModal.classList.add('hidden');
