@@ -13,11 +13,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ==========================================
-// Universal Native File Saving & Sharing Helper
+// Universal Native File Saving & Sharing Helper (Fixed for Capacitor)
 // ==========================================
-/**
- * دالة موحدة للتعامل مع حفظ وتنزيل ومشاركة الملفات والصور في Capacitor والأندرويد
- */
 async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle) {
   try {
     let blob;
@@ -34,19 +31,7 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       throw new Error("تنسيق بيانات الملف غير مدعوم");
     }
 
-    const file = new File([blob], fileName, { type: mimeType });
-
-    // 1. تجربة مشاركة الملف عبر قائمة أندرويد الأصلية (Android Share Sheet / WhatsApp / Files)
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        files: [file],
-        title: shareTitle || fileName,
-        text: fileName
-      });
-      return true;
-    }
-
-    // 2. التحميل المباشر لتفادي شاشات window.open المنبثقة المعطلة في WebView
+    // الطريقة المباشرة والآمنة لتنزيل الملفات في بيئة WebView للأندرويد
     const a = document.createElement('a');
     a.href = dataUrl;
     a.download = fileName;
@@ -59,12 +44,11 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       if (!(fileDataUrlOrBlob instanceof Blob)) {
         URL.revokeObjectURL(dataUrl);
       }
-    }, 1000);
+    }, 1500);
 
     return true;
   } catch (err) {
     console.warn("File saving fallback triggered:", err);
-    // طريقة بديلة أخيرة للتنزيل المباشر
     try {
       const a = document.createElement('a');
       a.href = typeof fileDataUrlOrBlob === 'string' ? fileDataUrlOrBlob : URL.createObjectURL(fileDataUrlOrBlob);
@@ -72,11 +56,12 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       a.click();
       return true;
     } catch (e) {
-      alert("⚠️ تعذر التحميل المباشر. يمكنك استخدام زر 'طباعة 🖨️' للحفظ كملف PDF.");
+      alert("⚠️ تعذر التحميل المباشر. يمكنك استخدام زر 'طباعة / PDF' للحفظ المباشر.");
       return false;
     }
   }
 }
+
 
 // ==========================================
 // Capacitor Native Bridge & System Integration
