@@ -103,7 +103,7 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
 }
 
 /**
- * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية (معدلة لتجنب الصفحات البيضاء)
+ * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية
  */
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
@@ -114,7 +114,6 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
     element.style.display = 'block';
   }
 
-  // انتظار بسيط لضمان رندر العناصر ورسومات QR كود والخطوط
   await new Promise(resolve => setTimeout(resolve, 300));
 
   // 1. التوليد عبر html2pdf
@@ -161,7 +160,6 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
     }
   }
 
-  // 3. طباعة المتصفح التقليدية
   window.print();
   return true;
 }
@@ -1884,6 +1882,31 @@ window.openClientLedger = (clientName) => {
   activeLedgerClientName = clientObj.name;
   const stats = getClientCalculatedLedger(clientObj);
 
+  // تحديث معلومات الهيدر في كرت المطبوعات الأبيض
+  const clLogo = document.getElementById('cl-logo');
+  if (clLogo) {
+    if (storeProfile.logo) {
+      clLogo.src = storeProfile.logo;
+      clLogo.classList.remove('hidden');
+    } else {
+      clLogo.classList.add('hidden');
+    }
+  }
+
+  const clStoreName = document.getElementById('cl-store-name');
+  if (clStoreName) clStoreName.textContent = storeProfile.name;
+  const clStorePhone = document.getElementById('cl-store-phone');
+  if (clStorePhone) clStorePhone.textContent = storeProfile.phone ? `هاتف: ${storeProfile.phone}` : '';
+  const clStoreVat = document.getElementById('cl-store-vat');
+  if (clStoreVat) clStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+  const clDate = document.getElementById('cl-date');
+  if (clDate) clDate.textContent = new Date().toLocaleDateString('ar-EG');
+
+  const clClientName = document.getElementById('cl-client-name');
+  if (clClientName) clClientName.textContent = clientObj.name;
+  const clClientPhone = document.getElementById('cl-client-phone');
+  if (clClientPhone) clClientPhone.textContent = clientObj.phone || '-';
+
   const ledgerTitle = document.getElementById('ledger-client-title');
   if (ledgerTitle) ledgerTitle.textContent = `👤 كشف حساب: ${clientObj.name}`;
   const ledgerTotalSales = document.getElementById('ledger-total-sales');
@@ -1893,35 +1916,38 @@ window.openClientLedger = (clientName) => {
   const ledgerBalance = document.getElementById('ledger-balance');
   if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency}`;
 
-  const historyUl = document.getElementById('client-ledger-history');
-  if (!historyUl) return;
+  const historyBody = document.getElementById('client-ledger-history-body');
+  if (!historyBody) return;
   let historyHtml = '';
 
   stats.clientInvoices.forEach(inv => {
     historyHtml += `
-      <li style="border-right: 4px solid var(--accent)">
-        <div>فاتورة #${inv.id} (${inv.date})<br><small>${(inv.items ? inv.items : []).length} أصناف - ${inv.status}</small></div>
-        <strong>${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</strong>
-      </li>
+      <tr>
+        <td style="border:1px solid #d1d5db; padding:8px; text-align:right;">فاتورة مبيعات #${inv.id} (${(inv.items ? inv.items : []).length} أصناف - ${inv.status})</td>
+        <td style="border:1px solid #d1d5db; padding:8px; text-align:center;">${inv.date}</td>
+        <td style="border:1px solid #d1d5db; padding:8px; text-align:center; font-weight:bold;">${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</td>
+      </tr>
     `;
   });
 
   stats.payments.forEach((p, pIndex) => {
+    const safeName = clientObj.name.replace(/'/g, "\\'");
     historyHtml += `
-      <li style="border-right: 4px solid var(--success); display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div>دفعة سداد 💵 (${p.date})</div>
-          <strong class="text-success">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong>
-        </div>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editClientPayment('${clientObj.name.replace(/'/g, "\\'")}', ${pIndex})">✏️</button>
-          <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteClientPayment('${clientObj.name.replace(/'/g, "\\'")}', ${pIndex})">🗑️</button>
-        </div>
-      </li>
+      <tr style="background-color:#f0fdf4;">
+        <td style="border:1px solid #d1d5db; padding:8px; text-align:right;">
+          <span style="color:#16a34a; font-weight:bold;">دفعة سداد نقدي 💵</span>
+          <div class="no-print" style="display:inline-block; margin-right:10px;">
+            <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 2px 6px;" onclick="window.editClientPayment('${safeName}', ${pIndex})">✏️</button>
+            <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 2px 6px;" onclick="window.deleteClientPayment('${safeName}', ${pIndex})">🗑️</button>
+          </div>
+        </td>
+        <td style="border:1px solid #d1d5db; padding:8px; text-align:center;">${p.date}</td>
+        <td style="border:1px solid #d1d5db; padding:8px; text-align:center; color:#16a34a; font-weight:bold;">-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
+      </tr>
     `;
   });
 
-  historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
+  historyBody.innerHTML = historyHtml ? historyHtml : '<tr><td colspan="3" style="text-align:center; padding:15px; color:#6b7280;">لا توجد معاملات مسجلة</td></tr>';
   const ledgerModal = document.getElementById('client-ledger-modal');
   if (ledgerModal) ledgerModal.classList.remove('hidden');
 };
@@ -2241,6 +2267,31 @@ window.openSupplierLedger = (supplierName) => {
     activeLedgerSupplierName = supplierObj.name;
     const stats = getSupplierCalculatedLedger(supplierObj);
 
+    // تحديث هيدر الورقة البيضاء
+    const slLogo = document.getElementById('sl-logo');
+    if (slLogo) {
+      if (storeProfile.logo) {
+        slLogo.src = storeProfile.logo;
+        slLogo.classList.remove('hidden');
+      } else {
+        slLogo.classList.add('hidden');
+      }
+    }
+
+    const slStoreName = document.getElementById('sl-store-name');
+    if (slStoreName) slStoreName.textContent = storeProfile.name;
+    const slStorePhone = document.getElementById('sl-store-phone');
+    if (slStorePhone) slStorePhone.textContent = storeProfile.phone ? `هاتف: ${storeProfile.phone}` : '';
+    const slStoreVat = document.getElementById('sl-store-vat');
+    if (slStoreVat) slStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+    const slDate = document.getElementById('sl-date');
+    if (slDate) slDate.textContent = new Date().toLocaleDateString('ar-EG');
+
+    const slSupplierName = document.getElementById('sl-supplier-name');
+    if (slSupplierName) slSupplierName.textContent = supplierObj.name;
+    const slSupplierPhone = document.getElementById('sl-supplier-phone');
+    if (slSupplierPhone) slSupplierPhone.textContent = supplierObj.phone || '-';
+
     const ledgerTitle = document.getElementById('ledger-supplier-title');
     if (ledgerTitle) ledgerTitle.textContent = `🏭 كشف حساب مورد: ${supplierObj.name}`;
     
@@ -2253,36 +2304,38 @@ window.openSupplierLedger = (supplierName) => {
     const ledgerBalance = document.getElementById('ledger-supplier-balance');
     if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
 
-    const historyUl = document.getElementById('supplier-ledger-history');
-    if (historyUl) {
+    const historyBody = document.getElementById('supplier-ledger-history-body');
+    if (historyBody) {
       let historyHtml = '';
 
       (stats.supplierPurchases || []).forEach(pur => {
         historyHtml += `
-          <li style="border-right: 4px solid var(--accent)">
-            <div>فاتورة توريد #${pur.id} (${pur.date || ''})<br><small>${(pur.items ? pur.items : []).length} أصناف - ${pur.status || ''}</small></div>
-            <strong>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
-          </li>
+          <tr>
+            <td style="border:1px solid #d1d5db; padding:8px; text-align:right;">فاتورة توريد #${pur.id} (${(pur.items ? pur.items : []).length} أصناف - ${pur.status || ''})</td>
+            <td style="border:1px solid #d1d5db; padding:8px; text-align:center;">${pur.date || ''}</td>
+            <td style="border:1px solid #d1d5db; padding:8px; text-align:center; font-weight:bold;">${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
+          </tr>
         `;
       });
 
       (stats.payments || []).forEach((p, pIndex) => {
         const safeSupplierName = (supplierObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
         historyHtml += `
-          <li style="border-right: 4px solid var(--success); display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div>دفعة سداد للمورد 💵 (${p.date || ''})</div>
-              <strong class="text-success">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
-            </div>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 3px 8px;" onclick="window.editSupplierPayment('${safeSupplierName}', ${pIndex})">✏️</button>
-              <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 3px 8px;" onclick="window.deleteSupplierPayment('${safeSupplierName}', ${pIndex})">🗑️</button>
-            </div>
-          </li>
+          <tr style="background-color:#f0fdf4;">
+            <td style="border:1px solid #d1d5db; padding:8px; text-align:right;">
+              <span style="color:#16a34a; font-weight:bold;">دفعة سداد للمورد 💵</span>
+              <div class="no-print" style="display:inline-block; margin-right:10px;">
+                <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 2px 6px;" onclick="window.editSupplierPayment('${safeSupplierName}', ${pIndex})">✏️</button>
+                <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 2px 6px;" onclick="window.deleteSupplierPayment('${safeSupplierName}', ${pIndex})">🗑️</button>
+              </div>
+            </td>
+            <td style="border:1px solid #d1d5db; padding:8px; text-align:center;">${p.date || ''}</td>
+            <td style="border:1px solid #d1d5db; padding:8px; text-align:center; color:#16a34a; font-weight:bold;">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
+          </tr>
         `;
       });
 
-      historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted); padding: 10px;">لا توجد معاملات مسجلة للمورد</p>';
+      historyBody.innerHTML = historyHtml ? historyHtml : '<tr><td colspan="3" style="text-align:center; padding:15px; color:#6b7280;">لا توجد معاملات مسجلة للمورد</td></tr>';
     }
 
     const ledgerModal = document.getElementById('supplier-ledger-modal');
