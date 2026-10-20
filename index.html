@@ -15,7 +15,13 @@
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   
+  <!-- مكتبة html2canvas مع بديل محلي مضمن لضمان العمل بدون إنترنت 100% -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    if (typeof html2canvas === 'undefined') {
+      document.write('<script src="html2canvas.min.js"><\/script>');
+    }
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6651309355082807" crossorigin="anonymous"></script>
@@ -787,4 +793,4 @@
   <script src="capacitor.js"></script>
   <script type="module" src="app.js"></script>
 </body>
-                                                                   </html>
+</html>
