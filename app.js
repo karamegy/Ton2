@@ -13,8 +13,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ==========================================
-// Universal Native File Saving & Sharing Helper (Fixed for Capacitor)
+// Universal Native File Saving & Sharing Helper
 // ==========================================
+/**
+ * دالة موحدة للتعامل مع حفظ وتنزيل ومشاركة الملفات والصور في Capacitor والأندرويد
+ */
 async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle) {
   try {
     let blob;
@@ -31,7 +34,7 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       throw new Error("تنسيق بيانات الملف غير مدعوم");
     }
 
-    // الطريقة المباشرة والآمنة لتنزيل الملفات في بيئة WebView للأندرويد
+    // التحميل المباشر والآمن داخل بيئة WebView لأندرويد لتفادي توقف الأزرار
     const a = document.createElement('a');
     a.href = dataUrl;
     a.download = fileName;
@@ -49,11 +52,15 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
     return true;
   } catch (err) {
     console.warn("File saving fallback triggered:", err);
+    // طريقة بديلة أخيرة للتنزيل المباشر
     try {
       const a = document.createElement('a');
       a.href = typeof fileDataUrlOrBlob === 'string' ? fileDataUrlOrBlob : URL.createObjectURL(fileDataUrlOrBlob);
       a.download = fileName;
+      a.style.display = 'none';
+      document.body.appendChild(a);
       a.click();
+      setTimeout(() => document.body.removeChild(a), 1500);
       return true;
     } catch (e) {
       alert("⚠️ تعذر التحميل المباشر. يمكنك استخدام زر 'طباعة / PDF' للحفظ المباشر.");
