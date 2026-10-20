@@ -30,35 +30,35 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          # 1. إعداد مجلد الويب وتحديث ملف التكوين
+          # 1. إعداد مجلد الويب لتغذية الكاباسيتور
           mkdir -p www
           cp -r * www/ 2>/dev/null || true
           
           node -e '
-          const fs = require("fs");
-          if (fs.existsSync("capacitor.config.json")) {
-            let cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
-            cfg.webDir = "www";
-            cfg.appId = "io.github.karamegy.Ton2";
-            cfg.appName = "GITI Enterprise ERP";
-            cfg.plugins = cfg.plugins || {};
-            cfg.plugins.GoogleAuth = {
-              scopes: ["profile", "email"],
-              serverClientId: "753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com",
-              forceCodeForRefreshToken: true
-            };
-            fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
-          }
+            const fs = require("fs");
+            if (fs.existsSync("capacitor.config.json")) {
+              let cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
+              cfg.webDir = "www";
+              cfg.appId = "io.github.karamegy.Ton2";
+              cfg.appName = "Giti ERP";
+              cfg.plugins = cfg.plugins || {};
+              cfg.plugins.GoogleAuth = {
+                scopes: ["profile", "email"],
+                serverClientId: "753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com",
+                forceCodeForRefreshToken: true
+              };
+              fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
+            }
           '
 
-          # 2. تثبيت أدوات الكاباسيتور والإضافات الأصلية مع حزمة الطباعة الصحيحة
-          npm install @capacitor/cli @capacitor/core @capacitor/app @capacitor/splash-screen @codetrix-studio/capacitor-google-auth @capacitor/assets @capacitor/filesystem @capacitor/share capacitor-printer --save-dev
+          # 2. تثبيت كافة حزم الكاباسيتور والإضافات المستحدثة في app.js
+          npm install @capacitor/cli @capacitor/core @capacitor/android @capacitor/app @capacitor/splash-screen @capacitor/filesystem @capacitor/share @codetrix-studio/capacitor-google-auth capacitor-printer @capacitor/assets --save-dev
 
           # 3. إعادة إنشاء منصة أندرويد
           rm -rf android
           npx cap add android
 
-          # 4. تجهيز الأيقونات وتوليدها
+          # 4. توليد أيقونات التطبيق
           mkdir -p assets
           if [ -f "logo.png" ]; then
             cp logo.png assets/icon-only.png 2>/dev/null || true
@@ -66,25 +66,20 @@ jobs:
             npx @capacitor/assets generate --android || true
           fi
 
-          # 5. نسخ ملفات Google وKeystore وتحديث Gradle الرئيسي
+          # 5. نقل واستدعاء خدمات جوجل إن وجدت
           if [ -f "google-services.json" ]; then
             cp google-services.json android/app/
             node -e '
-            const fs = require("fs");
-            let bg = fs.readFileSync("android/build.gradle", "utf8");
-            if (!bg.includes("com.google.gms:google-services")) {
-              bg = bg.replace(/dependencies\s*\{/, "dependencies {\n        classpath \"com.google.gms:google-services:4.4.1\"");
-              fs.writeFileSync("android/build.gradle", bg);
-            }
+              const fs = require("fs");
+              let bg = fs.readFileSync("android/build.gradle", "utf8");
+              if (!bg.includes("com.google.gms:google-services")) {
+                bg = bg.replace(/dependencies\s*\{/, "dependencies {\n        classpath \"com.google.gms:google-services:4.4.1\"");
+                fs.writeFileSync("android/build.gradle", bg);
+              }
             '
           fi
 
-          if [ -f "signing.keystore" ]; then
-            cp signing.keystore android/app/
-          fi
-
-          # 6. إنشاء ملف AndroidManifest.xml المحدث
-          mkdir -p android/app/src/main
+          # 6. كتابة ملف AndroidManifest.xml المحدث بالأذونات الكاملة
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -162,13 +157,13 @@ jobs:
           </manifest>
           EOF
 
-          # 7. إنشاء ملف strings.xml المصحح
-          mkdir -p android/app/src/main/res/values
+          # 7. حقن النصوص وقيم المعرفات في strings.xml
+          mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <string name="app_name">GITI Enterprise ERP</string>
-              <string name="title_activity_main">GITI Enterprise ERP</string>
+              <string name="app_name">Giti ERP</string>
+              <string name="title_activity_main">Giti فواتير</string>
               <string name="package_name">io.github.karamegy.Ton2</string>
               <string name="custom_url_scheme">io.github.karamegy.Ton2</string>
               <string name="server_client_id">753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com</string>
@@ -177,7 +172,7 @@ jobs:
           </resources>
           EOF
 
-          # 8. إنشاء ملف file_paths.xml المعتمد لمشاركة الملفات والـ PDF
+          # 8. إعداد مسارات المشاركة والحفظ للملفات والـ PDF
           mkdir -p android/app/src/main/res/xml
           cat << 'EOF' > android/app/src/main/res/xml/file_paths.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -188,44 +183,50 @@ jobs:
           </paths>
           EOF
 
-          # 9. مزامنة الإضافات والملفات المحدثة مع مجلد أندرويد
+          # 9. نسخ ملف التوقيع إن وجد
+          if [ -f "signing.keystore" ]; then
+            cp signing.keystore android/app/
+          fi
+
+          # 10. مزامنة المشروع مع أندرويد
           npx cap sync android
 
-          # 10. إعداد Gradle لتوقيع التطبيق بشكل صحيح (تحديد V1 و V2 وتفادي خطأ AGP)
+          # 11. حقن إعدادات التوقيع والإصدار المعتمد في android/app/build.gradle
           node -e '
-          const fs = require("fs");
-          let appGradle = fs.readFileSync("android/app/build.gradle", "utf8");
+            const fs = require("fs");
+            let appGradle = fs.readFileSync("android/app/build.gradle", "utf8");
 
-          // تحديث targetSdkVersion
-          appGradle = appGradle.replace(/targetSdkVersion\s+\d+/, "targetSdkVersion 34");
+            // تحديث targetSdkVersion إلى المستقر 34
+            appGradle = appGradle.replace(/targetSdkVersion\s+\d+/, "targetSdkVersion 34");
 
-          // إعدادات التوقيع المكتملة
-          const signingConfigStr = `
-              signingConfigs {
-                  release {
-                      storeFile file("signing.keystore")
-                      storePassword "${process.env.KEYSTORE_PASSWORD}"
-                      keyAlias "${process.env.KEY_ALIAS}"
-                      keyPassword "${process.env.KEY_PASSWORD}"
-                      v1SigningEnabled true
-                      v2SigningEnabled true
-                  }
+            const signingConfigStr = `
+                signingConfigs {
+                    release {
+                        if (file("signing.keystore").exists()) {
+                            storeFile file("signing.keystore")
+                            storePassword "${process.env.KEYSTORE_PASSWORD}"
+                            keyAlias "${process.env.KEY_ALIAS}"
+                            keyPassword "${process.env.KEY_PASSWORD}"
+                            v1SigningEnabled true
+                            v2SigningEnabled true
+                        }
+                    }
+                }
+            `;
+
+            appGradle = appGradle.replace(/android\s*\{/, "android {\n" + signingConfigStr);
+            appGradle = appGradle.replace(/buildTypes\s*\{[\s\S]*?release\s*\{/, match => match + "\n            signingConfig signingConfigs.release");
+
+            if (fs.existsSync("android/app/google-services.json")) {
+              if (!appGradle.includes("com.google.gms.google-services")) {
+                appGradle += "\napply plugin: \"com.google.gms.google-services\"\n";
               }
-          `;
-
-          appGradle = appGradle.replace(/android\s*\{/, "android {\n" + signingConfigStr);
-          appGradle = appGradle.replace(/buildTypes\s*\{[\s\S]*?release\s*\{/, match => match + "\n            signingConfig signingConfigs.release");
-
-          if (fs.existsSync("android/app/google-services.json")) {
-            if (!appGradle.includes("com.google.gms.google-services")) {
-              appGradle += "\napply plugin: \"com.google.gms.google-services\"\n";
             }
-          }
 
-          fs.writeFileSync("android/app/build.gradle", appGradle);
+            fs.writeFileSync("android/app/build.gradle", appGradle);
           '
 
-          # 11. تنفيذ عملية التجميع وبناء الحزم APK و AAB
+          # 12. بناء التطبيق وحزم APK و AAB
           cd android
           chmod +x gradlew
           ./gradlew bundleRelease --no-daemon
