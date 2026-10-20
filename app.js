@@ -13,6 +13,72 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ==========================================
+// Universal Native File Saving & Sharing Helper
+// ==========================================
+/**
+ * دالة موحدة للتعامل مع حفظ وتنزيل ومشاركة الملفات والصور في Capacitor والأندرويد
+ */
+async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle) {
+  try {
+    let blob;
+    let dataUrl;
+
+    if (typeof fileDataUrlOrBlob === 'string' && fileDataUrlOrBlob.startsWith('data:')) {
+      dataUrl = fileDataUrlOrBlob;
+      const res = await fetch(fileDataUrlOrBlob);
+      blob = await res.blob();
+    } else if (fileDataUrlOrBlob instanceof Blob) {
+      blob = fileDataUrlOrBlob;
+      dataUrl = URL.createObjectURL(blob);
+    } else {
+      throw new Error("تنسيق بيانات الملف غير مدعوم");
+    }
+
+    const file = new File([blob], fileName, { type: mimeType });
+
+    // 1. تجربة مشاركة الملف عبر قائمة أندرويد الأصلية (Android Share Sheet / WhatsApp / Files)
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: shareTitle || fileName,
+        text: fileName
+      });
+      return true;
+    }
+
+    // 2. التحميل المباشر لتفادي شاشات window.open المنبثقة المعطلة في WebView
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = fileName;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(a);
+      if (!(fileDataUrlOrBlob instanceof Blob)) {
+        URL.revokeObjectURL(dataUrl);
+      }
+    }, 1000);
+
+    return true;
+  } catch (err) {
+    console.warn("File saving fallback triggered:", err);
+    // طريقة بديلة أخيرة للتنزيل المباشر
+    try {
+      const a = document.createElement('a');
+      a.href = typeof fileDataUrlOrBlob === 'string' ? fileDataUrlOrBlob : URL.createObjectURL(fileDataUrlOrBlob);
+      a.download = fileName;
+      a.click();
+      return true;
+    } catch (e) {
+      alert("⚠️ تعذر التحميل المباشر. يمكنك استخدام زر 'طباعة 🖨️' للحفظ كملف PDF.");
+      return false;
+    }
+  }
+}
+
+// ==========================================
 // Capacitor Native Bridge & System Integration
 // ==========================================
 const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
@@ -21,7 +87,6 @@ function initCapacitorBridge() {
   if (isCapacitorNative) {
     console.log("Capacitor Native Bridge Connected Successfully.");
     
-    // تهيئة مكتبة Google Auth الأصلية باستخدام Web Client ID المعتمد
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
       window.Capacitor.Plugins.GoogleAuth.initialize({
         clientId: '753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com',
@@ -31,7 +96,6 @@ function initCapacitorBridge() {
       }).catch(err => console.warn("GoogleAuth init warning:", err));
     }
     
-    // التعامل مع زر الرجوع للخلف لأجهزة الأندرويد
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
       window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
         const activeModals = document.querySelectorAll('.modal:not(.hidden)');
@@ -45,7 +109,6 @@ function initCapacitorBridge() {
       });
     }
 
-    // إخفاء شاشة البدء (SplashScreen)
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen) {
       setTimeout(() => {
         window.Capacitor.Plugins.SplashScreen.hide();
@@ -83,7 +146,6 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app);
 auth.languageCode = 'ar';
 
-// ضبط التخزين عبر IndexedDB لتفادي فقدان الجلسة
 setPersistence(auth, indexedDBLocalPersistence).catch(() => {
   setPersistence(auth, browserLocalPersistence).catch((error) => {
     console.error("Auth Persistence Error:", error);
@@ -124,11 +186,11 @@ const translations = {
     clientPhone: "رقم الهاتف (للواتساب)", itemTitle: "الصنف / الخدمة", qtyTitle: "الكمية", priceTitle: "السعر",
     subtotalTitle: "الإجمالي", addItem: "+ إضافة صنف جديد", subtotal: "المجموع الفرعي:", discount: "الخصم:",
     tax: "الضريبة (%):", payStatus: "حالة الدفع:", grandTotal: "الإجمالي النهائي:", saveInv: "حفظ وتسجيل الفاتورة",
-    sendWhatsApp: "واتساب 💬", print: "طباعة 🖨️", invHistory: "سجل الفواتير السحابي", addProduct: "إضافة منتج للمخزن",
+    sendWhatsApp: "واتساب 💬", print: "طباعة / PDF 🖨️", invHistory: "سجل الفواتير السحابي", addProduct: "إضافة منتج للمخزن",
     pName: "اسم المنتج", pPrice: "سعر البيع", pCost: "سعر التكلفة", pStock: "الكمية بالمخزن", saveProduct: "حفظ المنتج",
     productList: "قائمة المنتجات المخزنة", clientDb: "سجل العملاء والمديونيات", addExpense: "تسجيل مصروف جديد",
     expTitle: "بند المصروف", expAmount: "المبلغ", saveExpense: "تسجيل المصروف", expList: "سجل المصروفات",
-    previewTitle: "👁️ معاينة الفاتورة الإلكترونية", downloadImg: "تحميل كصورة 🖼", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
+    previewTitle: "👁️ معاينة الفاتورة الإلكترونية", downloadImg: "حفظ كصورة 🖼️", settingsTitle: "⚙️ إعدادات المنشأة والعملة",
     theme: "مظهر التطبيق", currency: "العملة الرئيسية", vatNo: "الرقم الضريبي للمنشأة (VAT)", logo: "شعار الشركة", address: "العنوان", saveSettings: "حفظ التغييرات السحابية"
   },
   en: {
@@ -143,11 +205,11 @@ const translations = {
     clientPhone: "Client Phone (WhatsApp)", itemTitle: "Item / Service", qtyTitle: "Qty", priceTitle: "Price",
     subtotalTitle: "Total", addItem: "+ Add Item", subtotal: "Subtotal:", discount: "Discount:",
     tax: "VAT (%):", payStatus: "Payment Status:", grandTotal: "Grand Total:", saveInv: "Save Invoice",
-    sendWhatsApp: "WhatsApp 💬", print: "Print 🖨️", invHistory: "Cloud Invoice Logs", addProduct: "Add Product",
+    sendWhatsApp: "WhatsApp 💬", print: "Print / PDF 🖨️", invHistory: "Cloud Invoice Logs", addProduct: "Add Product",
     pName: "Product Name", pPrice: "Selling Price", pCost: "Cost Price", pStock: "Stock Quantity", saveProduct: "Save Product",
     productList: "Stocked Items", clientDb: "Client Accounts", addExpense: "Add Expense",
     expTitle: "Expense Category", expAmount: "Amount", saveExpense: "Record Expense", expList: "Expense Log",
-    previewTitle: "👁️ E-Invoice Preview", downloadImg: "Download Image 🖼", settingsTitle: "⚙️ Enterprise Settings",
+    previewTitle: "👁️ E-Invoice Preview", downloadImg: "Save Image 🖼️", settingsTitle: "⚙️ Enterprise Settings",
     theme: "UI Theme", currency: "Base Currency", vatNo: "VAT Number", logo: "Company Logo", address: "Address", saveSettings: "Save Cloud Settings"
   }
 };
@@ -179,7 +241,6 @@ const notificationModal = document.getElementById('notification-modal');
 const closeNotificationBtn = document.getElementById('close-notification-btn');
 const dismissNotificationBtn = document.getElementById('dismiss-notification-btn');
 const notificationBadge = document.getElementById('notification-badge');
-const notificationContentText = document.getElementById('notification-content-text');
 
 if (notificationBtn) {
   notificationBtn.addEventListener('click', () => {
@@ -1213,57 +1274,14 @@ if (downloadImgBtn) {
       const dataUrl = canvas.toDataURL('image/png');
       const fileName = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
 
-      if (navigator.share && isCapacitorNative) {
-        try {
-          const blob = await (await fetch(dataUrl)).blob();
-          const file = new File([blob], fileName, { type: 'image/png' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'الفاتورة الإلكترونية',
-              text: `فاتورة رقم #${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : ''}`
-            });
-            return;
-          }
-        } catch (sErr) {
-          console.warn("Native Share fallback:", sErr);
-        }
-      }
-
-      const newWin = window.open();
-      if (newWin) {
-        newWin.document.write(`
-          <html dir="rtl">
-            <head>
-              <title>${fileName}</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
-                img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
-                .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
-              </style>
-            </head>
-            <body>
-              <img src="${dataUrl}" alt="Invoice Image" />
-              <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
-            </body>
-          </html>
-        `);
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      await saveOrShareFile(dataUrl, fileName, 'image/png', 'الفاتورة الإلكترونية');
 
     } catch (err) {
       console.error("HTML2Canvas Render Error:", err);
       alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر "طباعة" وحفظ الفاتورة كـ PDF.');
     } finally {
       downloadImgBtn.disabled = false;
-      downloadImgBtn.textContent = 'تحميل كصورة 🖼️';
+      downloadImgBtn.textContent = translations[currentLang].downloadImg || 'حفظ كصورة 🖼️';
     }
   });
 }
@@ -1394,7 +1412,7 @@ function renderSavedInvoices(filter = '') {
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editInvoiceById(${inv.id})">✏️ تعديل</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.archiveInvoice(${inv.id})" title="أرشفة الفاتورة">📦 أرشفة</button>
           <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendWhatsAppById(${inv.id})">💬 واتساب</button>
-          <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨 طباعة</button>
+          <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨 طباعة / PDF</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </div>
@@ -1952,48 +1970,7 @@ if (ledgerDownloadBtn) {
         const dataUrl = canvas.toDataURL('image/png');
         const fileName = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
 
-        if (navigator.share && isCapacitorNative) {
-          try {
-            const blob = await (await fetch(dataUrl)).blob();
-            const file = new File([blob], fileName, { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: 'كشف حساب عميل',
-                text: `كشف حساب العميل: ${activeLedgerClientName}`
-              });
-              return;
-            }
-          } catch (e) {}
-        }
-
-        const newWin = window.open();
-        if (newWin) {
-          newWin.document.write(`
-            <html dir="rtl">
-              <head>
-                <title>${fileName}</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                  body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
-                  img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
-                  .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
-                </style>
-              </head>
-              <body>
-                <img src="${dataUrl}" alt="Ledger Image" />
-                <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
-              </body>
-            </html>
-          `);
-        } else {
-          const a = document.createElement('a');
-          a.download = fileName;
-          a.href = dataUrl;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }
+        await saveOrShareFile(dataUrl, fileName, 'image/png', `كشف حساب العميل: ${activeLedgerClientName}`);
       } catch (err) {
         console.error("Ledger Image Error:", err);
       }
@@ -2428,48 +2405,7 @@ if (ledgerSupplierDownloadBtn) {
         const dataUrl = canvas.toDataURL('image/png');
         const fileName = `كشف_حساب_مورد_${activeLedgerSupplierName}_${Date.now()}.png`;
 
-        if (navigator.share && isCapacitorNative) {
-          try {
-            const blob = await (await fetch(dataUrl)).blob();
-            const file = new File([blob], fileName, { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: 'كشف حساب مورد',
-                text: `كشف حساب المورد: ${activeLedgerSupplierName}`
-              });
-              return;
-            }
-          } catch (e) {}
-        }
-
-        const newWin = window.open();
-        if (newWin) {
-          newWin.document.write(`
-            <html dir="rtl">
-              <head>
-                <title>${fileName}</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                  body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
-                  img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
-                  .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
-                </style>
-              </head>
-              <body>
-                <img src="${dataUrl}" alt="Supplier Ledger Image" />
-                <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
-              </body>
-            </html>
-          `);
-        } else {
-          const link = document.createElement('a');
-          link.download = fileName;
-          link.href = dataUrl;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+        await saveOrShareFile(dataUrl, fileName, 'image/png', `كشف حساب المورد: ${activeLedgerSupplierName}`);
       } catch (err) {
         console.error("Supplier Ledger Image Error:", err);
       }
@@ -2817,7 +2753,7 @@ function renderPurchases() {
         <div class="inv-actions" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;" onclick="event.stopPropagation();">
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.viewPurchaseById(${pur.id})">👁️ معاينة</button>
           <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendSupplierWhatsAppById(${pur.id})">💬 واتساب</button>
-          <button class="btn-sm" onclick="window.reprintPurchase(${pur.id})">🖨 طباعة</button>
+          <button class="btn-sm" onclick="window.reprintPurchase(${pur.id})">🖨 طباعة / PDF</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deletePurchase(${pur.id})">🗑️</button>
         </div>
       </div>
@@ -2906,48 +2842,7 @@ if (supplierDownloadImgBtn) {
         const dataUrl = canvas.toDataURL('image/png');
         const fileName = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.png`;
 
-        if (navigator.share && isCapacitorNative) {
-          try {
-            const blob = await (await fetch(dataUrl)).blob();
-            const file = new File([blob], fileName, { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: 'فاتورة مشتريات',
-                text: 'فاتورة مشتريات وتوريد'
-              });
-              return;
-            }
-          } catch (e) {}
-        }
-
-        const newWin = window.open();
-        if (newWin) {
-          newWin.document.write(`
-            <html dir="rtl">
-              <head>
-                <title>${fileName}</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                  body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
-                  img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
-                  .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
-                </style>
-              </head>
-              <body>
-                <img src="${dataUrl}" alt="Supplier Invoice Image" />
-                <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
-              </body>
-            </html>
-          `);
-        } else {
-          const link = document.createElement('a');
-          link.download = fileName;
-          link.href = dataUrl;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+        await saveOrShareFile(dataUrl, fileName, 'image/png', 'فاتورة المشتريات والتوريد');
       } catch (err) {
         console.error("Supplier Image Error:", err);
       }
@@ -3159,51 +3054,9 @@ if (exportJsonBtn) {
       
       const jsonString = JSON.stringify(data, null, 2);
       const fileName = `backup_cloud_${Date.now()}.json`;
+      const blob = new Blob([jsonString], { type: 'application/json' });
 
-      if (navigator.share && isCapacitorNative) {
-        try {
-          const blob = new Blob([jsonString], { type: 'application/json' });
-          const file = new File([blob], fileName, { type: 'application/json' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'النسخة الاحتياطية',
-              text: 'ملف النسخة الاحتياطية للبيانات'
-            });
-            return;
-          }
-        } catch (sErr) {
-          console.warn("Native share fallback for JSON:", sErr);
-        }
-      }
-
-      const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonString);
-      const newWin = window.open();
-      if (newWin) {
-        newWin.document.write(`
-          <html dir="rtl">
-            <head>
-              <title>${fileName}</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body { margin:0; background:#111827; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; text-align:center; padding:20px; }
-                .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; margin-top:15px; }
-              </style>
-            </head>
-            <body>
-              <h3>💾 النسخة الاحتياطية جاهزة للتحميل</h3>
-              <a href="${dataUrl}" download="${fileName}" class="btn">اضغط هنا لتحميل الملف على الجهاز</a>
-            </body>
-          </html>
-        `);
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      await saveOrShareFile(blob, fileName, 'application/json', 'النسخة الاحتياطية للبيانات');
     } catch (err) {
       console.error("Export JSON Error:", err);
       alert("حدث خطأ أثناء استخراج النسخة الاحتياطية.");
@@ -3297,51 +3150,9 @@ if (exportCsvBtn) {
 
       const fileName = `sales_report_${Date.now()}.csv`;
       const csvContent = "\ufeff" + csv;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 
-      if (navigator.share && isCapacitorNative) {
-        try {
-          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-          const file = new File([blob], fileName, { type: 'text/csv' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'تقرير المبيعات Excel',
-              text: 'تقرير فواتير المبيعات بصيغة CSV/Excel'
-            });
-            return;
-          }
-        } catch (sErr) {
-          console.warn("Native share fallback for CSV:", sErr);
-        }
-      }
-
-      const dataUrl = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
-      const newWin = window.open();
-      if (newWin) {
-        newWin.document.write(`
-          <html dir="rtl">
-            <head>
-              <title>${fileName}</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body { margin:0; background:#111827; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; text-align:center; padding:20px; }
-                .btn { background:#16a34a; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; margin-top:15px; }
-              </style>
-            </head>
-            <body>
-              <h3>📊 تقرير المبيعات جاهز للتحميل</h3>
-              <a href="${dataUrl}" download="${fileName}" class="btn">اضغط هنا لتحميل تقرير Excel</a>
-            </body>
-          </html>
-        `);
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      await saveOrShareFile(blob, fileName, 'text/csv', 'تقرير فواتير المبيعات Excel');
     } catch (err) {
       console.error("Export CSV Error:", err);
       alert("حدث خطأ أثناء استخراج التقرير.");
