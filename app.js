@@ -43,7 +43,6 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       });
     }
 
-    // 1. استخدام كاباسيتور Native إذا كان متوفراً في أندرويد
     if (isCapacitorNative && window.Capacitor.Plugins) {
       const Filesystem = window.Capacitor.Plugins.Filesystem;
       const Share = window.Capacitor.Plugins.Share;
@@ -65,7 +64,6 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       }
     }
 
-    // 2. استخدام Web Share API كخيار ثاني
     const file = new File([blob], fileName, { type: mimeType || blob.type || 'application/octet-stream' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
@@ -80,7 +78,6 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       }
     }
 
-    // 3. التنزيل المباشر كـ HTML Anchor Fallback
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
@@ -114,14 +111,8 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
     element.style.display = 'block';
   }
 
-  // إخفاء أزرار الإجراءات المؤقتة غير المخصصة للطباعة إن وجدت
-  const noPrints = element.querySelectorAll('.no-print');
-  noPrints.forEach(el => el.style.display = 'none');
-
-  // انتظار بسيط لضمان رندر العناصر ورسومات QR كود والخطوط
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  // 1. التوليد عبر html2pdf
   if (typeof html2pdf !== 'undefined') {
     const opt = {
       margin:       [5, 5, 5, 5],
@@ -140,7 +131,6 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
 
     try {
       const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-      noPrints.forEach(el => el.style.display = '');
       if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
       return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
     } catch (e) {
@@ -148,7 +138,6 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
     }
   }
 
-  // 2. Fallback إلى صورة عالية الدقة بخلفية بيضاء
   if (typeof html2canvas !== 'undefined') {
     try {
       const canvas = await html2canvas(element, { 
@@ -159,7 +148,6 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
         scrollY: 0
       });
       const imgData = canvas.toDataURL('image/png');
-      noPrints.forEach(el => el.style.display = '');
       if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
       return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
     } catch (e) {
@@ -167,16 +155,12 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
     }
   }
 
-  // 3. طباعة المتصفح التقليدية
-  noPrints.forEach(el => el.style.display = '');
   window.print();
   return true;
 }
 
 function initCapacitorBridge() {
   if (isCapacitorNative) {
-    console.log("Capacitor Native Bridge Connected Successfully.");
-    
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
       window.Capacitor.Plugins.GoogleAuth.initialize({
         clientId: '753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com',
@@ -213,9 +197,6 @@ if (document.readyState === 'loading') {
   initCapacitorBridge();
 }
 
-// ==========================================
-// Firebase Initialization & Config
-// ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
   authDomain: "giti-68750.firebaseapp.com",
@@ -226,7 +207,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-
 const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
@@ -237,9 +217,7 @@ const auth = getAuth(app);
 auth.languageCode = 'ar';
 
 setPersistence(auth, indexedDBLocalPersistence).catch(() => {
-  setPersistence(auth, browserLocalPersistence).catch((error) => {
-    console.error("Auth Persistence Error:", error);
-  });
+  setPersistence(auth, browserLocalPersistence).catch((error) => {});
 });
 
 const googleProvider = new GoogleAuthProvider();
@@ -254,15 +232,10 @@ function triggerAds() {
           (window.adsbygoogle = window.adsbygoogle || []).push({});
         }
       });
-    } catch (e) {
-      console.warn("AdSense Trigger Error:", e);
-    }
+    } catch (e) {}
   }, 300);
 }
 
-// ==========================================
-// Translations & UI State Management
-// ==========================================
 const translations = {
   ar: {
     login: "تسجيل الدخول", register: "حساب جديد", googleAuth: "متابعة بواسطة Google",
@@ -354,9 +327,6 @@ if (dismissNotificationBtn) {
   });
 }
 
-// ==========================================
-// ZATCA QR Code Generator
-// ==========================================
 function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAmount) {
   function getTlvTag(tag, value) {
     const encoder = new TextEncoder();
@@ -402,9 +372,6 @@ function renderQrCode(containerId, dataText) {
   }
 }
 
-// ==========================================
-// Application Core Variables & Storage
-// ==========================================
 const loginScreen = document.getElementById('login-screen');
 const lockScreen = document.getElementById('lock-screen');
 const mainApp = document.getElementById('main-app');
@@ -436,9 +403,7 @@ let editingSupplierId = null;
 function saveLocalData(uid, key, data) {
   try {
     localStorage.setItem(`giti_${uid}_${key}`, JSON.stringify(data));
-  } catch (e) {
-    console.warn("Local storage save error:", e);
-  }
+  } catch (e) {}
 }
 
 function getLocalData(uid, key, fallback = []) {
@@ -446,7 +411,6 @@ function getLocalData(uid, key, fallback = []) {
     const data = localStorage.getItem(`giti_${uid}_${key}`);
     return data ? JSON.parse(data) : fallback;
   } catch (e) {
-    console.warn("Local storage read error:", e);
     return fallback;
   }
 }
@@ -469,9 +433,7 @@ async function ensureUserLicense(user) {
     } else {
       localStorage.setItem(`giti_license_${user.uid}`, JSON.stringify(docSnap.data()));
     }
-  } catch (e) {
-    console.warn("License registration error or offline:", e);
-  }
+  } catch (e) {}
 }
 
 const tabLoginBtn = document.getElementById('tab-login-btn');
@@ -503,9 +465,6 @@ function clearAuthMsgs() {
   if (authSuccess) authSuccess.classList.add('hidden');
 }
 
-// ==========================================
-// Authentication State Observer
-// ==========================================
 onAuthStateChanged(auth, async (user) => {
   const adminBtn = document.getElementById('admin-btn');
 
@@ -552,9 +511,7 @@ onAuthStateChanged(auth, async (user) => {
         localStorage.setItem(`giti_license_${user.uid}`, JSON.stringify(licenseData));
         applyLicenseData(licenseData);
       }
-    }, (err) => {
-      console.warn("License Snapshot Offline Fallback:", err);
-    });
+    }, (err) => {});
 
   } else {
     currentUser = null;
@@ -630,9 +587,7 @@ function detachCloudSync() {
 async function syncDocToCloud(docName, payload) {
   if (!currentUser) return;
   saveLocalData(currentUser.uid, docName, payload);
-  setDoc(doc(db, "users", currentUser.uid, "data", docName), payload).catch(err => {
-    console.warn("Sync to cloud queued offline:", err);
-  });
+  setDoc(doc(db, "users", currentUser.uid, "data", docName), payload).catch(err => {});
 }
 
 async function fetchAllDataFromCloud() {
@@ -692,7 +647,6 @@ async function fetchAllDataFromCloud() {
     renderAllModules();
     alert('✅ تم جلب وتحديث جميع الفواتير والحسابات بنجاح من السحابة!');
   } catch (err) {
-    console.error("Fetch Cloud Error:", err);
     alert('❌ تعذر جلب البيانات من السحابة (جاري العمل على البيانات المحلية المخزنة).');
   }
 }
@@ -733,7 +687,6 @@ if (googleLoginBtn) {
             return;
           }
         } catch (nativeErr) {
-          console.error("Native GoogleAuth signin failed:", nativeErr);
           if (authError) {
             authError.textContent = "فشل تسجيل الدخول عبر Google Auth.";
             authError.classList.remove('hidden');
@@ -745,7 +698,6 @@ if (googleLoginBtn) {
         if (result && result.user) await ensureUserLicense(result.user);
       }
     } catch (err) {
-      console.error("Google Auth Error:", err);
       if (authError) {
         authError.textContent = "فشل تسجيل الدخول. تأكد من اتصال الإنترنت.";
         authError.classList.remove('hidden');
@@ -841,9 +793,6 @@ function updateHeaderUI() {
   }
 }
 
-// ==========================================
-// Sales Invoices System Engine
-// ==========================================
 const itemsBody = document.getElementById('items-body');
 const discountInput = document.getElementById('discount-input');
 const taxInput = document.getElementById('tax-input');
@@ -993,9 +942,9 @@ window.handleItemInput = (index, val) => {
   
   if (itemsBody) {
     const rows = itemsBody.querySelectorAll('tr');
-    if (rows[index]) {
+    if (rows[index] && activeItems[index]) {
       const totalSpan = rows[index].querySelector('.item-total-text');
-      if (totalSpan && activeItems[index]) {
+      if (totalSpan) {
         totalSpan.textContent = (((activeItems[index].qty ? activeItems[index].qty : 0)) * ((activeItems[index].price ? activeItems[index].price : 0))).toFixed(2);
       }
     }
@@ -1207,9 +1156,7 @@ async function saveInvoiceData() {
           setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
         }
       });
-    } catch (err) {
-      console.warn("Background sync queued offline:", err);
-    }
+    } catch (err) {}
   }
 
   return invoice;
@@ -1316,9 +1263,6 @@ if (closeViewBtn) {
   });
 }
 
-// ==========================================
-// Image & PDF Export Controls
-// ==========================================
 const downloadImgBtn = document.getElementById('download-img-btn');
 if (downloadImgBtn) {
   downloadImgBtn.addEventListener('click', async () => {
@@ -1348,8 +1292,7 @@ if (downloadImgBtn) {
       await saveOrShareFile(dataUrl, fileName, 'image/png', 'الفاتورة الإلكترونية');
 
     } catch (err) {
-      console.error("HTML2Canvas Render Error:", err);
-      alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر الطباعة وحفظ الفاتورة كـ PDF.');
+      alert('حدث خطأ أثناء استخراج الصورة.');
     } finally {
       downloadImgBtn.disabled = false;
       downloadImgBtn.textContent = translations[currentLang]?.downloadImg || 'حفظ كصورة 🖼️';
@@ -1450,9 +1393,6 @@ function renderSavedInvoices(filter = '') {
   `).join('');
 }
 
-// ==========================================
-// Invoices Archive Module
-// ==========================================
 const openArchiveModalBtn = document.getElementById('open-archive-modal-btn');
 const archiveModal = document.getElementById('archive-modal');
 const closeArchiveModalBtn = document.getElementById('close-archive-modal-btn');
@@ -1482,7 +1422,7 @@ function renderArchivedInvoices(filter = '') {
   });
 
   if (filtered.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">لا توجد فواتير مؤرشفة مطابقة.</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">لا توجد فواتير مؤرشفة حالياً.</p>';
     return;
   }
 
@@ -1584,17 +1524,12 @@ window.deleteInvoice = async (id) => {
     }
     updateNextInvoiceNumber();
     renderAllModules();
-  } catch (err) {
-    console.error("Delete Invoice Error:", err);
-  }
+  } catch (err) {}
 };
 
 const searchInput = document.getElementById('search-input');
 if (searchInput) searchInput.addEventListener('input', (e) => renderSavedInvoices(e.target.value));
 
-// ==========================================
-// Inventory / Products Management
-// ==========================================
 const productForm = document.getElementById('product-form');
 if (productForm) {
   productForm.addEventListener('submit', async (e) => {
@@ -1609,10 +1544,7 @@ if (productForm) {
     const cost = costEl ? (parseFloat(costEl.value) ? parseFloat(costEl.value) : 0) : 0;
     const stock = stockEl ? (parseInt(stockEl.value) ? parseInt(stockEl.value) : 0) : 0;
 
-    if (!name) {
-      alert('يرجى إدخال اسم المنتج');
-      return;
-    }
+    if (!name) { alert('يرجى إدخال اسم المنتج'); return; }
 
     let prodToSave;
     if (editingProductId !== null) {
@@ -1713,14 +1645,9 @@ window.deleteProduct = async (idx) => {
       deleteDoc(doc(db, "users", currentUser.uid, "products", String(p.id))).catch(() => {});
     }
     renderAllModules();
-  } catch (err) {
-    console.error("Delete Product Error:", err);
-  }
+  } catch (err) {}
 };
 
-// ==========================================
-// Clients & Ledger Management
-// ==========================================
 const clientForm = document.getElementById('client-form');
 if (clientForm) {
   clientForm.addEventListener('submit', async (e) => {
@@ -1832,22 +1759,13 @@ window.editClient = async (index) => {
   if (newBalanceStr === null) return;
 
   const newBalance = parseFloat(newBalanceStr);
-  if (isNaN(newBalance)) {
-    alert('يرجى إدخال رقم صحيح للرصيد.');
-    return;
-  }
+  if (isNaN(newBalance)) { alert('يرجى إدخال رقم صحيح للرصيد.'); return; }
 
   const trimmedName = newName.trim();
-  if (!trimmedName) {
-    alert('اسم العميل لا يمكن أن يكون فارغاً.');
-    return;
-  }
+  if (!trimmedName) { alert('اسم العميل لا يمكن أن يكون فارغاً.'); return; }
 
   const exists = clientsDB.some((c, i) => i !== index && c.name.toLowerCase() === trimmedName.toLowerCase());
-  if (exists) {
-    alert('يوجد عميل آخر بنفس الاسم بالفعل!');
-    return;
-  }
+  if (exists) { alert('يوجد عميل آخر بنفس الاسم بالفعل!'); return; }
 
   clientsDB[index] = Object.assign({}, client, {
     name: trimmedName,
@@ -1869,7 +1787,7 @@ window.deleteClient = async (index) => {
   const client = clientsDB[index];
   if (!client) return;
 
-  if (!confirm(`⚠️ هل أنت متأكد من حذف العميل "${client.name}"؟ سيتم إزالته من الدفتر.`)) return;
+  if (!confirm(`⚠️ هل أنت متأكد من حذف العميل "${client.name}"؟`)) return;
 
   try {
     clientsDB.splice(index, 1);
@@ -1880,9 +1798,7 @@ window.deleteClient = async (index) => {
       deleteDoc(doc(db, "users", currentUser.uid, "clients", String(client.id))).catch(() => {});
     }
     renderAllModules();
-  } catch (err) {
-    console.error("Delete Client Error:", err);
-  }
+  } catch (err) {}
 };
 
 window.openClientLedger = (clientName) => {
@@ -1891,30 +1807,6 @@ window.openClientLedger = (clientName) => {
 
   activeLedgerClientName = clientObj.name;
   const stats = getClientCalculatedLedger(clientObj);
-
-  // تحديث رأس كشف الحساب
-  const clLogo = document.getElementById('cl-logo');
-  if (clLogo) {
-    if (storeProfile.logo) {
-      clLogo.src = storeProfile.logo;
-      clLogo.classList.remove('hidden');
-    } else {
-      clLogo.classList.add('hidden');
-    }
-  }
-  const clStoreName = document.getElementById('cl-store-name');
-  if (clStoreName) clStoreName.textContent = storeProfile.name;
-  const clStorePhone = document.getElementById('cl-store-phone');
-  if (clStorePhone) clStorePhone.textContent = storeProfile.phone;
-  const clStoreVat = document.getElementById('cl-store-vat');
-  if (clStoreVat) clStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
-  const clDate = document.getElementById('cl-date');
-  if (clDate) clDate.textContent = `التاريخ: ${new Date().toLocaleDateString('ar-EG')}`;
-  
-  const clClientName = document.getElementById('cl-client-name');
-  if (clClientName) clClientName.textContent = clientObj.name;
-  const clClientPhone = document.getElementById('cl-client-phone');
-  if (clClientPhone) clClientPhone.textContent = clientObj.phone || '-';
 
   const ledgerTitle = document.getElementById('ledger-client-title');
   if (ledgerTitle) ledgerTitle.textContent = `👤 كشف حساب: ${clientObj.name}`;
@@ -1925,51 +1817,73 @@ window.openClientLedger = (clientName) => {
   const ledgerBalance = document.getElementById('ledger-balance');
   if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency}`;
 
-  const tableBody = document.getElementById('client-ledger-table-body');
-  if (!tableBody) return;
-  let rowsHtml = '';
-
-  if (clientObj.openingBalance > 0) {
-    rowsHtml += `
-      <tr>
-        <td>-</td>
-        <td><strong>رصيد افتتاح مديونية سابقة</strong></td>
-        <td><strong style="color:#dc2626 !important;">${clientObj.openingBalance.toFixed(2)} ${storeProfile.currency}</strong></td>
-        <td><span style="color:#dc2626 !important; font-weight: bold;">مديونية</span></td>
-      </tr>
-    `;
-  }
+  const historyUl = document.getElementById('client-ledger-history');
+  if (!historyUl) return;
+  let historyHtml = '';
 
   stats.clientInvoices.forEach(inv => {
-    rowsHtml += `
-      <tr>
-        <td>${inv.date || '-'}</td>
-        <td>فاتورة مبيعات #${inv.id} (${(inv.items ? inv.items.length : 0)} أصناف)</td>
-        <td><strong>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong></td>
-        <td><span style="color:${inv.status === 'مدفوعة' ? '#059669' : '#dc2626'} !important; font-weight: bold;">${inv.status}</span></td>
-      </tr>
+    let itemsRows = '';
+    (inv.items || []).forEach(it => {
+      itemsRows += `<tr><td>${it.name}</td><td>${it.qty}</td><td>${it.price.toFixed(2)}</td><td>${(it.qty * it.price).toFixed(2)}</td></tr>`;
+    });
+
+    const zatcaCode = inv.zatcaQr || generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime || new Date().toISOString(), inv.grandTotal, inv.taxAmount || 0);
+
+    historyHtml += `
+      <div style="background:#ffffff; color:#1f2937; border:1px solid #e5e7eb; border-radius:8px; padding:15px; margin-bottom:15px;">
+        <div style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 8px;">
+          <h3 style="margin: 0; font-size: 1.2rem; color: #111827;">${storeProfile.name}</h3>
+          <p style="margin: 2px 0; font-size: 0.85rem; color: #4b5563;">رقم الفاتورة: #${inv.id} | التاريخ: ${inv.date}</p>
+        </div>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:0.9rem;">
+          <thead>
+            <tr style="background:#f3f4f6;">
+              <th style="padding:6px; border:1px solid #e5e7eb;">الصنف</th>
+              <th style="padding:6px; border:1px solid #e5e7eb;">الكمية</th>
+              <th style="padding:6px; border:1px solid #e5e7eb;">السعر</th>
+              <th style="padding:6px; border:1px solid #e5e7eb;">الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsRows}
+          </tbody>
+        </table>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; border-top:1px solid #e5e7eb; padding-top:8px;">
+          <div>
+            <p style="margin:2px 0;">المجموع الفرعي: ${(inv.subtotal || 0).toFixed(2)}</p>
+            <p style="margin:2px 0; color:#ef4444;">الخصم: ${(inv.discount || 0).toFixed(2)}</p>
+            <p style="margin:2px 0; font-weight:bold; color:#10b981;">الإجمالي الكلي: ${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</p>
+            <p style="margin:2px 0; font-size:0.8rem; color:#6b7280;">حالة الدفع: ${inv.status}</p>
+          </div>
+          <div id="client-ledger-qr-${inv.id}"></div>
+        </div>
+      </div>
     `;
   });
 
   stats.payments.forEach((p, pIndex) => {
-    const safeClientName = (clientObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
-    rowsHtml += `
-      <tr style="background-color: #f0fdf4 !important;">
-        <td>${p.date || '-'}</td>
-        <td>
-          دفعة سداد نقدي 💵 
-          <span style="float: left;" class="no-print">
-            <button class="btn-sm" style="background:#f59e0b; color:#fff; padding:2px 6px; font-size:0.75rem;" onclick="window.editClientPayment('${safeClientName}', ${pIndex})">✏️</button>
-            <button class="btn-sm" style="background:#ef4444; color:#fff; padding:2px 6px; font-size:0.75rem;" onclick="window.deleteClientPayment('${safeClientName}', ${pIndex})">🗑️</button>
-          </span>
-        </td>
-        <td><strong style="color:#059669 !important;">-${p.amount.toFixed(2)} ${storeProfile.currency}</strong></td>
-        <td><span style="color:#059669 !important; font-weight: bold;">مسددة</span></td>
-      </tr>
+    historyHtml += `
+      <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong style="color:#166534;">دفعة سداد نقدي 💵</strong>
+          <br><small style="color:#4b5563;">التاريخ: ${p.date || ''}</small>
+          <br><strong class="text-success" style="font-size:1.1rem;">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency}</strong>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 4px 8px;" onclick="window.editClientPayment('${clientObj.name.replace(/'/g, "\\'")}', ${pIndex})">✏️</button>
+          <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 4px 8px;" onclick="window.deleteClientPayment('${clientObj.name.replace(/'/g, "\\'")}', ${pIndex})">🗑️</button>
+        </div>
+      </div>
     `;
   });
 
-  tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" style="text-align:center; color:#6b7280 !important;">لا توجد معاملات مسجلة</td></tr>';
+  historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted)">لا توجد معاملات مسجلة</p>';
+
+  stats.clientInvoices.forEach(inv => {
+    const zatcaCode = inv.zatcaQr || generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime || new Date().toISOString(), inv.grandTotal, inv.taxAmount || 0);
+    setTimeout(() => renderQrCode(`client-ledger-qr-${inv.id}`, zatcaCode), 100);
+  });
+
   const ledgerModal = document.getElementById('client-ledger-modal');
   if (ledgerModal) ledgerModal.classList.remove('hidden');
 };
@@ -2032,12 +1946,12 @@ if (ledgerWhatsappBtn) {
     if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
     let msg = `*${storeProfile.name}*\n`;
-    msg += `📄 *كشف حساب العميل:* ${activeLedgerClientName}\n`;
+    msg += `📄 *كشف حساب العميل التفصيلي:* ${activeLedgerClientName}\n`;
     msg += `📅 *التاريخ:* ${new Date().toLocaleDateString('ar-EG')}\n`;
     msg += `-----------------------------------\n`;
-    msg += `🛍 *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
-    msg += `✅ *إجمالي المدفوعات:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
-    msg += `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += `🛍 *إجمالي التعاملات والفواتير:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += `✅ *إجمالي المدفوعات والسداد:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += `📌 *الصافي / المديونية المستحقة:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `-----------------------------------\n`;
     msg += `شكراً لتعاملكم معنا!`;
 
@@ -2062,9 +1976,7 @@ if (ledgerDownloadBtn) {
         const fileName = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
 
         await saveOrShareFile(dataUrl, fileName, 'image/png', `كشف حساب العميل: ${activeLedgerClientName}`);
-      } catch (err) {
-        console.error("Ledger Image Error:", err);
-      }
+      } catch (err) {}
     }
   });
 }
@@ -2103,9 +2015,6 @@ if (submitPaymentBtn) {
   });
 }
 
-// ==========================================
-// Suppliers & Purchasing Engine
-// ==========================================
 const supplierForm = document.getElementById('supplier-form');
 if (supplierForm) {
   supplierForm.addEventListener('submit', async (e) => {
@@ -2273,9 +2182,7 @@ window.deleteSupplier = async (index) => {
       deleteDoc(doc(db, "users", currentUser.uid, "suppliers", String(supplier.id))).catch(() => {});
     }
     renderAllModules();
-  } catch (err) {
-    console.error("Delete Supplier Error:", err);
-  }
+  } catch (err) {}
 };
 
 window.openSupplierLedger = (supplierName) => {
@@ -2289,30 +2196,6 @@ window.openSupplierLedger = (supplierName) => {
     activeLedgerSupplierName = supplierObj.name;
     const stats = getSupplierCalculatedLedger(supplierObj);
 
-    // تحديث رأس كشف الحساب
-    const slLogo = document.getElementById('sl-logo');
-    if (slLogo) {
-      if (storeProfile.logo) {
-        slLogo.src = storeProfile.logo;
-        slLogo.classList.remove('hidden');
-      } else {
-        slLogo.classList.add('hidden');
-      }
-    }
-    const slStoreName = document.getElementById('sl-store-name');
-    if (slStoreName) slStoreName.textContent = storeProfile.name;
-    const slStorePhone = document.getElementById('sl-store-phone');
-    if (slStorePhone) slStorePhone.textContent = storeProfile.phone;
-    const slStoreVat = document.getElementById('sl-store-vat');
-    if (slStoreVat) slStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
-    const slDate = document.getElementById('sl-date');
-    if (slDate) slDate.textContent = `التاريخ: ${new Date().toLocaleDateString('ar-EG')}`;
-
-    const slSupplierName = document.getElementById('sl-supplier-name');
-    if (slSupplierName) slSupplierName.textContent = supplierObj.name;
-    const slSupplierPhone = document.getElementById('sl-supplier-phone');
-    if (slSupplierPhone) slSupplierPhone.textContent = supplierObj.phone || '-';
-
     const ledgerTitle = document.getElementById('ledger-supplier-title');
     if (ledgerTitle) ledgerTitle.textContent = `🏭 كشف حساب مورد: ${supplierObj.name}`;
     
@@ -2325,59 +2208,68 @@ window.openSupplierLedger = (supplierName) => {
     const ledgerBalance = document.getElementById('ledger-supplier-balance');
     if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
 
-    const tableBody = document.getElementById('supplier-ledger-table-body');
-    if (tableBody) {
-      let rowsHtml = '';
-
-      if (supplierObj.openingBalance > 0) {
-        rowsHtml += `
-          <tr>
-            <td>-</td>
-            <td><strong>رصيد افتتاح (مستحق سابقة للمورد)</strong></td>
-            <td><strong style="color:#dc2626 !important;">${supplierObj.openingBalance.toFixed(2)} ${storeProfile.currency}</strong></td>
-            <td><span style="color:#dc2626 !important; font-weight: bold;">مستحق للمورد</span></td>
-          </tr>
-        `;
-      }
+    const historyUl = document.getElementById('supplier-ledger-history');
+    if (historyUl) {
+      let historyHtml = '';
 
       (stats.supplierPurchases || []).forEach(pur => {
-        rowsHtml += `
-          <tr>
-            <td>${pur.date || '-'}</td>
-            <td>فاتورة توريد #${pur.id} (${(pur.items ? pur.items.length : 0)} أصناف)</td>
-            <td><strong>${(pur.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong></td>
-            <td><span style="color:${pur.status === 'مدفوعة' ? '#059669' : '#dc2626'} !important; font-weight: bold;">${pur.status || ''}</span></td>
-          </tr>
+        let itemsRows = '';
+        (pur.items || []).forEach(it => {
+          itemsRows += `<tr><td>${it.name}</td><td>${it.qty}</td><td>${(it.cost || 0).toFixed(2)}</td><td>${(it.qty * (it.cost || 0)).toFixed(2)}</td></tr>`;
+        });
+
+        historyHtml += `
+          <div style="background:#ffffff; color:#1f2937; border:1px solid #e5e7eb; border-radius:8px; padding:15px; margin-bottom:15px;">
+            <div style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 8px;">
+              <h3 style="margin: 0; font-size: 1.2rem; color: #111827;">${storeProfile.name}</h3>
+              <p style="margin: 2px 0; font-size: 0.85rem; color: #4b5563;">فاتورة توريد #${pur.id} | التاريخ: ${pur.date || ''}</p>
+            </div>
+            <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:0.9rem;">
+              <thead>
+                <tr style="background:#f3f4f6;">
+                  <th style="padding:6px; border:1px solid #e5e7eb;">الصنف</th>
+                  <th style="padding:6px; border:1px solid #e5e7eb;">الكمية</th>
+                  <th style="padding:6px; border:1px solid #e5e7eb;">سعر التكلفة</th>
+                  <th style="padding:6px; border:1px solid #e5e7eb;">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsRows}
+              </tbody>
+            </table>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem; border-top:1px solid #e5e7eb; padding-top:8px;">
+              <div>
+                <p style="margin:2px 0; font-weight:bold; color:#ef4444;">الإجمالي الكلي: ${(pur.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</p>
+                <p style="margin:2px 0; font-size:0.8rem; color:#6b7280;">حالة الدفع: ${pur.status || ''}</p>
+              </div>
+            </div>
+          </div>
         `;
       });
 
       (stats.payments || []).forEach((p, pIndex) => {
         const safeSupplierName = (supplierObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        rowsHtml += `
-          <tr style="background-color: #f0fdf4 !important;">
-            <td>${p.date || '-'}</td>
-            <td>
-              دفعة سداد للمورد 💵 
-              <span style="float: left;" class="no-print">
-                <button class="btn-sm" style="background:#f59e0b; color:#fff; padding:2px 6px; font-size:0.75rem;" onclick="window.editSupplierPayment('${safeSupplierName}', ${pIndex})">✏️</button>
-                <button class="btn-sm" style="background:#ef4444; color:#fff; padding:2px 6px; font-size:0.75rem;" onclick="window.deleteSupplierPayment('${safeSupplierName}', ${pIndex})">🗑️</button>
-              </span>
-            </td>
-            <td><strong style="color:#059669 !important;">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong></td>
-            <td><span style="color:#059669 !important; font-weight: bold;">مسددة للمورد</span></td>
-          </tr>
+        historyHtml += `
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <strong style="color:#166534;">دفعة سداد نقدي للمورد 💵</strong>
+              <br><small style="color:#4b5563;">التاريخ: ${p.date || ''}</small>
+              <br><strong class="text-success" style="font-size:1.1rem;">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency}</strong>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn-sm" style="background:var(--warning); color:#fff; padding: 4px 8px;" onclick="window.editSupplierPayment('${safeSupplierName}', ${pIndex})">✏️</button>
+              <button class="btn-sm" style="background:var(--danger); color:#fff; padding: 4px 8px;" onclick="window.deleteSupplierPayment('${safeSupplierName}', ${pIndex})">🗑️</button>
+            </div>
+          </div>
         `;
       });
 
-      tableBody.innerHTML = rowsHtml || '<tr><td colspan="4" style="text-align:center; color:#6b7280 !important; padding: 10px;">لا توجد معاملات مسجلة للمورد</td></tr>';
+      historyUl.innerHTML = historyHtml ? historyHtml : '<p style="text-align:center; color:var(--text-muted); padding: 10px;">لا توجد معاملات مسجلة للمورد</p>';
     }
 
     const ledgerModal = document.getElementById('supplier-ledger-modal');
     if (ledgerModal) ledgerModal.classList.remove('hidden');
-  } catch (err) {
-    console.error("Error in openSupplierLedger:", err);
-    alert('حدث خطأ أثناء فتح كشف الحساب: ' + err.message);
-  }
+  } catch (err) {}
 };
 
 const closeSupplierLedgerBtn = document.getElementById('close-supplier-ledger-btn');
@@ -2464,7 +2356,7 @@ if (ledgerSupplierWhatsappBtn) {
     if (!phone.startsWith('20') && phone.length === 11) phone = '2' + phone;
 
     let msg = `*${storeProfile.name}*\n`;
-    msg += `📄 *كشف حساب المورد:* ${activeLedgerSupplierName}\n`;
+    msg += `📄 *كشف حساب المورد التفصيلي:* ${activeLedgerSupplierName}\n`;
     msg += `📅 *التاريخ:* ${new Date().toLocaleDateString('ar-EG')}\n`;
     msg += `-----------------------------------\n`;
     msg += `📦 *إجمالي المشتريات والتوريد:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
@@ -2494,9 +2386,7 @@ if (ledgerSupplierDownloadBtn) {
         const fileName = `كشف_حساب_مورد_${activeLedgerSupplierName}_${Date.now()}.png`;
 
         await saveOrShareFile(dataUrl, fileName, 'image/png', `كشف حساب المورد: ${activeLedgerSupplierName}`);
-      } catch (err) {
-        console.error("Supplier Ledger Image Error:", err);
-      }
+      } catch (err) {}
     }
   });
 }
@@ -2876,9 +2766,7 @@ if (supplierDownloadImgBtn) {
         const fileName = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.png`;
 
         await saveOrShareFile(dataUrl, fileName, 'image/png', 'فاتورة المشتريات والتوريد');
-      } catch (err) {
-        console.error("Supplier Image Error:", err);
-      }
+      } catch (err) {}
     }
   });
 }
@@ -2944,14 +2832,9 @@ window.deletePurchase = async (id) => {
       deleteDoc(doc(db, "users", currentUser.uid, "purchases", String(id))).catch(() => {});
     }
     renderAllModules();
-  } catch (err) {
-    console.error("Delete Purchase Error:", err);
-  }
+  } catch (err) {}
 };
 
-// ==========================================
-// Treasury & Expenses Engine
-// ==========================================
 const expenseForm = document.getElementById('expense-form');
 if (expenseForm) {
   expenseForm.addEventListener('submit', async (e) => {
@@ -3005,9 +2888,7 @@ window.deleteExpense = async (idx) => {
       deleteDoc(doc(db, "users", currentUser.uid, "expenses", String(exp.id))).catch(() => {});
     }
     renderAllModules();
-  } catch (err) {
-    console.error("Delete Expense Error:", err);
-  }
+  } catch (err) {}
 };
 
 function updateDashboardStats() {
@@ -3031,9 +2912,6 @@ function updateDashboardStats() {
   if (countEl) countEl.textContent = invoicesDB.length;
 }
 
-// ==========================================
-// Backup, Import & CSV/Excel Export
-// ==========================================
 const exportJsonBtn = document.getElementById('export-json-btn');
 if (exportJsonBtn) {
   exportJsonBtn.addEventListener('click', async () => {
@@ -3061,10 +2939,7 @@ if (exportJsonBtn) {
           alert('📋 تم نسخ بيانات النسخة الاحتياطية للحافظة بنجاح!');
         }
       }
-    } catch (err) {
-      console.error("Export JSON Error:", err);
-      alert("حدث خطأ أثناء استخراج النسخة الاحتياطية.");
-    }
+    } catch (err) {}
   });
 }
 
@@ -3133,8 +3008,7 @@ if (importJsonInput) {
           updateHeaderUI();
         }
       } catch (error) {
-        alert('❌ حدث خطأ أثناء قراءة الملف. تأكد من اختيار ملف JSON صحيح.');
-        console.error("Import JSON Error:", error);
+        alert('❌ حدث خطأ أثناء قراءة الملف.');
       } finally {
         event.target.value = '';
       }
@@ -3157,16 +3031,10 @@ if (exportCsvBtn) {
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 
       await saveOrShareFile(blob, fileName, 'text/csv', 'تقرير فواتير المبيعات Excel');
-    } catch (err) {
-      console.error("Export CSV Error:", err);
-      alert("حدث خطأ أثناء استخراج التقرير.");
-    }
+    } catch (err) {}
   });
 }
 
-// ==========================================
-// System Settings
-// ==========================================
 const settingsModal = document.getElementById('settings-modal');
 const openSettingsBtn = document.getElementById('open-settings-btn');
 if (openSettingsBtn) {
@@ -3252,17 +3120,12 @@ function renderAllModules() {
   updateDashboardStats();
 }
 
-// ==========================================
-// Application Bootstrapping
-// ==========================================
 applyTheme(localStorage.getItem('app_theme') ? localStorage.getItem('app_theme') : 'dark');
 applyLanguage(currentLang);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((err) => {
-      console.warn("SW Registration Error:", err);
-    });
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((err) => {});
   });
 }
 
