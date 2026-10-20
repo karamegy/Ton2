@@ -51,8 +51,8 @@ jobs:
           }
           '
 
-          # 2. تثبيت أدوات الكاباسيتور والإضافات الأصلية للطباعة والمشاركة والملفات
-          npm install @capacitor/cli @capacitor/core @capacitor/app @capacitor/splash-screen @codetrix-studio/capacitor-google-auth @capacitor/assets @capacitor/filesystem @capacitor/share @capacitor-community/printer --save-dev
+          # 2. تثبيت أدوات الكاباسيتور والإضافات الأصلية (تعديل اسم مكتبة الطباعة إلى capacitor-printer)
+          npm install @capacitor/cli @capacitor/core @capacitor/app @capacitor/splash-screen @codetrix-studio/capacitor-google-auth @capacitor/assets @capacitor/filesystem @capacitor/share capacitor-printer --save-dev
 
           # 3. إعادة إنشاء منصة أندرويد
           rm -rf android
