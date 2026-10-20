@@ -13,27 +13,60 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // ==========================================
-// Universal Native File Saving & Sharing Helper
+// Capacitor & Native Integration Helpers
 // ==========================================
+const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+
 /**
- * دالة موحدة ومعالجة للتعامل مع حفظ وتنزيل ومشاركة الملفات والصور في Capacitor وأندرويد
+ * دالة حفظ وتصدير الملفات الموحدة (أندرويد Native ومتصفح)
  */
 async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle) {
   try {
+    let base64Data = '';
     let blob;
 
-    if (typeof fileDataUrlOrBlob === 'string' && fileDataUrlOrBlob.startsWith('data:')) {
-      const res = await fetch(fileDataUrlOrBlob);
-      blob = await res.blob();
+    if (typeof fileDataUrlOrBlob === 'string') {
+      if (fileDataUrlOrBlob.startsWith('data:')) {
+        base64Data = fileDataUrlOrBlob.split(',')[1];
+        const res = await fetch(fileDataUrlOrBlob);
+        blob = await res.blob();
+      } else {
+        base64Data = fileDataUrlOrBlob;
+        blob = new Blob([base64Data], { type: mimeType || 'application/octet-stream' });
+      }
     } else if (fileDataUrlOrBlob instanceof Blob) {
       blob = fileDataUrlOrBlob;
-    } else {
-      throw new Error("تنسيق بيانات الملف غير مدعوم");
+      base64Data = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(blob);
+      });
     }
 
-    const file = new File([blob], fileName, { type: mimeType || blob.type || 'application/octet-stream' });
+    // 1. استخدام كاباسيتور Native إذا كان متوفراً في أندرويد
+    if (isCapacitorNative && window.Capacitor.Plugins) {
+      const Filesystem = window.Capacitor.Plugins.Filesystem;
+      const Share = window.Capacitor.Plugins.Share;
 
-    // 1. استخدام Web Share API المباشر لأندرويد (يفتح نافذة حفظ الملفات والتنزيل فوراً)
+      if (Filesystem && Share) {
+        const savedFile = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: 'CACHE'
+        });
+
+        await Share.share({
+          title: shareTitle || fileName,
+          text: shareTitle || fileName,
+          url: savedFile.uri,
+          dialogTitle: shareTitle || fileName
+        });
+        return true;
+      }
+    }
+
+    // 2. استخدام Web Share API كخيار ثاني
+    const file = new File([blob], fileName, { type: mimeType || blob.type || 'application/octet-stream' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({
@@ -44,11 +77,10 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
         return true;
       } catch (shareErr) {
         if (shareErr.name === 'AbortError') return true;
-        console.warn("Web Share API fallback triggered:", shareErr);
       }
     }
 
-    // 2. المحاولة عبر إنشاء عنصر تنزيل أوتوماتيكي
+    // 3. التنزيل المباشر كـ HTML Anchor Fallback
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
@@ -56,7 +88,7 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    
+
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
@@ -65,15 +97,51 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
     return true;
   } catch (err) {
     console.warn("File save/share error:", err);
-    alert("⚠️ تعذر التنزيل المباشر من المتصفح.");
+    alert("⚠️ تعذر تنزيل المستند مباشرة من المتصفح.");
     return false;
   }
 }
 
-// ==========================================
-// Capacitor Native Bridge & System Integration
-// ==========================================
-const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+/**
+ * دالة تصدير وطباعة الـ PDF الموحدة
+ */
+async function generateAndExportPdf(elementId, fileName, shareTitle) {
+  const element = document.getElementById(elementId);
+  if (!element) return false;
+
+  // 1. التوليد عبر html2pdf إذا كانت المكتبة متوفرة
+  if (typeof html2pdf !== 'undefined') {
+    const opt = {
+      margin:       [5, 5, 5, 5],
+      filename:     fileName,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, logging: false },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
+    } catch (e) {
+      console.warn("html2pdf error, falling back to canvas:", e);
+    }
+  }
+
+  // 2. Fallback إلى صورة عالية الدقة
+  if (typeof html2canvas !== 'undefined') {
+    try {
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#090d16' });
+      const imgData = canvas.toDataURL('image/png');
+      return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
+    } catch (e) {
+      console.error("Canvas export failed:", e);
+    }
+  }
+
+  // 3. طباعة المتصفح التقليدية
+  window.print();
+  return true;
+}
 
 function initCapacitorBridge() {
   if (isCapacitorNative) {
@@ -116,7 +184,7 @@ if (document.readyState === 'loading') {
 }
 
 // ==========================================
-// Firebase App Initialization & Config
+// Firebase Initialization & Config
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyDqFZjs7m93mB5XsnO_bAQV49O7g2FQkZc",
@@ -257,7 +325,7 @@ if (dismissNotificationBtn) {
 }
 
 // ==========================================
-// ZATCA QR Code & Helpers
+// ZATCA QR Code Generator
 // ==========================================
 function generateZatcaTlvBase64(sellerName, vatNo, timeStamp, totalAmount, vatAmount) {
   function getTlvTag(tag, value) {
@@ -305,7 +373,7 @@ function renderQrCode(containerId, dataText) {
 }
 
 // ==========================================
-// Application Core Variables
+// Application Core Variables & Storage
 // ==========================================
 const loginScreen = document.getElementById('login-screen');
 const lockScreen = document.getElementById('lock-screen');
@@ -416,7 +484,6 @@ onAuthStateChanged(auth, async (user) => {
     if (loginScreen) loginScreen.classList.add('hidden');
     
     const isAdmin = user.email === 'haretg@gmail.com';
-    
     if (adminBtn) {
       if (isAdmin) adminBtn.classList.remove('hidden');
       else adminBtn.classList.add('hidden');
@@ -596,7 +663,7 @@ async function fetchAllDataFromCloud() {
     alert('✅ تم جلب وتحديث جميع الفواتير والحسابات بنجاح من السحابة!');
   } catch (err) {
     console.error("Fetch Cloud Error:", err);
-    alert('❌ تعذر جلب البيانات من السحابة (جاري العمل على البيانات المحلية المخزنة على جهازك).');
+    alert('❌ تعذر جلب البيانات من السحابة (جاري العمل على البيانات المحلية المخزنة).');
   }
 }
 
@@ -1222,7 +1289,7 @@ if (closeViewBtn) {
 }
 
 // ==========================================
-// Image Render & Export Engine (Capacitor Native Compliant)
+// Image & PDF Export Controls
 // ==========================================
 const downloadImgBtn = document.getElementById('download-img-btn');
 if (downloadImgBtn) {
@@ -1254,7 +1321,7 @@ if (downloadImgBtn) {
 
     } catch (err) {
       console.error("HTML2Canvas Render Error:", err);
-      alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر "طباعة" وحفظ الفاتورة كـ PDF.');
+      alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر الطباعة وحفظ الفاتورة كـ PDF.');
     } finally {
       downloadImgBtn.disabled = false;
       downloadImgBtn.textContent = translations[currentLang]?.downloadImg || 'حفظ كصورة 🖼️';
@@ -1264,8 +1331,10 @@ if (downloadImgBtn) {
 
 const printViewBtn = document.getElementById('print-view-btn');
 if (printViewBtn) {
-  printViewBtn.addEventListener('click', () => {
-    if (currentActiveInvoiceForPreview) printInvoice(currentActiveInvoiceForPreview);
+  printViewBtn.addEventListener('click', async () => {
+    if (currentActiveInvoiceForPreview) {
+      await generateAndExportPdf('invoice-card-preview', `Invoice_${currentActiveInvoiceForPreview.id}.pdf`, `فاتورة مبيعات #${currentActiveInvoiceForPreview.id}`);
+    }
   });
 }
 
@@ -1273,65 +1342,16 @@ const printBtn = document.getElementById('print-btn');
 if (printBtn) {
   printBtn.addEventListener('click', async () => {
     const inv = await saveInvoiceData();
-    if (inv) printInvoice(inv);
+    if (inv) {
+      openInvoicePreview(inv);
+      await generateAndExportPdf('invoice-card-preview', `Invoice_${inv.id}.pdf`, `فاتورة مبيعات #${inv.id}`);
+    }
   });
 }
 
 function printInvoice(inv) {
-  const printTemplate = document.getElementById('print-template');
-  if (!printTemplate) return;
-  printTemplate.innerHTML = `
-    <div class="print-header">
-      ${storeProfile.logo ? `<img id="p-logo" class="print-logo" src="${storeProfile.logo}">` : ''}
-      <h1 id="p-store-name">${storeProfile.name}</h1>
-      <p id="p-store-phone">${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
-      <p id="p-store-vat">${storeProfile.vatNo ? 'الرقم الضريبي: ' + storeProfile.vatNo : ''}</p>
-      <p id="p-store-address">${storeProfile.address ? storeProfile.address : ''}</p>
-      <hr>
-      <p id="p-inv-id">رقم الفاتورة: #${inv.id}</p>
-      <p id="p-date">التاريخ: ${inv.date}</p>
-    </div>
-    <div class="print-client">
-      <p><strong>العميل:</strong> <span id="p-client-name">${inv.client}</span></p>
-      <p><strong>الهاتف:</strong> <span id="p-client-phone">${inv.phone ? inv.phone : '-'}</span></p>
-      <p><strong>حالة الدفع:</strong> <span id="p-payment-status">${inv.status}</span></p>
-    </div>
-    <table class="print-table">
-      <thead>
-        <tr>
-          <th>الصنف</th>
-          <th>الكمية</th>
-          <th>السعر</th>
-          <th>الإجمالي</th>
-        </tr>
-      </thead>
-      <tbody id="p-items-body">
-        ${(inv.items ? inv.items : []).map(item => `
-          <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
-        `).join('')}
-      </tbody>
-    </table>
-    <div class="print-footer-container">
-      <div class="print-totals">
-        <p>المجموع الفرعي: <span id="p-subtotal">${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}</span></p>
-        <p>الخصم: <span id="p-discount">${(inv.discount ? inv.discount : 0).toFixed(2)} ${storeProfile.currency}</span></p>
-        <p>الضريبة: <span id="p-tax">${inv.taxPercent ? inv.taxPercent : 0}%</span></p>
-        <h3>الإجمالي الكلي: <span id="p-total">${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</span></h3>
-      </div>
-      <div id="print-qrcode" class="qrcode-wrapper"></div>
-    </div>
-  `;
-
-  renderQrCode('print-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
-
-  setTimeout(() => {
-    try {
-      window.print();
-    } catch (e) {
-      console.warn("window.print error:", e);
-      alert("يمكنك تحميل الفاتورة كصورة من خلال زر 'تحميل كصورة'.");
-    }
-  }, 300);
+  openInvoicePreview(inv);
+  generateAndExportPdf('invoice-card-preview', `Invoice_${inv.id}.pdf`, `فاتورة مبيعات #${inv.id}`);
 }
 
 window.editInvoiceById = (id) => {
@@ -1982,63 +2002,9 @@ if (ledgerDownloadBtn) {
 
 const ledgerPrintBtn = document.getElementById('ledger-print-btn');
 if (ledgerPrintBtn) {
-  ledgerPrintBtn.addEventListener('click', () => {
+  ledgerPrintBtn.addEventListener('click', async () => {
     if (!activeLedgerClientName) return;
-    const clientObj = clientsDB.find(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
-    if (!clientObj) return;
-    const stats = getClientCalculatedLedger(clientObj);
-    const printTemplate = document.getElementById('print-template');
-    if (!printTemplate) return;
-
-    printTemplate.innerHTML = `
-      <div class="print-header">
-        ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
-        <h1>كشف حساب عميل</h1>
-        <h2>${storeProfile.name}</h2>
-        <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
-        <p>${storeProfile.address ? storeProfile.address : ''}</p>
-        <hr>
-        <p><strong>اسم العميل:</strong> ${activeLedgerClientName}</p>
-        <p><strong>تاريخ التقرير:</strong> ${new Date().toLocaleDateString('ar-EG')}</p>
-      </div>
-
-      <div style="margin: 15px 0; padding: 10px; border: 1px solid #000; border-radius: 6px;">
-        <p><strong>إجمالي التعاملات:</strong> ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}</p>
-        <p><strong>إجمالي المدفوعات:</strong> ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}</p>
-        <p style="font-size: 1.1rem; font-weight: bold; margin-top: 5px;"><strong>الرصيد المتبقي / المديونية:</strong> ${stats.balance.toFixed(2)} ${storeProfile.currency}</p>
-      </div>
-
-      <h3>سجل الحركة الحسابية التفصيلي:</h3>
-      <table class="print-table">
-        <thead>
-          <tr>
-            <th>بيان المعاملة</th>
-            <th>التاريخ</th>
-            <th>المبلغ</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${stats.clientInvoices.map(inv => `
-            <tr>
-              <td>فاتورة مبيعات #${inv.id} (${inv.items ? inv.items.length : 0} أصناف - ${inv.status})</td>
-              <td>${inv.date}</td>
-              <td>${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</td>
-            </tr>
-          `).join('')}
-          ${stats.payments.map(p => `
-            <tr>
-              <td>دفعة سداد نقدي 💵</td>
-              <td>${p.date}</td>
-              <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-
-    setTimeout(() => {
-      try { window.print(); } catch (e) {}
-    }, 250);
+    await generateAndExportPdf('ledger-printable-card', `كشف_حساب_${activeLedgerClientName}.pdf`, `كشف حساب العميل: ${activeLedgerClientName}`);
   });
 }
 
@@ -2429,63 +2395,9 @@ if (ledgerSupplierDownloadBtn) {
 
 const ledgerSupplierPrintBtn = document.getElementById('ledger-supplier-print-btn');
 if (ledgerSupplierPrintBtn) {
-  ledgerSupplierPrintBtn.addEventListener('click', () => {
+  ledgerSupplierPrintBtn.addEventListener('click', async () => {
     if (!activeLedgerSupplierName) return;
-    const supplierObj = suppliersDB.find(s => s.name.toLowerCase() === activeLedgerSupplierName.toLowerCase());
-    if (!supplierObj) return;
-    const stats = getSupplierCalculatedLedger(supplierObj);
-    const printTemplate = document.getElementById('print-template');
-    if (!printTemplate) return;
-
-    printTemplate.innerHTML = `
-      <div class="print-header">
-        ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
-        <h1>كشف حساب مورد</h1>
-        <h2>${storeProfile.name}</h2>
-        <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
-        <p>${storeProfile.address ? storeProfile.address : ''}</p>
-        <hr>
-        <p><strong>اسم المورد:</strong> ${activeLedgerSupplierName}</p>
-        <p><strong>تاريخ التقرير:</strong> ${new Date().toLocaleDateString('ar-EG')}</p>
-      </div>
-
-      <div style="margin: 15px 0; padding: 10px; border: 1px solid #000; border-radius: 6px;">
-        <p><strong>إجمالي المشتريات:</strong> ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}</p>
-        <p><strong>إجمالي الدفعات المسددة:</strong> ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}</p>
-        <p style="font-size: 1.1rem; font-weight: bold; margin-top: 5px;"><strong>الرصيد المتبقي المستحق للمورد:</strong> ${stats.balance.toFixed(2)} ${storeProfile.currency}</p>
-      </div>
-
-      <h3>سجل التوريدات والحركة المالية التفصيلي:</h3>
-      <table class="print-table">
-        <thead>
-          <tr>
-            <th>بيان المعاملة</th>
-            <th>التاريخ</th>
-            <th>المبلغ</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${stats.supplierPurchases.map(pur => `
-            <tr>
-              <td>فاتورة توريد بضاعة #${pur.id} (${pur.items ? pur.items.length : 0} أصناف - ${pur.status})</td>
-              <td>${pur.date}</td>
-              <td>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</td>
-            </tr>
-          `).join('')}
-          ${stats.payments.map(p => `
-            <tr>
-              <td>دفعة سداد نقدي للمورد 💵</td>
-              <td>${p.date}</td>
-              <td>-${p.amount.toFixed(2)} ${storeProfile.currency}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-
-    setTimeout(() => {
-      try { window.print(); } catch (e) {}
-    }, 250);
+    await generateAndExportPdf('supplier-ledger-printable-card', `كشف_حساب_مورد_${activeLedgerSupplierName}.pdf`, `كشف حساب المورد: ${activeLedgerSupplierName}`);
   });
 }
 
@@ -2867,59 +2779,16 @@ if (supplierDownloadImgBtn) {
 
 const supplierPrintViewBtn = document.getElementById('supplier-print-view-btn');
 if (supplierPrintViewBtn) {
-  supplierPrintViewBtn.addEventListener('click', () => {
-    if (currentActivePurchaseForPreview) printPurchaseInvoice(currentActivePurchaseForPreview);
+  supplierPrintViewBtn.addEventListener('click', async () => {
+    if (currentActivePurchaseForPreview) {
+      await generateAndExportPdf('supplier-invoice-card-preview', `Purchase_Invoice_${currentActivePurchaseForPreview.id}.pdf`, `فاتورة توريد #${currentActivePurchaseForPreview.id}`);
+    }
   });
 }
 
 function printPurchaseInvoice(pur) {
-  const printTemplate = document.getElementById('print-template');
-  if (!printTemplate) return;
-  printTemplate.innerHTML = `
-    <div class="print-header">
-      ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
-      <h1>${storeProfile.name}</h1>
-      <h2>فاتورة مشتريات / توريد من مورد</h2>
-      <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
-      <p>${storeProfile.vatNo ? 'الرقم الضريبي: ' + storeProfile.vatNo : ''}</p>
-      <p>${storeProfile.address ? storeProfile.address : ''}</p>
-      <hr>
-      <p>رقم الفاتورة: #${pur.id}</p>
-      <p>التاريخ: ${pur.date}</p>
-    </div>
-    <div class="print-client">
-      <p><strong>المورد:</strong> <span>${pur.supplier}</span></p>
-      <p><strong>الهاتف:</strong> <span>${pur.phone ? pur.phone : '-'}</span></p>
-      <p><strong>حالة الدفع:</strong> <span>${pur.status}</span></p>
-    </div>
-    <table class="print-table">
-      <thead>
-        <tr>
-          <th>الصنف</th>
-          <th>الكمية</th>
-          <th>سعر التكلفة</th>
-          <th>الإجمالي</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${(pur.items ? pur.items : []).map(item => `
-          <tr><td>${item.name}</td><td>${item.qty}</td><td>${(item.cost ? item.cost : 0).toFixed(2)}</td><td>${(item.qty * (item.cost ? item.cost : 0)).toFixed(2)}</td></tr>
-        `).join('')}
-      </tbody>
-    </table>
-    <div class="print-footer-container">
-      <div class="print-totals">
-        <h3>الإجمالي الكلي: <span>${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}</span></h3>
-      </div>
-      <div id="print-supplier-qrcode" class="qrcode-wrapper"></div>
-    </div>
-  `;
-
-  renderQrCode('print-supplier-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
-  
-  setTimeout(() => {
-    try { window.print(); } catch (e) {}
-  }, 250);
+  openSupplierInvoicePreview(pur);
+  generateAndExportPdf('supplier-invoice-card-preview', `Purchase_Invoice_${pur.id}.pdf`, `فاتورة توريد #${pur.id}`);
 }
 
 function sendSupplierWhatsApp(pur) {
@@ -3057,7 +2926,7 @@ function updateDashboardStats() {
 }
 
 // ==========================================
-// Backup, Import & CSV/Excel Export (Native Capacitor Ready)
+// Backup, Import & CSV/Excel Export
 // ==========================================
 const exportJsonBtn = document.getElementById('export-json-btn');
 if (exportJsonBtn) {
@@ -3190,7 +3059,7 @@ if (exportCsvBtn) {
 }
 
 // ==========================================
-// System Settings & UI Modals
+// System Settings
 // ==========================================
 const settingsModal = document.getElementById('settings-modal');
 const openSettingsBtn = document.getElementById('open-settings-btn');
