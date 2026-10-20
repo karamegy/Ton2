@@ -1893,6 +1893,22 @@ window.openClientLedger = (clientName) => {
   const ledgerBalance = document.getElementById('ledger-balance');
   if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency}`;
 
+  const pdfItemsBody = document.getElementById('ledger-pdf-items-body');
+  if (pdfItemsBody) {
+    let pdfRows = '';
+    stats.clientInvoices.forEach(inv => {
+      pdfRows += `
+        <tr>
+          <td style="padding: 6px; border: 1px solid #ddd;">فاتورة مبيعات #${inv.id} (${(inv.items || []).map(i => i.name).join(', ')})</td>
+          <td style="padding: 6px; border: 1px solid #ddd;">${inv.date || ''}</td>
+          <td style="padding: 6px; border: 1px solid #ddd;">${inv.status || ''}</td>
+          <td style="padding: 6px; border: 1px solid #ddd; text-align: left;">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</td>
+        </tr>
+      `;
+    });
+    pdfItemsBody.innerHTML = pdfRows || '<tr><td colspan="4" style="text-align:center; padding:10px;">لا توجد فواتير مسجلة</td></tr>';
+  }
+
   const historyUl = document.getElementById('client-ledger-history');
   if (!historyUl) return;
   let historyHtml = '';
@@ -2252,6 +2268,23 @@ window.openSupplierLedger = (supplierName) => {
     
     const ledgerBalance = document.getElementById('ledger-supplier-balance');
     if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+
+    // تعبئة جدول الفواتير التفصيلية المخصص لـ PDF الخاص بالمورد
+    const supplierPdfItemsBody = document.getElementById('supplier-ledger-pdf-items-body');
+    if (supplierPdfItemsBody) {
+      let supplierPdfRows = '';
+      (stats.supplierPurchases || []).forEach(pur => {
+        supplierPdfRows += `
+          <tr>
+            <td style="padding: 6px; border: 1px solid #ddd;">فاتورة توريد #${pur.id} (${(pur.items || []).map(i => i.name).join(', ')})</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${pur.date || ''}</td>
+            <td style="padding: 6px; border: 1px solid #ddd;">${pur.status || ''}</td>
+            <td style="padding: 6px; border: 1px solid #ddd; text-align: left;">${(pur.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
+          </tr>
+        `;
+      });
+      supplierPdfItemsBody.innerHTML = supplierPdfRows || '<tr><td colspan="4" style="text-align:center; padding:10px;">لا توجد فواتير توريد مسجلة</td></tr>';
+    }
 
     const historyUl = document.getElementById('supplier-ledger-history');
     if (historyUl) {
