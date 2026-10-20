@@ -51,7 +51,7 @@ jobs:
           }
           '
 
-          # 2. تثبيت أدوات الكاباسيتور والإضافات الأصلية (تعديل اسم مكتبة الطباعة إلى capacitor-printer)
+          # 2. تثبيت أدوات الكاباسيتور والإضافات الأصلية مع حزمة الطباعة الصحيحة
           npm install @capacitor/cli @capacitor/core @capacitor/app @capacitor/splash-screen @codetrix-studio/capacitor-google-auth @capacitor/assets @capacitor/filesystem @capacitor/share capacitor-printer --save-dev
 
           # 3. إعادة إنشاء منصة أندرويد
@@ -66,7 +66,7 @@ jobs:
             npx @capacitor/assets generate --android || true
           fi
 
-          # 5. نسخ ملفات Google وتحديث Gradle الرئيسي
+          # 5. نسخ ملفات Google وKeystore وتحديث Gradle الرئيسي
           if [ -f "google-services.json" ]; then
             cp google-services.json android/app/
             node -e '
@@ -191,15 +191,15 @@ jobs:
           # 9. مزامنة الإضافات والملفات المحدثة مع مجلد أندرويد
           npx cap sync android
 
-          # 10. إعداد Gradle للتوقيع وخدمات Google وتحديد الإصدار المستقر
+          # 10. إعداد Gradle لتوقيع التطبيق بشكل صحيح (تحديد V1 و V2 وتفادي خطأ AGP)
           node -e '
           const fs = require("fs");
           let appGradle = fs.readFileSync("android/app/build.gradle", "utf8");
 
-          // تحديث targetSdkVersion وإعدادات JAVA 17
+          // تحديث targetSdkVersion
           appGradle = appGradle.replace(/targetSdkVersion\s+\d+/, "targetSdkVersion 34");
-          
-          // إضافة إعدادات التوقيع
+
+          // إعدادات التوقيع المكتملة
           const signingConfigStr = `
               signingConfigs {
                   release {
@@ -207,15 +207,19 @@ jobs:
                       storePassword "${process.env.KEYSTORE_PASSWORD}"
                       keyAlias "${process.env.KEY_ALIAS}"
                       keyPassword "${process.env.KEY_PASSWORD}"
+                      v1SigningEnabled true
+                      v2SigningEnabled true
                   }
               }
           `;
 
-          appGradle = appGradle.replace(/buildTypes\s*\{/, signingConfigStr + "\n    buildTypes {");
-          appGradle = appGradle.replace(/release\s*\{/, "release {\n            signingConfig signingConfigs.release");
+          appGradle = appGradle.replace(/android\s*\{/, "android {\n" + signingConfigStr);
+          appGradle = appGradle.replace(/buildTypes\s*\{[\s\S]*?release\s*\{/, match => match + "\n            signingConfig signingConfigs.release");
 
           if (fs.existsSync("android/app/google-services.json")) {
-            appGradle += "\napply plugin: \"com.google.gms.google-services\"\n";
+            if (!appGradle.includes("com.google.gms.google-services")) {
+              appGradle += "\napply plugin: \"com.google.gms.google-services\"\n";
+            }
           }
 
           fs.writeFileSync("android/app/build.gradle", appGradle);
