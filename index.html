@@ -51,6 +51,26 @@
       border: 1px solid #e5e7eb;
       color: #1f2937 !important;
     }
+
+    /* تحسين خيارات الطباعة المباشرة لتجنب طباعة القوائم والخلفيات */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      .modal:not(.hidden) .printable-white-card, 
+      .modal:not(.hidden) .printable-white-card * {
+        visibility: visible !important;
+      }
+      .modal:not(.hidden) .printable-white-card {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 15px !important;
+        box-shadow: none !important;
+      }
+    }
   </style>
 </head>
 <body>
