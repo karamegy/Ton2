@@ -21,6 +21,37 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6651309355082807" crossorigin="anonymous"></script>
+  
+  <style>
+    /* تنسيقات كروت المعاينة والطباعة باللون الأبيض الرسمي */
+    .printable-white-card {
+      background-color: #ffffff !important;
+      color: #1f2937 !important;
+      padding: 20px;
+      border-radius: 12px;
+      font-family: 'Cairo', sans-serif;
+    }
+    .printable-white-card h2, .printable-white-card h3, .printable-white-card strong, .printable-white-card p, .printable-white-card span {
+      color: #1f2937 !important;
+    }
+    .printable-white-card table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      color: #1f2937 !important;
+    }
+    .printable-white-card th {
+      background-color: #f3f4f6 !important;
+      color: #111827 !important;
+      padding: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    .printable-white-card td {
+      padding: 8px;
+      border: 1px solid #e5e7eb;
+      color: #1f2937 !important;
+    }
+  </style>
 </head>
 <body>
 
@@ -517,34 +548,34 @@
         <button id="close-ledger-btn" class="btn-close">✕</button>
       </div>
       
-      <div id="ledger-printable-card" style="padding: 10px; border-radius: 12px; background: var(--bg-card, #111827);">
-        <div class="ledger-summary-card">
+      <div id="ledger-printable-card" class="printable-white-card">
+        <div class="ledger-summary-card" style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px; display:flex; justify-content:space-around;">
           <div>
             <span>إجمالي التعاملات:</span>
-            <strong id="ledger-total-sales">0.00</strong>
+            <strong id="ledger-total-sales" style="display:block; font-size:1.1rem; color:#1f2937;">0.00</strong>
           </div>
           <div>
             <span>المدفوع:</span>
-            <strong id="ledger-total-paid" class="text-success">0.00</strong>
+            <strong id="ledger-total-paid" class="text-success" style="display:block; font-size:1.1rem; color:#10b981;">0.00</strong>
           </div>
           <div>
             <span>الصافي / المديونية:</span>
-            <strong id="ledger-balance" class="text-danger">0.00</strong>
+            <strong id="ledger-balance" class="text-danger" style="display:block; font-size:1.1rem; color:#ef4444;">0.00</strong>
           </div>
         </div>
 
-        <div class="pay-section">
+        <div class="pay-section" style="margin-top:12px;">
           <div class="form-group">
-            <label>تسجيل دفعة سداد نقدي من العميل</label>
-            <div style="display:flex; gap:8px;">
-              <input type="number" id="pay-amount-input" placeholder="المبلغ">
+            <label style="color:#374151; font-weight:600;">تسجيل دفعة سداد نقدي من العميل</label>
+            <div style="display:flex; gap:8px; margin-top:4px;">
+              <input type="number" id="pay-amount-input" placeholder="المبلغ" style="background:#fff; color:#000; border:1px solid #ccc;">
               <button id="submit-payment-btn" class="btn-success">سداد 💵</button>
             </div>
           </div>
         </div>
 
-        <h4>سجل الفواتير والدفعات المجمعة:</h4>
-        <div class="list-container" style="max-height: 250px;">
+        <h4 style="margin-top:15px; color:#111827;">سجل الفواتير والدفعات المجمعة:</h4>
+        <div class="list-container" style="max-height: 250px; background:#fff; border:1px solid #e5e7eb;">
           <ul id="client-ledger-history"></ul>
         </div>
       </div>
@@ -565,34 +596,34 @@
         <button id="close-supplier-ledger-btn" class="btn-close">✕</button>
       </div>
       
-      <div id="supplier-ledger-printable-card" style="padding: 10px; border-radius: 12px; background: var(--bg-card, #111827);">
-        <div class="ledger-summary-card">
+      <div id="supplier-ledger-printable-card" class="printable-white-card">
+        <div class="ledger-summary-card" style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px; display:flex; justify-content:space-around;">
           <div>
             <span>إجمالي المشتريات:</span>
-            <strong id="ledger-supplier-total-purchases">0.00</strong>
+            <strong id="ledger-supplier-total-purchases" style="display:block; font-size:1.1rem; color:#1f2937;">0.00</strong>
           </div>
           <div>
             <span>المسدد للمورد:</span>
-            <strong id="ledger-supplier-total-paid" class="text-success">0.00</strong>
+            <strong id="ledger-supplier-total-paid" class="text-success" style="display:block; font-size:1.1rem; color:#10b981;">0.00</strong>
           </div>
           <div>
             <span>الصافي / المستحق للمورد:</span>
-            <strong id="ledger-supplier-balance" class="text-danger">0.00</strong>
+            <strong id="ledger-supplier-balance" class="text-danger" style="display:block; font-size:1.1rem; color:#ef4444;">0.00</strong>
           </div>
         </div>
 
-        <div class="pay-section">
+        <div class="pay-section" style="margin-top:12px;">
           <div class="form-group">
-            <label>تسجيل دفعة سداد نقدي للمورد</label>
-            <div style="display:flex; gap:8px;">
-              <input type="number" id="supplier-pay-amount-input" placeholder="المبلغ">
+            <label style="color:#374151; font-weight:600;">تسجيل دفعة سداد نقدي للمورد</label>
+            <div style="display:flex; gap:8px; margin-top:4px;">
+              <input type="number" id="supplier-pay-amount-input" placeholder="المبلغ" style="background:#fff; color:#000; border:1px solid #ccc;">
               <button id="submit-supplier-payment-btn" class="btn-success">سداد للمورد 💵</button>
             </div>
           </div>
         </div>
 
-        <h4>سجل فواتير التوريد والدفعات:</h4>
-        <div class="list-container" style="max-height: 250px;">
+        <h4 style="margin-top:15px; color:#111827;">سجل فواتير التوريد والدفعات:</h4>
+        <div class="list-container" style="max-height: 250px; background:#fff; border:1px solid #e5e7eb;">
           <ul id="supplier-ledger-history"></ul>
         </div>
       </div>
@@ -612,21 +643,22 @@
         <h3 data-i18n="previewTitle">👁️ معاينة الفاتورة الإلكترونية</h3>
         <button id="close-view-btn" class="btn-close">✕</button>
       </div>
-      <div id="invoice-card-preview" class="invoice-card-preview" style="background:#090d16; color:#fff; padding:15px; border-radius:12px;">
-        <div class="preview-header">
-          <img id="v-logo" class="preview-logo hidden" alt="Logo">
-          <h2 id="v-store-name">اسم المحل</h2>
-          <p id="v-store-phone"></p>
-          <p id="v-store-vat"></p>
-          <p id="v-store-address"></p>
-          <hr>
-          <p id="v-inv-id"></p>
-          <p id="v-date"></p>
+      <div id="invoice-card-preview" class="invoice-card-preview printable-white-card">
+        <div class="preview-header" style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 10px;">
+          <img id="v-logo" class="preview-logo hidden" alt="Logo" style="max-height: 60px; margin-bottom: 5px;">
+          <h2 id="v-store-name" style="margin: 0; font-size: 1.4rem; color: #111827;">اسم المحل</h2>
+          <p id="v-store-phone" style="margin: 2px 0; font-size: 0.9rem; color: #4b5563;"></p>
+          <p id="v-store-vat" style="margin: 2px 0; font-size: 0.85rem; color: #4b5563;"></p>
+          <p id="v-store-address" style="margin: 2px 0; font-size: 0.85rem; color: #4b5563;"></p>
+          <div style="display: flex; justify-content: space-between; margin-top: 10px; font-weight: bold; background: #f3f4f6; padding: 6px 10px; border-radius: 6px;">
+            <span id="v-inv-id" style="color:#1f2937;"></span>
+            <span id="v-date" style="color:#1f2937;"></span>
+          </div>
         </div>
-        <div class="preview-client">
-          <p><strong>العميل:</strong> <span id="v-client-name"></span></p>
-          <p><strong>الهاتف:</strong> <span id="v-client-phone"></span></p>
-          <p><strong>حالة الدفع:</strong> <span id="v-payment-status"></span></p>
+        <div class="preview-client" style="margin-bottom: 12px; font-size: 0.95rem;">
+          <p style="margin: 3px 0;"><strong style="color:#111827;">العميل:</strong> <span id="v-client-name" style="color:#374151;"></span></p>
+          <p style="margin: 3px 0;"><strong style="color:#111827;">الهاتف:</strong> <span id="v-client-phone" style="color:#374151;"></span></p>
+          <p style="margin: 3px 0;"><strong style="color:#111827;">حالة الدفع:</strong> <span id="v-payment-status" style="color:#374151;"></span></p>
         </div>
         <table class="preview-table">
           <thead>
@@ -639,14 +671,14 @@
           </thead>
           <tbody id="v-items-body"></tbody>
         </table>
-        <div class="preview-footer-container">
-          <div class="preview-totals">
-            <p>المجموع الفرعي: <span id="v-subtotal"></span></p>
-            <p>الخصم: <span id="v-discount"></span></p>
-            <p>الضريبة: <span id="v-tax"></span></p>
-            <h3>الإجمالي الكلي: <span id="v-total"></span></h3>
+        <div class="preview-footer-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 2px solid #e5e7eb; padding-top: 10px;">
+          <div class="preview-totals" style="font-size: 0.95rem;">
+            <p style="margin: 2px 0;">المجموع الفرعي: <span id="v-subtotal" style="font-weight: bold; color:#111827;"></span></p>
+            <p style="margin: 2px 0;">الخصم: <span id="v-discount" style="font-weight: bold; color:#ef4444;"></span></p>
+            <p style="margin: 2px 0;">الضريبة: <span id="v-tax" style="font-weight: bold; color:#111827;"></span></p>
+            <h3 style="margin: 5px 0 0 0; color: #10b981; font-size: 1.2rem;">الإجمالي الكلي: <span id="v-total"></span></h3>
           </div>
-          <div id="preview-qrcode" class="qrcode-wrapper"></div>
+          <div id="preview-qrcode" class="qrcode-wrapper" style="background:#fff; padding:4px; border:1px solid #ccc; border-radius:6px;"></div>
         </div>
       </div>
       <div class="modal-actions-row">
@@ -663,21 +695,22 @@
         <h3>👁️ معاينة فاتورة مشتريات المورد</h3>
         <button id="close-supplier-view-btn" class="btn-close">✕</button>
       </div>
-      <div id="supplier-invoice-card-preview" class="invoice-card-preview" style="background:#090d16; color:#fff; padding:15px; border-radius:12px;">
-        <div class="preview-header">
-          <img id="sv-logo" class="preview-logo hidden" alt="Logo">
-          <h2 id="sv-store-name">اسم المحل</h2>
-          <p id="sv-store-phone"></p>
-          <p id="sv-store-vat"></p>
-          <p id="sv-store-address"></p>
-          <hr>
-          <p id="sv-inv-id"></p>
-          <p id="sv-date"></p>
+      <div id="supplier-invoice-card-preview" class="invoice-card-preview printable-white-card">
+        <div class="preview-header" style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 10px;">
+          <img id="sv-logo" class="preview-logo hidden" alt="Logo" style="max-height: 60px; margin-bottom: 5px;">
+          <h2 id="sv-store-name" style="margin: 0; font-size: 1.4rem; color: #111827;">اسم المحل</h2>
+          <p id="sv-store-phone" style="margin: 2px 0; font-size: 0.9rem; color: #4b5563;"></p>
+          <p id="sv-store-vat" style="margin: 2px 0; font-size: 0.85rem; color: #4b5563;"></p>
+          <p id="sv-store-address" style="margin: 2px 0; font-size: 0.85rem; color: #4b5563;"></p>
+          <div style="display: flex; justify-content: space-between; margin-top: 10px; font-weight: bold; background: #f3f4f6; padding: 6px 10px; border-radius: 6px;">
+            <span id="sv-inv-id" style="color:#1f2937;"></span>
+            <span id="sv-date" style="color:#1f2937;"></span>
+          </div>
         </div>
-        <div class="preview-client">
-          <p><strong>المورد:</strong> <span id="sv-supplier-name"></span></p>
-          <p><strong>الهاتف:</strong> <span id="sv-supplier-phone"></span></p>
-          <p><strong>حالة الدفع:</strong> <span id="sv-payment-status"></span></p>
+        <div class="preview-client" style="margin-bottom: 12px; font-size: 0.95rem;">
+          <p style="margin: 3px 0;"><strong style="color:#111827;">المورد:</strong> <span id="sv-supplier-name" style="color:#374151;"></span></p>
+          <p style="margin: 3px 0;"><strong style="color:#111827;">الهاتف:</strong> <span id="sv-supplier-phone" style="color:#374151;"></span></p>
+          <p style="margin: 3px 0;"><strong style="color:#111827;">حالة الدفع:</strong> <span id="sv-payment-status" style="color:#374151;"></span></p>
         </div>
         <table class="preview-table">
           <thead>
@@ -690,11 +723,11 @@
           </thead>
           <tbody id="sv-items-body"></tbody>
         </table>
-        <div class="preview-footer-container">
-          <div class="preview-totals">
-            <h3>الإجمالي الكلي: <span id="sv-total"></span></h3>
+        <div class="preview-footer-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 2px solid #e5e7eb; padding-top: 10px;">
+          <div class="preview-totals" style="font-size: 0.95rem;">
+            <h3 style="margin: 5px 0 0 0; color: #ef4444; font-size: 1.2rem;">الإجمالي الكلي: <span id="sv-total"></span></h3>
           </div>
-          <div id="supplier-preview-qrcode" class="qrcode-wrapper"></div>
+          <div id="supplier-preview-qrcode" class="qrcode-wrapper" style="background:#fff; padding:4px; border:1px solid #ccc; border-radius:6px;"></div>
         </div>
       </div>
       <div class="modal-actions-row">
