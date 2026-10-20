@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="io.github.karamegy.Ton2">
 
-    <!-- أذونات الشبكة وحالة الاتصال والإنترنت القياسية -->
+    <!-- أذونات الشبكة والاتصال -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- أذونات التوثيق ببصمة الإصبع والتعرف الحيوي -->
+    <!-- أذونات البصمة والتعرف الحيوي -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
-    <!-- أذونات قراءة وحفظ الصور والملفات لجميع إصدارات أندرويد -->
+    <!-- أذونات الملفات والصور -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-    <!-- السماح للتطبيق بالاستعلام وفتح الواتساب والروابط الخارجية على Android 11+ -->
+    <!-- الاستعلام عن الواتساب والتطبيقات الخارجية -->
     <queries>
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
@@ -38,7 +39,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        tools:overrideLibrary="com.getcapacitor.android">
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
@@ -53,18 +55,27 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- ربط النطاق الأساسي المباشر (App Links Verification) -->
+            <!-- ربط روابط App Links -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 
-                <!-- النطاق الأساسي المباشر -->
                 <data android:scheme="https" android:host="karamegy.github.io" android:pathPrefix="/Ton2" />
-                <!-- نطاق الفايربيس -->
                 <data android:scheme="https" android:host="giti-68750.firebaseapp.com" />
             </intent-filter>
         </activity>
+
+        <!-- موفر الملفات لمنع انهيار التطبيق عند مشاركة وحفظ الصور والفواتير -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 
