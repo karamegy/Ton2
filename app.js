@@ -103,24 +103,40 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
 }
 
 /**
- * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية
+ * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية (معدلة لتجنب الصفحات البيضاء)
  */
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
   if (!element) return false;
 
-  // 1. التوليد عبر html2pdf إذا كانت المكتبة متوفرة
+  const originalDisplay = element.style.display;
+  if (element.classList.contains('hidden') || getComputedStyle(element).display === 'none') {
+    element.style.display = 'block';
+  }
+
+  // انتظار بسيط لضمان رندر العناصر ورسومات QR كود والخطوط
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  // 1. التوليد عبر html2pdf
   if (typeof html2pdf !== 'undefined') {
     const opt = {
       margin:       [5, 5, 5, 5],
       filename:     fileName,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+      html2canvas:  { 
+        scale: 2, 
+        useCORS: true, 
+        logging: false, 
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0
+      },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     try {
       const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
       return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
     } catch (e) {
       console.warn("html2pdf error, falling back to canvas:", e);
@@ -130,8 +146,15 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   // 2. Fallback إلى صورة عالية الدقة بخلفية بيضاء
   if (typeof html2canvas !== 'undefined') {
     try {
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0
+      });
       const imgData = canvas.toDataURL('image/png');
+      if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
       return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
     } catch (e) {
       console.error("Canvas export failed:", e);
@@ -1231,53 +1254,51 @@ function openInvoicePreview(inv) {
   const viewModal = document.getElementById('view-modal');
   if (viewModal) viewModal.classList.remove('hidden');
 
-  requestAnimationFrame(() => {
-    const vLogo = document.getElementById('v-logo');
-    if (vLogo) {
-      if (storeProfile.logo) {
-        vLogo.src = storeProfile.logo;
-        vLogo.classList.remove('hidden');
-      } else {
-        vLogo.classList.add('hidden');
-      }
+  const vLogo = document.getElementById('v-logo');
+  if (vLogo) {
+    if (storeProfile.logo) {
+      vLogo.src = storeProfile.logo;
+      vLogo.classList.remove('hidden');
+    } else {
+      vLogo.classList.add('hidden');
     }
+  }
 
-    const vStoreName = document.getElementById('v-store-name');
-    if (vStoreName) vStoreName.textContent = storeProfile.name;
-    const vStorePhone = document.getElementById('v-store-phone');
-    if (vStorePhone) vStorePhone.textContent = storeProfile.phone;
-    const vStoreVat = document.getElementById('v-store-vat');
-    if (vStoreVat) vStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
-    const vStoreAddress = document.getElementById('v-store-address');
-    if (vStoreAddress) vStoreAddress.textContent = storeProfile.address;
-    const vInvId = document.getElementById('v-inv-id');
-    if (vInvId) vInvId.textContent = `رقم الفاتورة: #${inv.id}`;
-    const vDate = document.getElementById('v-date');
-    if (vDate) vDate.textContent = `التاريخ: ${inv.date}`;
-    const vClientName = document.getElementById('v-client-name');
-    if (vClientName) vClientName.textContent = inv.client;
-    const vClientPhone = document.getElementById('v-client-phone');
-    if (vClientPhone) vClientPhone.textContent = inv.phone ? inv.phone : '-';
-    const vPaymentStatus = document.getElementById('v-payment-status');
-    if (vPaymentStatus) vPaymentStatus.textContent = inv.status;
-    const vSubtotal = document.getElementById('v-subtotal');
-    if (vSubtotal) vSubtotal.textContent = `${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}`;
-    const vDiscount = document.getElementById('v-discount');
-    if (vDiscount) vDiscount.textContent = `${(inv.discount ? inv.discount : 0).toFixed(2)} ${storeProfile.currency}`;
-    const vTax = document.getElementById('v-tax');
-    if (vTax) vTax.textContent = `${inv.taxPercent ? inv.taxPercent : 0}%`;
-    const vTotal = document.getElementById('v-total');
-    if (vTotal) vTotal.textContent = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+  const vStoreName = document.getElementById('v-store-name');
+  if (vStoreName) vStoreName.textContent = storeProfile.name;
+  const vStorePhone = document.getElementById('v-store-phone');
+  if (vStorePhone) vStorePhone.textContent = storeProfile.phone;
+  const vStoreVat = document.getElementById('v-store-vat');
+  if (vStoreVat) vStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+  const vStoreAddress = document.getElementById('v-store-address');
+  if (vStoreAddress) vStoreAddress.textContent = storeProfile.address;
+  const vInvId = document.getElementById('v-inv-id');
+  if (vInvId) vInvId.textContent = `رقم الفاتورة: #${inv.id}`;
+  const vDate = document.getElementById('v-date');
+  if (vDate) vDate.textContent = `التاريخ: ${inv.date}`;
+  const vClientName = document.getElementById('v-client-name');
+  if (vClientName) vClientName.textContent = inv.client;
+  const vClientPhone = document.getElementById('v-client-phone');
+  if (vClientPhone) vClientPhone.textContent = inv.phone ? inv.phone : '-';
+  const vPaymentStatus = document.getElementById('v-payment-status');
+  if (vPaymentStatus) vPaymentStatus.textContent = inv.status;
+  const vSubtotal = document.getElementById('v-subtotal');
+  if (vSubtotal) vSubtotal.textContent = `${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}`;
+  const vDiscount = document.getElementById('v-discount');
+  if (vDiscount) vDiscount.textContent = `${(inv.discount ? inv.discount : 0).toFixed(2)} ${storeProfile.currency}`;
+  const vTax = document.getElementById('v-tax');
+  if (vTax) vTax.textContent = `${inv.taxPercent ? inv.taxPercent : 0}%`;
+  const vTotal = document.getElementById('v-total');
+  if (vTotal) vTotal.textContent = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
 
-    const vItemsBody = document.getElementById('v-items-body');
-    if (vItemsBody) {
-      vItemsBody.innerHTML = (inv.items ? inv.items : []).map(item => `
-        <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
-      `).join('');
-    }
+  const vItemsBody = document.getElementById('v-items-body');
+  if (vItemsBody) {
+    vItemsBody.innerHTML = (inv.items ? inv.items : []).map(item => `
+      <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
+    `).join('');
+  }
 
-    renderQrCode('preview-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
-  });
+  renderQrCode('preview-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
 }
 
 const closeViewBtn = document.getElementById('close-view-btn');
@@ -2698,50 +2719,48 @@ function openSupplierInvoicePreview(pur) {
   const modal = document.getElementById('supplier-view-modal');
   if (modal) modal.classList.remove('hidden');
 
-  requestAnimationFrame(() => {
-    const vLogo = document.getElementById('sv-logo');
-    if (vLogo) {
-      if (storeProfile.logo) {
-        vLogo.src = storeProfile.logo;
-        vLogo.classList.remove('hidden');
-      } else {
-        vLogo.classList.add('hidden');
-      }
+  const vLogo = document.getElementById('sv-logo');
+  if (vLogo) {
+    if (storeProfile.logo) {
+      vLogo.src = storeProfile.logo;
+      vLogo.classList.remove('hidden');
+    } else {
+      vLogo.classList.add('hidden');
     }
+  }
 
-    const vStoreName = document.getElementById('sv-store-name');
-    if (vStoreName) vStoreName.textContent = storeProfile.name;
-    const vStorePhone = document.getElementById('sv-store-phone');
-    if (vStorePhone) vStorePhone.textContent = storeProfile.phone;
-    const vStoreVat = document.getElementById('sv-store-vat');
-    if (vStoreVat) vStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
-    const vStoreAddress = document.getElementById('sv-store-address');
-    if (vStoreAddress) vStoreAddress.textContent = storeProfile.address;
-    
-    const vInvId = document.getElementById('sv-inv-id');
-    if (vInvId) vInvId.textContent = `رقم فاتورة المشتريات: #${pur.id}`;
-    const vDate = document.getElementById('sv-date');
-    if (vDate) vDate.textContent = `التاريخ: ${pur.date}`;
-    
-    const vSupplierName = document.getElementById('sv-supplier-name');
-    if (vSupplierName) vSupplierName.textContent = pur.supplier;
-    const vSupplierPhone = document.getElementById('sv-supplier-phone');
-    if (vSupplierPhone) vSupplierPhone.textContent = pur.phone ? pur.phone : '-';
-    const vPaymentStatus = document.getElementById('sv-payment-status');
-    if (vPaymentStatus) vPaymentStatus.textContent = pur.status;
-    
-    const vTotal = document.getElementById('sv-total');
-    if (vTotal) vTotal.textContent = `${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+  const vStoreName = document.getElementById('sv-store-name');
+  if (vStoreName) vStoreName.textContent = storeProfile.name;
+  const vStorePhone = document.getElementById('sv-store-phone');
+  if (vStorePhone) vStorePhone.textContent = storeProfile.phone;
+  const vStoreVat = document.getElementById('sv-store-vat');
+  if (vStoreVat) vStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+  const vStoreAddress = document.getElementById('sv-store-address');
+  if (vStoreAddress) vStoreAddress.textContent = storeProfile.address;
+  
+  const vInvId = document.getElementById('sv-inv-id');
+  if (vInvId) vInvId.textContent = `رقم فاتورة المشتريات: #${pur.id}`;
+  const vDate = document.getElementById('sv-date');
+  if (vDate) vDate.textContent = `التاريخ: ${pur.date}`;
+  
+  const vSupplierName = document.getElementById('sv-supplier-name');
+  if (vSupplierName) vSupplierName.textContent = pur.supplier;
+  const vSupplierPhone = document.getElementById('sv-supplier-phone');
+  if (vSupplierPhone) vSupplierPhone.textContent = pur.phone ? pur.phone : '-';
+  const vPaymentStatus = document.getElementById('sv-payment-status');
+  if (vPaymentStatus) vPaymentStatus.textContent = pur.status;
+  
+  const vTotal = document.getElementById('sv-total');
+  if (vTotal) vTotal.textContent = `${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
 
-    const vItemsBody = document.getElementById('sv-items-body');
-    if (vItemsBody) {
-      vItemsBody.innerHTML = (pur.items ? pur.items : []).map(item => `
-        <tr><td>${item.name}</td><td>${item.qty}</td><td>${(item.cost ? item.cost : 0).toFixed(2)}</td><td>${(item.qty * (item.cost ? item.cost : 0)).toFixed(2)}</td></tr>
-      `).join('');
-    }
+  const vItemsBody = document.getElementById('sv-items-body');
+  if (vItemsBody) {
+    vItemsBody.innerHTML = (pur.items ? pur.items : []).map(item => `
+      <tr><td>${item.name}</td><td>${item.qty}</td><td>${(item.cost ? item.cost : 0).toFixed(2)}</td><td>${(item.qty * (item.cost ? item.cost : 0)).toFixed(2)}</td></tr>
+    `).join('');
+  }
 
-    renderQrCode('supplier-preview-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
-  });
+  renderQrCode('supplier-preview-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
 }
 
 const closeSupplierViewBtn = document.getElementById('close-supplier-view-btn');
