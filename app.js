@@ -61,6 +61,170 @@ if (document.readyState === 'loading') {
 }
 
 // ==========================================
+// Native Android Utilities (PDF, Print, Files & Share)
+// ==========================================
+async function exportAndSharePDF(elementId, fileName, title) {
+  const element = document.getElementById(elementId);
+  if (!element) {
+    alert("العنصر المراد تصديره غير موجود في الصفحة");
+    return;
+  }
+
+  if (typeof html2pdf === 'undefined') {
+    alert("مكتبة معالجة PDF جاري تحميلها، يرجى إعادة المحاولة بعد لحظات.");
+    return;
+  }
+
+  const opt = {
+    margin:       [10, 10, 10, 10],
+    filename:     fileName,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, allowTaint: true, logging: false },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  try {
+    const pdfBase64 = await html2pdf().set(opt).from(element).outputPdf('datauristring');
+    const base64Data = pdfBase64.split(',')[1];
+
+    if (isCapacitorNative && window.Capacitor?.Plugins?.Filesystem && window.Capacitor?.Plugins?.Share) {
+      const savedFile = await window.Capacitor.Plugins.Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: 'CACHE'
+      });
+
+      await window.Capacitor.Plugins.Share.share({
+        title: title || 'مشاركة مستند PDF',
+        url: savedFile.uri,
+        dialogTitle: title || 'حفظ أو مشاركة ملف PDF'
+      });
+      return;
+    }
+
+    // Web Fallback
+    const a = document.createElement('a');
+    a.href = pdfBase64;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (err) {
+    console.error("PDF Generation Error:", err);
+    alert("حدث خطأ أثناء إنشاء وتصدير ملف PDF");
+  }
+}
+
+async function saveAndShareCanvasImage(canvas, fileName, title, text) {
+  const dataUrl = canvas.toDataURL('image/png');
+  
+  if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem && window.Capacitor.Plugins.Share) {
+    try {
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+      
+      const savedFile = await window.Capacitor.Plugins.Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: 'CACHE'
+      });
+
+      await window.Capacitor.Plugins.Share.share({
+        title: title || 'مشاركة صورة',
+        text: text || '',
+        url: savedFile.uri,
+        dialogTitle: title || 'حفظ أو مشاركة الصورة'
+      });
+      return;
+    } catch (nativeErr) {
+      console.warn("Capacitor Native Share/Filesystem failed:", nativeErr);
+    }
+  }
+
+  // Web Share API Fallback
+  if (navigator.share) {
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], fileName, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: title || 'مشاركة صورة',
+          text: text || ''
+        });
+        return;
+      }
+    } catch (sErr) {
+      console.warn("Web Share fallback failed:", sErr);
+    }
+  }
+
+  // Standard Web Download Fallback
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function printHtmlContent(htmlContent) {
+  if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Printer) {
+    try {
+      await window.Capacitor.Plugins.Printer.print({
+        content: htmlContent
+      });
+      return;
+    } catch (e) {
+      console.warn("Capacitor Printer failed, falling back to window.print():", e);
+      window.print();
+    }
+  } else {
+    window.print();
+  }
+}
+
+async function saveAndShareTextFile(fileContent, fileName, mimeType, title, text) {
+  if (isCapacitorNative && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem && window.Capacitor.Plugins.Share) {
+    try {
+      const encoder = new TextEncoder();
+      const uint8 = encoder.encode(fileContent);
+      let binary = '';
+      for (let i = 0; i < uint8.byteLength; i++) {
+        binary += String.fromCharCode(uint8[i]);
+      }
+      const base64Data = btoa(binary);
+
+      const savedFile = await window.Capacitor.Plugins.Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: 'CACHE'
+      });
+
+      await window.Capacitor.Plugins.Share.share({
+        title: title || fileName,
+        text: text || '',
+        url: savedFile.uri,
+        dialogTitle: title || 'حفظ أو مشاركة الملف'
+      });
+      return;
+    } catch (err) {
+      console.warn("Native file share error:", err);
+    }
+  }
+
+  // Web Fallback
+  const blob = new Blob(["\ufeff" + fileContent], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ==========================================
 // Firebase App Initialization & Config
 // ==========================================
 const firebaseConfig = {
@@ -535,7 +699,7 @@ async function fetchAllDataFromCloud() {
     const purchaseSnap = await getDocs(collection(db, "users", uid, "purchases"));
     purchasesDB = [];
     purchaseSnap.forEach(d => purchasesDB.push(d.data()));
-    purchasesDB.sort((a, b) => b.id - a.id);
+    purchaseSnap.sort((a, b) => b.id - a.id);
     saveLocalData(uid, 'purchases', purchasesDB);
 
     const prodSnap = await getDocs(collection(db, "users", uid, "products"));
@@ -1207,44 +1371,34 @@ if (downloadImgBtn) {
         useCORS: true, 
         allowTaint: true, 
         backgroundColor: '#090d16',
-        logging: false 
+        logging: false,
+        timeout: 5000
       });
 
-      const dataUrl = canvas.toDataURL('image/png');
       const fileName = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
-
-      if (navigator.share && isCapacitorNative) {
-        try {
-          const blob = await (await fetch(dataUrl)).blob();
-          const file = new File([blob], fileName, { type: 'image/png' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'الفاتورة الإلكترونية',
-              text: `فاتورة رقم #${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : ''}`
-            });
-            return;
-          }
-        } catch (sErr) {
-          console.warn("Native Share fallback:", sErr);
-        }
-      }
-
-      // تنزيل مباشر بدون فتح متصفح خارجي أو window.open
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      await saveAndShareCanvasImage(
+        canvas, 
+        fileName, 
+        'الفاتورة الإلكترونية', 
+        `فاتورة رقم #${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : ''}`
+      );
 
     } catch (err) {
-      console.error("HTML2Canvas Render Error:", err);
+      console.error("Render Error:", err);
       alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر "طباعة" وحفظ الفاتورة كـ PDF.');
     } finally {
       downloadImgBtn.disabled = false;
       downloadImgBtn.textContent = 'تحميل كصورة 🖼️';
     }
+  });
+}
+
+// زر تصدير الفاتورة كـ PDF عبر Capacitor Share/Filesystem
+const downloadPdfBtn = document.getElementById('download-pdf-btn');
+if (downloadPdfBtn) {
+  downloadPdfBtn.addEventListener('click', async () => {
+    const fileName = `Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.pdf`;
+    await exportAndSharePDF('invoice-card-preview', fileName, 'فاتورة مبيعات إلكترونية');
   });
 }
 
@@ -1310,8 +1464,8 @@ function printInvoice(inv) {
 
   renderQrCode('print-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
 
-  setTimeout(() => {
-    window.print();
+  setTimeout(async () => {
+    await printHtmlContent(printTemplate.innerHTML);
   }, 250);
 }
 
@@ -1929,30 +2083,13 @@ if (ledgerDownloadBtn) {
           allowTaint: true 
         });
 
-        const dataUrl = canvas.toDataURL('image/png');
         const fileName = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
-
-        if (navigator.share && isCapacitorNative) {
-          try {
-            const blob = await (await fetch(dataUrl)).blob();
-            const file = new File([blob], fileName, { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: 'كشف حساب عميل',
-                text: `كشف حساب العميل: ${activeLedgerClientName}`
-              });
-              return;
-            }
-          } catch (e) {}
-        }
-
-        const a = document.createElement('a');
-        a.download = fileName;
-        a.href = dataUrl;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        await saveAndShareCanvasImage(
+          canvas, 
+          fileName, 
+          'كشف حساب عميل', 
+          `كشف حساب العميل: ${activeLedgerClientName}`
+        );
 
       } catch (err) {
         console.error("Ledger Image Error:", err);
@@ -1961,9 +2098,18 @@ if (ledgerDownloadBtn) {
   });
 }
 
+// تصدير كشف حساب العميل إلى ملف PDF عبر Capacitor
+const ledgerPdfBtn = document.getElementById('ledger-pdf-btn');
+if (ledgerPdfBtn) {
+  ledgerPdfBtn.addEventListener('click', async () => {
+    const fileName = `Client_Ledger_${activeLedgerClientName || 'Client'}_${Date.now()}.pdf`;
+    await exportAndSharePDF('ledger-printable-card', fileName, 'كشف حساب عميل');
+  });
+}
+
 const ledgerPrintBtn = document.getElementById('ledger-print-btn');
 if (ledgerPrintBtn) {
-  ledgerPrintBtn.addEventListener('click', () => {
+  ledgerPrintBtn.addEventListener('click', async () => {
     if (!activeLedgerClientName) return;
     const clientObj = clientsDB.find(c => c.name.toLowerCase() === activeLedgerClientName.toLowerCase());
     if (!clientObj) return;
@@ -1975,7 +2121,7 @@ if (ledgerPrintBtn) {
       <div class="print-header">
         ${storeProfile.logo ? `<img class="print-logo" src="${storeProfile.logo}">` : ''}
         <h1>كشف حساب عميل</h1>
-        <h2>${storeProfile.name}</h2>
+        2>${storeProfile.name}</h2>
         <p>${storeProfile.phone ? 'هاتف: ' + storeProfile.phone : ''}</p>
         <p>${storeProfile.address ? storeProfile.address : ''}</p>
         <hr>
@@ -2017,8 +2163,8 @@ if (ledgerPrintBtn) {
       </table>
     `;
 
-    setTimeout(() => {
-      window.print();
+    setTimeout(async () => {
+      await printHtmlContent(printTemplate.innerHTML);
     }, 250);
   });
 }
@@ -2385,30 +2531,13 @@ if (ledgerSupplierDownloadBtn) {
           allowTaint: true 
         });
 
-        const dataUrl = canvas.toDataURL('image/png');
         const fileName = `كشف_حساب_مورد_${activeLedgerSupplierName}_${Date.now()}.png`;
-
-        if (navigator.share && isCapacitorNative) {
-          try {
-            const blob = await (await fetch(dataUrl)).blob();
-            const file = new File([blob], fileName, { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: 'كشف حساب مورد',
-                text: `كشف حساب المورد: ${activeLedgerSupplierName}`
-              });
-              return;
-            }
-          } catch (e) {}
-        }
-
-        const link = document.createElement('a');
-        link.download = fileName;
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        await saveAndShareCanvasImage(
+          canvas, 
+          fileName, 
+          'كشف حساب مورد', 
+          `كشف حساب المورد: ${activeLedgerSupplierName}`
+        );
 
       } catch (err) {
         console.error("Supplier Ledger Image Error:", err);
@@ -2417,9 +2546,18 @@ if (ledgerSupplierDownloadBtn) {
   });
 }
 
+// تصدير كشف حساب المورد إلى ملف PDF عبر Capacitor
+const ledgerSupplierPdfBtn = document.getElementById('ledger-supplier-pdf-btn');
+if (ledgerSupplierPdfBtn) {
+  ledgerSupplierPdfBtn.addEventListener('click', async () => {
+    const fileName = `Supplier_Ledger_${activeLedgerSupplierName || 'Supplier'}_${Date.now()}.pdf`;
+    await exportAndSharePDF('supplier-ledger-printable-card', fileName, 'كشف حساب مورد');
+  });
+}
+
 const ledgerSupplierPrintBtn = document.getElementById('ledger-supplier-print-btn');
 if (ledgerSupplierPrintBtn) {
-  ledgerSupplierPrintBtn.addEventListener('click', () => {
+  ledgerSupplierPrintBtn.addEventListener('click', async () => {
     if (!activeLedgerSupplierName) return;
     const supplierObj = suppliersDB.find(s => s.name.toLowerCase() === activeLedgerSupplierName.toLowerCase());
     if (!supplierObj) return;
@@ -2473,8 +2611,8 @@ if (ledgerSupplierPrintBtn) {
       </table>
     `;
 
-    setTimeout(() => {
-      window.print();
+    setTimeout(async () => {
+      await printHtmlContent(printTemplate.innerHTML);
     }, 250);
   });
 }
@@ -2843,35 +2981,27 @@ if (supplierDownloadImgBtn) {
           logging: false 
         });
 
-        const dataUrl = canvas.toDataURL('image/png');
         const fileName = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.png`;
-
-        if (navigator.share && isCapacitorNative) {
-          try {
-            const blob = await (await fetch(dataUrl)).blob();
-            const file = new File([blob], fileName, { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: 'فاتورة مشتريات',
-                text: 'فاتورة مشتريات وتوريد'
-              });
-              return;
-            }
-          } catch (e) {}
-        }
-
-        const link = document.createElement('a');
-        link.download = fileName;
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        await saveAndShareCanvasImage(
+          canvas, 
+          fileName, 
+          'فاتورة مشتريات', 
+          'فاتورة مشتريات وتوريد'
+        );
 
       } catch (err) {
         console.error("Supplier Image Error:", err);
       }
     }
+  });
+}
+
+// تصدير فاتورة المشتريات كـ PDF عبر Capacitor Share/Filesystem
+const supplierDownloadPdfBtn = document.getElementById('supplier-download-pdf-btn');
+if (supplierDownloadPdfBtn) {
+  supplierDownloadPdfBtn.addEventListener('click', async () => {
+    const fileName = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.pdf`;
+    await exportAndSharePDF('supplier-invoice-card-preview', fileName, 'فاتورة مشتريات وتوريد');
   });
 }
 
@@ -2927,8 +3057,8 @@ function printPurchaseInvoice(pur) {
 
   renderQrCode('print-supplier-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
   
-  setTimeout(() => {
-    window.print();
+  setTimeout(async () => {
+    await printHtmlContent(printTemplate.innerHTML);
   }, 250);
 }
 
@@ -3080,33 +3210,13 @@ if (exportJsonBtn) {
       const jsonString = JSON.stringify(data, null, 2);
       const fileName = `backup_cloud_${Date.now()}.json`;
 
-      if (navigator.share && isCapacitorNative) {
-        try {
-          const blob = new Blob([jsonString], { type: 'application/json' });
-          const file = new File([blob], fileName, { type: 'application/json' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'النسخة الاحتياطية',
-              text: 'ملف النسخة الاحتياطية للبيانات'
-            });
-            return;
-          }
-        } catch (sErr) {
-          console.warn("Native share fallback for JSON:", sErr);
-        }
-      }
-
-      // تنزيل مباشر بدون فتح نافذة متصفح جديدة
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await saveAndShareTextFile(
+        jsonString, 
+        fileName, 
+        'application/json', 
+        'النسخة الاحتياطية', 
+        'ملف النسخة الاحتياطية للبيانات'
+      );
 
     } catch (err) {
       console.error("Export JSON Error:", err);
@@ -3200,35 +3310,13 @@ if (exportCsvBtn) {
       });
 
       const fileName = `sales_report_${Date.now()}.csv`;
-      const csvContent = "\ufeff" + csv;
-
-      if (navigator.share && isCapacitorNative) {
-        try {
-          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-          const file = new File([blob], fileName, { type: 'text/csv' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'تقرير المبيعات Excel',
-              text: 'تقرير فواتير المبيعات بصيغة CSV/Excel'
-            });
-            return;
-          }
-        } catch (sErr) {
-          console.warn("Native share fallback for CSV:", sErr);
-        }
-      }
-
-      // تنزيل مباشر بدون فتح نافذة متصفح جديدة
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await saveAndShareTextFile(
+        csv, 
+        fileName, 
+        'text/csv;charset=utf-8;', 
+        'تقرير المبيعات Excel', 
+        'تقرير فواتير المبيعات بصيغة CSV/Excel'
+      );
 
     } catch (err) {
       console.error("Export CSV Error:", err);
