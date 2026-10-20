@@ -39,7 +39,7 @@ jobs:
             let cfg = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
             cfg.webDir = "www";
             cfg.appId = "io.github.karamegy.Ton2";
-            cfg.appName = "Giti فواتير";
+            cfg.appName = "GITI ERP";
             cfg.plugins = cfg.plugins || {};
             cfg.plugins.GoogleAuth = {
               scopes: ["profile", "email"],
@@ -49,8 +49,8 @@ jobs:
             fs.writeFileSync("capacitor.config.json", JSON.stringify(cfg, null, 2));
           '
 
-          # 2. تثبيت أدوات الكاباسيتور الأساسية ومكتبات الأيقونات
-          npm install @capacitor/cli @capacitor/core @codetrix-studio/capacitor-google-auth @capacitor/assets --save-dev
+          # 2. تثبيت أدوات الكاباسيتور الأساسية ومكتبات المشاركة والتخزين والأيقونات
+          npm install @capacitor/cli @capacitor/core @capacitor/filesystem @capacitor/share @codetrix-studio/capacitor-google-auth @capacitor/assets --save-dev
 
           # 3. إعادة إنشاء منصة أندرويد نظيفة
           rm -rf android
@@ -155,13 +155,13 @@ jobs:
           </manifest>
           EOF
 
-          # 7. حقن ملف strings.xml مع القيم المحدثة
+          # 7. حقن ملف strings.xml
           mkdir -p android/app/src/main/res/values/
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
           <resources>
-              <string name="app_name">Giti ERP</string>
-              <string name="title_activity_main">Giti فواتير</string>
+              <string name="app_name">GITI ERP</string>
+              <string name="title_activity_main">GITI ERP</string>
               <string name="package_name">io.github.karamegy.Ton2</string>
               <string name="custom_url_scheme">io.github.karamegy.Ton2</string>
               <string name="server_client_id">753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com</string>
@@ -170,12 +170,12 @@ jobs:
           </resources>
           EOF
 
-          # 8. نسخ ملف التوقيع الموجود في جذر المستودع
+          # 8. نسخ ملف التوقيع
           if [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
           fi
 
-          # 9. إعداد Gradle للتوقيع وربط خدمات Google
+          # 9. إعداد Gradle للتوقيع
           cat << EOF >> android/app/build.gradle
 
           android {
@@ -183,8 +183,8 @@ jobs:
                   applicationId "io.github.karamegy.Ton2"
                   minSdk 24
                   targetSdk 36
-                  versionCode 80004
-                  versionName "8.0.0.4"
+                  versionCode 80005
+                  versionName "8.0.0.5"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
