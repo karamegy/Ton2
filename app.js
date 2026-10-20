@@ -1185,7 +1185,7 @@ if (closeViewBtn) {
 }
 
 // ==========================================
-// Image Render & Export Engine (Capacitor Native Compliant)
+// Image Render & Native Direct Export Engine
 // ==========================================
 const downloadImgBtn = document.getElementById('download-img-btn');
 if (downloadImgBtn) {
@@ -1230,33 +1230,13 @@ if (downloadImgBtn) {
         }
       }
 
-      const newWin = window.open();
-      if (newWin) {
-        newWin.document.write(`
-          <html dir="rtl">
-            <head>
-              <title>${fileName}</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
-                img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
-                .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
-              </style>
-            </head>
-            <body>
-              <img src="${dataUrl}" alt="Invoice Image" />
-              <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
-            </body>
-          </html>
-        `);
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      // تنزيل مباشر بدون فتح متصفح خارجي أو window.open
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
     } catch (err) {
       console.error("HTML2Canvas Render Error:", err);
@@ -1967,33 +1947,13 @@ if (ledgerDownloadBtn) {
           } catch (e) {}
         }
 
-        const newWin = window.open();
-        if (newWin) {
-          newWin.document.write(`
-            <html dir="rtl">
-              <head>
-                <title>${fileName}</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                  body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
-                  img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
-                  .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
-                </style>
-              </head>
-              <body>
-                <img src="${dataUrl}" alt="Ledger Image" />
-                <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
-              </body>
-            </html>
-          `);
-        } else {
-          const a = document.createElement('a');
-          a.download = fileName;
-          a.href = dataUrl;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }
+        const a = document.createElement('a');
+        a.download = fileName;
+        a.href = dataUrl;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
       } catch (err) {
         console.error("Ledger Image Error:", err);
       }
@@ -2443,33 +2403,13 @@ if (ledgerSupplierDownloadBtn) {
           } catch (e) {}
         }
 
-        const newWin = window.open();
-        if (newWin) {
-          newWin.document.write(`
-            <html dir="rtl">
-              <head>
-                <title>${fileName}</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                  body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
-                  img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
-                  .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
-                </style>
-              </head>
-              <body>
-                <img src="${dataUrl}" alt="Supplier Ledger Image" />
-                <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
-              </body>
-            </html>
-          `);
-        } else {
-          const link = document.createElement('a');
-          link.download = fileName;
-          link.href = dataUrl;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
       } catch (err) {
         console.error("Supplier Ledger Image Error:", err);
       }
@@ -2921,33 +2861,13 @@ if (supplierDownloadImgBtn) {
           } catch (e) {}
         }
 
-        const newWin = window.open();
-        if (newWin) {
-          newWin.document.write(`
-            <html dir="rtl">
-              <head>
-                <title>${fileName}</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                  body { margin:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; }
-                  img { max-width:95%; height:auto; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5); margin-bottom:15px; }
-                  .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; }
-                </style>
-              </head>
-              <body>
-                <img src="${dataUrl}" alt="Supplier Invoice Image" />
-                <a href="${dataUrl}" download="${fileName}" class="btn">💾 اضغط هنا للحفظ على الجهاز</a>
-              </body>
-            </html>
-          `);
-        } else {
-          const link = document.createElement('a');
-          link.download = fileName;
-          link.href = dataUrl;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
       } catch (err) {
         console.error("Supplier Image Error:", err);
       }
@@ -3140,7 +3060,7 @@ function updateDashboardStats() {
 }
 
 // ==========================================
-// Backup, Import & CSV/Excel Export (Native Capacitor Ready)
+// Direct Backup & Export Engine (No Browser Dialogs)
 // ==========================================
 const exportJsonBtn = document.getElementById('export-json-btn');
 if (exportJsonBtn) {
@@ -3177,33 +3097,17 @@ if (exportJsonBtn) {
         }
       }
 
-      const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonString);
-      const newWin = window.open();
-      if (newWin) {
-        newWin.document.write(`
-          <html dir="rtl">
-            <head>
-              <title>${fileName}</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body { margin:0; background:#111827; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; text-align:center; padding:20px; }
-                .btn { background:#2563eb; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; margin-top:15px; }
-              </style>
-            </head>
-            <body>
-              <h3>💾 النسخة الاحتياطية جاهزة للتحميل</h3>
-              <a href="${dataUrl}" download="${fileName}" class="btn">اضغط هنا لتحميل الملف على الجهاز</a>
-            </body>
-          </html>
-        `);
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      // تنزيل مباشر بدون فتح نافذة متصفح جديدة
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
     } catch (err) {
       console.error("Export JSON Error:", err);
       alert("حدث خطأ أثناء استخراج النسخة الاحتياطية.");
@@ -3315,33 +3219,17 @@ if (exportCsvBtn) {
         }
       }
 
-      const dataUrl = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
-      const newWin = window.open();
-      if (newWin) {
-        newWin.document.write(`
-          <html dir="rtl">
-            <head>
-              <title>${fileName}</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body { margin:0; background:#111827; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; color:#fff; font-family:sans-serif; text-align:center; padding:20px; }
-                .btn { background:#16a34a; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer; text-decoration:none; display:inline-block; margin-top:15px; }
-              </style>
-            </head>
-            <body>
-              <h3>📊 تقرير المبيعات جاهز للتحميل</h3>
-              <a href="${dataUrl}" download="${fileName}" class="btn">اضغط هنا لتحميل تقرير Excel</a>
-            </body>
-          </html>
-        `);
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
+      // تنزيل مباشر بدون فتح نافذة متصفح جديدة
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
     } catch (err) {
       console.error("Export CSV Error:", err);
       alert("حدث خطأ أثناء استخراج التقرير.");
