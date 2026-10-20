@@ -1199,17 +1199,52 @@ if (closeViewBtn) {
   });
 }
 
+// ==========================================
+// معالجة تنزيل/مشاركة الفاتورة الرئيسية كصورة
+// ==========================================
 const downloadImgBtn = document.getElementById('download-img-btn');
 if (downloadImgBtn) {
   downloadImgBtn.addEventListener('click', () => {
     const previewCard = document.getElementById('invoice-card-preview');
     if (previewCard && typeof html2canvas !== 'undefined') {
-      html2canvas(previewCard, { scale: 2 }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+      html2canvas(previewCard, { 
+        scale: 2, 
+        useCORS: true, 
+        allowTaint: true, 
+        logging: false 
+      }).then(canvas => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          const fileName = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
+
+          if (navigator.share && navigator.canShare) {
+            try {
+              const file = new File([blob], fileName, { type: 'image/png' });
+              if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                  files: [file],
+                  title: 'الفاتورة الإلكترونية',
+                  text: `فاتورة رقم #${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : ''}`
+                });
+                return;
+              }
+            } catch (shareErr) {
+              console.warn("Native Share failed/cancelled:", shareErr);
+            }
+          }
+
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }, 'image/png');
+      }).catch(err => {
+        console.error("html2canvas error:", err);
+        alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر "طباعة" وحفظ الفاتورة كـ PDF.');
       });
+    } else {
+      alert('مكتبة معالجة الصور غير جاهزة، يمكنك استخدام زر الطباعة وحفظ الفاتورة كـ PDF.');
     }
   });
 }
@@ -1875,16 +1910,44 @@ if (ledgerWhatsappBtn) {
   });
 }
 
+// ==========================================
+// معالجة تنزيل/مشاركة كشف حساب عميل كصورة
+// ==========================================
 const ledgerDownloadBtn = document.getElementById('ledger-download-btn');
 if (ledgerDownloadBtn) {
   ledgerDownloadBtn.addEventListener('click', () => {
     const ledgerCard = document.getElementById('ledger-printable-card');
     if (ledgerCard && typeof html2canvas !== 'undefined') {
-      html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+      html2canvas(ledgerCard, { 
+        scale: 2, 
+        backgroundColor: '#111827', 
+        useCORS: true, 
+        allowTaint: true 
+      }).then(canvas => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          const fileName = `كشف_حساب_${activeLedgerClientName}_${Date.now()}.png`;
+
+          if (navigator.share && navigator.canShare) {
+            try {
+              const file = new File([blob], fileName, { type: 'image/png' });
+              if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                  files: [file],
+                  title: 'كشف حساب عميل',
+                  text: `كشف حساب العميل: ${activeLedgerClientName}`
+                });
+                return;
+              }
+            } catch (e) {}
+          }
+
+          const a = document.createElement('a');
+          a.download = fileName;
+          a.href = URL.createObjectURL(blob);
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }, 'image/png');
       });
     }
   });
@@ -2298,16 +2361,44 @@ if (ledgerSupplierWhatsappBtn) {
   });
 }
 
+// ==========================================
+// معالجة تنزيل/مشاركة كشف حساب مورد كصورة
+// ==========================================
 const ledgerSupplierDownloadBtn = document.getElementById('ledger-supplier-download-btn');
 if (ledgerSupplierDownloadBtn) {
   ledgerSupplierDownloadBtn.addEventListener('click', () => {
     const ledgerCard = document.getElementById('supplier-ledger-printable-card');
     if (ledgerCard && typeof html2canvas !== 'undefined') {
-      html2canvas(ledgerCard, { scale: 2, backgroundColor: '#111827' }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `كشف_حساب_مورد_${activeLedgerSupplierName}_${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+      html2canvas(ledgerCard, { 
+        scale: 2, 
+        backgroundColor: '#111827', 
+        useCORS: true, 
+        allowTaint: true 
+      }).then(canvas => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          const fileName = `كشف_حساب_مورد_${activeLedgerSupplierName}_${Date.now()}.png`;
+
+          if (navigator.share && navigator.canShare) {
+            try {
+              const file = new File([blob], fileName, { type: 'image/png' });
+              if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                  files: [file],
+                  title: 'كشف حساب مورد',
+                  text: `كشف حساب المورد: ${activeLedgerSupplierName}`
+                });
+                return;
+              }
+            } catch (e) {}
+          }
+
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }, 'image/png');
       });
     }
   });
@@ -2723,16 +2814,44 @@ if (closeSupplierViewBtn) {
   });
 }
 
+// ==========================================
+// معالجة تنزيل/مشاركة فاتورة المشتريات كصورة
+// ==========================================
 const supplierDownloadImgBtn = document.getElementById('supplier-download-img-btn');
 if (supplierDownloadImgBtn) {
   supplierDownloadImgBtn.addEventListener('click', () => {
     const previewCard = document.getElementById('supplier-invoice-card-preview');
     if (previewCard && typeof html2canvas !== 'undefined') {
-      html2canvas(previewCard, { scale: 2 }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+      html2canvas(previewCard, { 
+        scale: 2, 
+        useCORS: true, 
+        allowTaint: true, 
+        logging: false 
+      }).then(canvas => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          const fileName = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.png`;
+
+          if (navigator.share && navigator.canShare) {
+            try {
+              const file = new File([blob], fileName, { type: 'image/png' });
+              if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                  files: [file],
+                  title: 'فاتورة مشتريات',
+                  text: 'فاتورة مشتريات وتوريد'
+                });
+                return;
+              }
+            } catch (e) {}
+          }
+
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }, 'image/png');
       });
     }
   });
