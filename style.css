@@ -570,68 +570,8 @@ li:hover {
 }
 
 /* ==========================================================
-   تنسيق كروت الطباعة والتصدير الورقية (White Printable Cards)
-   ========================================================== */
-
-.printable-white-card,
-.invoice-card-preview,
-#invoice-card-preview,
-#supplier-invoice-card-preview,
-#ledger-printable-card,
-#supplier-ledger-printable-card {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border: 1px solid #d1d5db !important;
-  box-shadow: none !important;
-  -webkit-print-color-adjust: exact !important;
-  print-color-adjust: exact !important;
-}
-
-/* ضبط ألوان النصوص الأساسية واستثناء الألوان التنبيهية (الأخضر والأحمر) */
-.printable-white-card *:not(.text-success):not(.text-danger),
-.invoice-card-preview *:not(.text-success):not(.text-danger),
-#ledger-printable-card *:not(.text-success):not(.text-danger),
-#supplier-ledger-printable-card *:not(.text-success):not(.text-danger) {
-  color: #1f2937 !important;
-  text-shadow: none !important;
-}
-
-/* محاذاة الجداول الرسمية في كشوف الحساب والمعاينة */
-.printable-white-card table,
-.invoice-card-preview table,
-#ledger-printable-card table,
-#supplier-ledger-printable-card table {
-  width: 100% !important;
-  border-collapse: collapse !important;
-  margin: 12px 0 !important;
-  background-color: #ffffff !important;
-}
-
-.printable-white-card th,
-.printable-white-card td,
-.invoice-card-preview th,
-.invoice-card-preview td,
-#ledger-printable-card th,
-#ledger-printable-card td,
-#supplier-ledger-printable-card th,
-#supplier-ledger-printable-card td {
-  border: 1px solid #d1d5db !important;
-  padding: 8px 6px !important;
-  background-color: #ffffff !important;
-  font-size: 0.85rem !important;
-}
-
-.printable-white-card th,
-.invoice-card-preview th,
-#ledger-printable-card th,
-#supplier-ledger-printable-card th {
-  background-color: #f3f4f6 !important;
-  font-weight: 800 !important;
-  color: #111827 !important;
-}
-
-/* ==========================================================
    إعدادات الطباعة وتصدير الـ PDF بمقاس A4 لجميع الأقسام
+   (تُطبَّق فقط عند التصدير والطباعة ولا تؤثر على الشاشة)
    ========================================================== */
 @media print {
   /* 1. إجبار المتصفح على مقاس ورقة A4 وهامش منتظم */
@@ -644,15 +584,42 @@ li:hover {
     visibility: hidden !important;
   }
   
-  /* 2. إظهار بطاقات المعاينة المطبوعة فقط (عملاء / موردين / فواتير) */
+  /* 2. تحويل كروت الطباعة والمعاينة المصدرة للون الأبيض والخطوط الداكنة */
   .modal:not(.hidden) .printable-white-card, 
   .modal:not(.hidden) .printable-white-card *,
   .modal:not(.hidden) .invoice-card-preview,
   .modal:not(.hidden) .invoice-card-preview * {
     visibility: visible !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    text-shadow: none !important;
   }
 
-  /* 3. ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
+  /* 3. ضبط الجداول والحدود الرسمية للورقة Mطبوعة */
+  .modal:not(.hidden) .printable-white-card table,
+  .modal:not(.hidden) .invoice-card-preview table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    background-color: #ffffff !important;
+  }
+
+  .modal:not(.hidden) .printable-white-card th,
+  .modal:not(.hidden) .printable-white-card td,
+  .modal:not(.hidden) .invoice-card-preview th,
+  .modal:not(.hidden) .invoice-card-preview td {
+    border: 1px solid #d1d5db !important;
+    padding: 8px 6px !important;
+    background-color: #ffffff !important;
+  }
+
+  .modal:not(.hidden) .printable-white-card th,
+  .modal:not(.hidden) .invoice-card-preview th {
+    background-color: #f3f4f6 !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+  }
+
+  /* 4. ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
   .modal:not(.hidden) .printable-white-card,
   .modal:not(.hidden) .invoice-card-preview {
     position: absolute !important;
@@ -666,7 +633,7 @@ li:hover {
     border: none !important;
   }
 
-  /* 4. إخفاء الأزرار وعناصر التحكم أثناء التصدير */
+  /* 5. إخفاء الأزرار وعناصر التحكم أثناء التصدير */
   .no-print,
   button,
   .modal-header,
