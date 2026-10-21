@@ -988,54 +988,12 @@ li:hover {
 }
 
 /* ==========================================================
-   تنسيق وتصغير حجم نافذة إعدادات المنشأة والعملة حصراً
+   تقليل حجم إطار نافذة إعدادات المنشأة والعملة حصراً
    ========================================================== */
 #settings-modal .modal-content,
 #settingsModal .modal-content,
 .settings-modal .modal-content,
 .settings-modal-content {
-  padding: 14px 16px !important;
-  max-width: 400px !important;
-  max-height: 82vh !important;
-  overflow-y: auto !important;
-}
-
-#settings-modal .form-group,
-#settingsModal .form-group,
-.settings-modal .form-group {
-  margin-bottom: 6px !important;
-}
-
-#settings-modal input,
-#settings-modal select,
-#settingsModal input,
-#settingsModal select,
-.settings-modal input,
-.settings-modal select {
-  min-height: 34px !important;
-  padding: 4px 10px !important;
-  font-size: 0.82rem !important;
-  border-radius: 8px !important;
-}
-
-#settings-modal label,
-#settingsModal label,
-.settings-modal label {
-  font-size: 0.72rem !important;
-  margin-bottom: 3px !important;
-}
-
-#settings-modal h3, #settings-modal h2,
-#settingsModal h3, #settingsModal h2,
-.settings-modal h3, .settings-modal h2 {
-  font-size: 1.05rem !important;
-  margin-bottom: 6px !important;
-}
-
-#settings-modal button,
-#settingsModal button,
-.settings-modal button {
-  min-height: 36px !important;
-  padding: 8px 14px !important;
-  font-size: 0.82rem !important;
+  max-width: 400px;
+  padding: 14px;
 }
