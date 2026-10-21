@@ -183,8 +183,8 @@ jobs:
                   applicationId "io.github.karamegy.Ton2"
                   minSdk 24
                   targetSdk 36
-                  versionCode 80005
-                  versionName "8.0.0.5"
+                  versionCode 80006
+                  versionName "8.0.0.6"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_21
