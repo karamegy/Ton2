@@ -444,7 +444,7 @@ li:hover {
   max-width: 480px; 
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-  max-height: 88vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
+  max-height: 80vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
   display: flex !important;
   flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
   overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
