@@ -18,7 +18,7 @@ import {
 const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
 
 /**
- * دالة حفظ وتصدير الملفات الموحدة (أندرويد Native والمتصفح)
+ * دالة حفظ وتصدير الملفات الموحدة (أندرويد Native ومتصفح)
  */
 async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle) {
   try {
@@ -43,7 +43,6 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       });
     }
 
-    // 1. استخدام كاباسيتور Native للحفظ والمشاركة بالأندرويد
     if (isCapacitorNative && window.Capacitor.Plugins) {
       const Filesystem = window.Capacitor.Plugins.Filesystem;
       const Share = window.Capacitor.Plugins.Share;
@@ -65,7 +64,6 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       }
     }
 
-    // 2. استخدام Web Share API كخيار ثاني للمتصفحات
     const file = new File([blob], fileName, { type: mimeType || blob.type || 'application/octet-stream' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
@@ -80,7 +78,6 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
       }
     }
 
-    // 3. التنزيل المباشر كـ Anchor Fallback
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
@@ -97,82 +94,73 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
     return true;
   } catch (err) {
     console.warn("File save/share error:", err);
-    alert("⚠️ تعذر تنزيل المستند مباشرة من المتصفح.");
+    alert("⚠️ تعذر تنزيل المستند مباشرة.");
     return false;
   }
 }
 
 /**
- * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية A4 مستقلة عن أي ثيم
+ * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية A4
  */
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
   if (!element) return false;
 
   const originalDisplay = element.style.display;
-  element.classList.add('rendering-active');
-  element.setAttribute('data-export-active', 'true');
-
   if (element.classList.contains('hidden') || getComputedStyle(element).display === 'none') {
     element.style.display = 'block';
   }
 
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  try {
-    if (typeof html2pdf !== 'undefined') {
-      const opt = {
-        margin:       [8, 8, 8, 8],
-        filename:     fileName,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { 
-          scale: 2, 
-          useCORS: true, 
-          logging: false, 
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0
-        },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+  if (typeof html2pdf !== 'undefined') {
+    const opt = {
+      margin:       [5, 5, 5, 5],
+      filename:     fileName,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { 
+        scale: 2, 
+        useCORS: true, 
+        logging: false, 
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0
+      },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
 
-      try {
-        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-        return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
-      } catch (e) {
-        console.warn("html2pdf error, falling back to canvas:", e);
-      }
+    try {
+      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
+      return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
+    } catch (e) {
+      console.warn("html2pdf error, falling back to canvas:", e);
     }
-
-    if (typeof html2canvas !== 'undefined') {
-      try {
-        const canvas = await html2canvas(element, { 
-          scale: 2, 
-          useCORS: true, 
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0
-        });
-        const imgData = canvas.toDataURL('image/png');
-        return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
-      } catch (e) {
-        console.error("Canvas export failed:", e);
-      }
-    }
-
-    window.print();
-    return true;
-  } finally {
-    element.classList.remove('rendering-active');
-    element.removeAttribute('data-export-active');
-    if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
   }
+
+  if (typeof html2canvas !== 'undefined') {
+    try {
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0
+      });
+      const imgData = canvas.toDataURL('image/png');
+      if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
+      return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
+    } catch (e) {
+      console.error("Canvas export failed:", e);
+    }
+  }
+
+  window.print();
+  return true;
 }
 
 function initCapacitorBridge() {
   if (isCapacitorNative) {
-    console.log("Capacitor Native Bridge Connected Successfully.");
-    
     if (window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) {
       window.Capacitor.Plugins.GoogleAuth.initialize({
         clientId: '753885709520-r09nngge8556ndmg0ampdu266iota0lv.apps.googleusercontent.com',
@@ -250,9 +238,7 @@ function triggerAds() {
           (window.adsbygoogle = window.adsbygoogle || []).push({});
         }
       });
-    } catch (e) {
-      console.warn("AdSense Trigger Error:", e);
-    }
+    } catch (e) {}
   }, 300);
 }
 
@@ -465,9 +451,7 @@ async function ensureUserLicense(user) {
     } else {
       localStorage.setItem(`giti_license_${user.uid}`, JSON.stringify(docSnap.data()));
     }
-  } catch (e) {
-    console.warn("License registration error or offline:", e);
-  }
+  } catch (e) {}
 }
 
 const tabLoginBtn = document.getElementById('tab-login-btn');
@@ -626,9 +610,7 @@ function detachCloudSync() {
 async function syncDocToCloud(docName, payload) {
   if (!currentUser) return;
   saveLocalData(currentUser.uid, docName, payload);
-  setDoc(doc(db, "users", currentUser.uid, "data", docName), payload).catch(err => {
-    console.warn("Sync to cloud queued offline:", err);
-  });
+  setDoc(doc(db, "users", currentUser.uid, "data", docName), payload).catch(() => {});
 }
 
 async function fetchAllDataFromCloud() {
@@ -729,7 +711,6 @@ if (googleLoginBtn) {
             return;
           }
         } catch (nativeErr) {
-          console.error("Native GoogleAuth signin failed:", nativeErr);
           if (authError) {
             authError.textContent = "فشل تسجيل الدخول عبر Google Auth.";
             authError.classList.remove('hidden');
@@ -741,7 +722,6 @@ if (googleLoginBtn) {
         if (result && result.user) await ensureUserLicense(result.user);
       }
     } catch (err) {
-      console.error("Google Auth Error:", err);
       if (authError) {
         authError.textContent = "فشل تسجيل الدخول. تأكد من اتصال الإنترنت.";
         authError.classList.remove('hidden');
@@ -1203,9 +1183,7 @@ async function saveInvoiceData() {
           setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
         }
       });
-    } catch (err) {
-      console.warn("Background sync queued offline:", err);
-    }
+    } catch (err) {}
   }
 
   return invoice;
@@ -1330,8 +1308,6 @@ if (downloadImgBtn) {
       downloadImgBtn.disabled = true;
       downloadImgBtn.textContent = 'جاري التجهيز... ⏳';
 
-      previewCard.classList.add('rendering-active');
-
       const canvas = await html2canvas(previewCard, { 
         scale: 2, 
         useCORS: true, 
@@ -1347,9 +1323,8 @@ if (downloadImgBtn) {
 
     } catch (err) {
       console.error("HTML2Canvas Render Error:", err);
-      alert('حدث خطأ أثناء استخراج الصورة، يمكنك استخدام زر الطباعة وحفظ الفاتورة كـ PDF.');
+      alert('حدث خطأ أثناء استخراج الصورة.');
     } finally {
-      previewCard.classList.remove('rendering-active');
       downloadImgBtn.disabled = false;
       downloadImgBtn.textContent = translations[currentLang]?.downloadImg || 'حفظ كصورة 🖼️';
     }
@@ -1868,7 +1843,7 @@ window.deleteClient = async (index) => {
   const client = clientsDB[index];
   if (!client) return;
 
-  if (!confirm(`⚠️ هل أنت متأكد من حذف العميل "${client.name}"؟ سيتم إزالته من الدفتر.`)) return;
+  if (!confirm(`⚠️ هل أنت متأكد من حذف العميل "${client.name}"؟`)) return;
 
   try {
     clientsDB.splice(index, 1);
@@ -1895,9 +1870,8 @@ window.openClientLedger = (clientName) => {
     activeLedgerClientName = clientObj.name;
     const stats = getClientCalculatedLedger(clientObj);
 
-    // 1. تحديث إحصائيات الشاشة
     const ledgerTitle = document.getElementById('ledger-client-title');
-    if (ledgerTitle) ledgerTitle.textContent = `كشف حساب: ${clientObj.name}`;
+    if (ledgerTitle) ledgerTitle.textContent = `👤 كشف حساب: ${clientObj.name}`;
     
     const ledgerTotalSales = document.getElementById('ledger-total-sales');
     if (ledgerTotalSales) ledgerTotalSales.textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
@@ -1908,30 +1882,29 @@ window.openClientLedger = (clientName) => {
     const ledgerBalance = document.getElementById('ledger-balance');
     if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
 
-    // 2. تحديث قائمة الكروت للتطبيق (شاشة الموبايل المظلمة)
     const cardsList = document.getElementById('client-ledger-cards-list');
     if (cardsList) {
       let cardsHtml = '';
 
       if (clientObj.openingBalance && clientObj.openingBalance > 0) {
         cardsHtml += `
-          <div class="app-ledger-card opening-balance-card">
-            <div class="alc-info">
-              <strong class="alc-title">رصيد افتتاحي (مديونية سابقة)</strong>
+          <div class="ledger-item-card">
+            <div class="lic-main">
+              <div class="lic-title">رصيد افتتاحي (مديونية سابقة)</div>
             </div>
-            <strong class="alc-price text-danger">${clientObj.openingBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+            <strong class="lic-price text-danger">${clientObj.openingBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
           </div>
         `;
       }
 
       stats.clientInvoices.forEach(inv => {
         cardsHtml += `
-          <div class="app-ledger-card invoice-card" onclick="window.viewInvoiceById(${inv.id})" style="cursor:pointer;">
-            <div class="alc-info">
-              <div class="alc-title">فاتورة #${inv.id} <small class="alc-date">(${inv.date || ''})</small></div>
-              <div class="alc-sub">${(inv.items ? inv.items.length : 0)} أصناف - <span class="alc-status ${inv.status === 'مدفوعة' ? 'status-paid' : 'status-unpaid'}">${inv.status}</span></div>
+          <div class="ledger-item-card" onclick="window.viewInvoiceById(${inv.id})" style="cursor:pointer;">
+            <div class="lic-main">
+              <div class="lic-title">فاتورة #${inv.id} <small style="color:#64748b;">(${inv.date || ''})</small></div>
+              <div class="lic-sub">${(inv.items ? inv.items.length : 0)} أصناف - <span style="font-weight:bold;">${inv.status}</span></div>
             </div>
-            <strong class="alc-price">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+            <strong class="lic-price">${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
           </div>
         `;
       });
@@ -1939,26 +1912,25 @@ window.openClientLedger = (clientName) => {
       stats.payments.forEach((p, pIndex) => {
         const safeClientName = (clientObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
         cardsHtml += `
-          <div class="app-ledger-card payment-card">
-            <div class="alc-info">
-              <div class="alc-title text-success">دفعة سداد نقدي 💵 <small class="alc-date">(${p.date || ''})</small></div>
-              <div class="alc-actions" style="margin-top: 4px;">
+          <div class="ledger-item-card pay-card">
+            <div class="lic-main">
+              <div class="lic-title text-success">دفعة سداد نقدي 💵 <small style="color:#64748b;">(${p.date || ''})</small></div>
+              <div class="lic-sub" style="margin-top:4px;">
                 <button class="btn-sm" style="background:#f59e0b; color:#fff; padding: 2px 6px;" onclick="event.stopPropagation(); window.editClientPayment('${safeClientName}', ${pIndex})">✏️</button>
                 <button class="btn-sm" style="background:#ef4444; color:#fff; padding: 2px 6px;" onclick="event.stopPropagation(); window.deleteClientPayment('${safeClientName}', ${pIndex})">🗑️</button>
               </div>
             </div>
-            <strong class="alc-price text-success">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+            <strong class="lic-price text-success">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
           </div>
         `;
       });
 
-      cardsList.innerHTML = cardsHtml ? cardsHtml : '<p style="text-align:center; color:var(--text-muted); padding:15px;">لا توجد معاملات مسجلة</p>';
+      cardsList.innerHTML = cardsHtml ? cardsHtml : '<p style="text-align:center; color:#64748b; padding:15px;">لا توجد معاملات مسجلة</p>';
     }
 
-    // 3. بناء جدول كشف الحساب المطبوع ورقة A4 البيضاء
-    const clPrintSales = document.getElementById('cl-print-sales') || document.getElementById('cl-print-total-sales');
+    const clPrintSales = document.getElementById('cl-print-total-sales');
     if (clPrintSales) clPrintSales.textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
-    const clPrintPaid = document.getElementById('cl-print-paid') || document.getElementById('cl-print-total-paid');
+    const clPrintPaid = document.getElementById('cl-print-total-paid');
     if (clPrintPaid) clPrintPaid.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
     const clPrintBal = document.getElementById('cl-print-balance');
     if (clPrintBal) clPrintBal.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
@@ -1988,9 +1960,6 @@ window.openClientLedger = (clientName) => {
     const clClientName = document.getElementById('cl-client-name');
     if (clClientName) clClientName.textContent = clientObj.name;
 
-    const clClientPhone = document.getElementById('cl-client-phone');
-    if (clClientPhone) clClientPhone.textContent = clientObj.phone || 'غير مسجل';
-
     const tableBody = document.getElementById('client-ledger-table-body');
     if (tableBody) {
       let rowsHtml = '';
@@ -1998,8 +1967,8 @@ window.openClientLedger = (clientName) => {
       if (clientObj.openingBalance && clientObj.openingBalance > 0) {
         rowsHtml += `
           <tr>
-            <td>رصيد افتتاحي (مديونية سابقة)</td>
             <td>-</td>
+            <td>رصيد افتتاحي (مديونية سابقة)</td>
             <td>${clientObj.openingBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
           </tr>
         `;
@@ -2008,8 +1977,8 @@ window.openClientLedger = (clientName) => {
       stats.clientInvoices.forEach(inv => {
         rowsHtml += `
           <tr>
-            <td>فاتورة مبيعات #${inv.id} (${(inv.items ? inv.items.length : 0)} أصناف - ${inv.status})</td>
             <td>${inv.date || '-'}</td>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items ? inv.items.length : 0)} أصناف)</td>
             <td>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
           </tr>
         `;
@@ -2017,15 +1986,15 @@ window.openClientLedger = (clientName) => {
 
       stats.payments.forEach((p) => {
         rowsHtml += `
-          <tr>
-            <td>دفعة سداد نقدي 💵</td>
+          <tr style="background-color: #f0fdf4 !important;">
             <td>${p.date || '-'}</td>
+            <td>دفعة سداد نقدي 💵</td>
             <td style="color:#059669; font-weight:bold;">-${p.amount.toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
           </tr>
         `;
       });
 
-      tableBody.innerHTML = rowsHtml ? rowsHtml : '<tr><td colspan="3" style="text-align:center;">لا توجد معاملات مسجلة في كشف الحساب</td></tr>';
+      tableBody.innerHTML = rowsHtml ? rowsHtml : '<tr><td colspan="3" style="text-align:center; color:#6b7280;">لا توجد معاملات مسجلة في كشف الحساب</td></tr>';
     }
 
     const ledgerModal = document.getElementById('client-ledger-modal');
@@ -2109,33 +2078,24 @@ if (ledgerWhatsappBtn) {
 const ledgerDownloadBtn = document.getElementById('ledger-download-btn');
 if (ledgerDownloadBtn) {
   ledgerDownloadBtn.addEventListener('click', async () => {
-    const card = document.getElementById('ledger-printable-card');
-    if (!card) return;
+    const ledgerCard = document.getElementById('ledger-printable-card');
+    if (ledgerCard && typeof html2canvas !== 'undefined') {
+      try {
+        const canvas = await html2canvas(ledgerCard, { 
+          scale: 2, 
+          backgroundColor: '#ffffff', 
+          useCORS: true, 
+          allowTaint: false 
+        });
 
-    try {
-      ledgerDownloadBtn.disabled = true;
-      ledgerDownloadBtn.textContent = 'جاري التوليد... ⏳';
+        const dataUrl = canvas.toDataURL('image/png');
+        const fileName = `Statement_${activeLedgerClientName || 'Client'}_${Date.now()}.png`;
 
-      card.classList.add('rendering-active');
-
-      const canvas = await html2canvas(card, { 
-        scale: 2, 
-        backgroundColor: '#ffffff', 
-        useCORS: true, 
-        allowTaint: false 
-      });
-
-      const dataUrl = canvas.toDataURL('image/png');
-      const fileName = `كشف_حساب_${activeLedgerClientName || 'عميل'}.png`;
-
-      await saveOrShareFile(dataUrl, fileName, 'image/png', `كشف حساب العميل: ${activeLedgerClientName}`);
-    } catch (err) {
-      console.error("Ledger Image Error:", err);
-      alert("حدث خطأ أثناء تنزيل صورة كشف الحساب.");
-    } finally {
-      card.classList.remove('rendering-active');
-      ledgerDownloadBtn.disabled = false;
-      ledgerDownloadBtn.textContent = 'صورة 🖼️';
+        await saveOrShareFile(dataUrl, fileName, 'image/png', `كشف حساب العميل: ${activeLedgerClientName}`);
+      } catch (err) {
+        console.error("Ledger Image Error:", err);
+        alert("حدث خطأ أثناء تنزيل الصورة.");
+      }
     }
   });
 }
@@ -2144,7 +2104,7 @@ const ledgerPrintBtn = document.getElementById('ledger-print-btn');
 if (ledgerPrintBtn) {
   ledgerPrintBtn.addEventListener('click', async () => {
     if (!activeLedgerClientName) return;
-    await generateAndExportPdf('ledger-printable-card', `كشف_حساب_${activeLedgerClientName}.pdf`, `كشف حساب العميل: ${activeLedgerClientName}`);
+    await generateAndExportPdf('ledger-printable-card', `Statement_${activeLedgerClientName}.pdf`, `كشف حساب العميل: ${activeLedgerClientName}`);
   });
 }
 
@@ -2360,7 +2320,6 @@ window.openSupplierLedger = (supplierName) => {
     activeLedgerSupplierName = supplierObj.name;
     const stats = getSupplierCalculatedLedger(supplierObj);
 
-    // 1. تحديث إحصائيات الشاشة
     const ledgerTitle = document.getElementById('ledger-supplier-title');
     if (ledgerTitle) ledgerTitle.textContent = `🏭 كشف حساب مورد: ${supplierObj.name}`;
     
@@ -2373,30 +2332,29 @@ window.openSupplierLedger = (supplierName) => {
     const ledgerBalance = document.getElementById('ledger-supplier-balance');
     if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
 
-    // 2. كروت شاشة التطبيق المظلمة
     const cardsList = document.getElementById('supplier-ledger-cards-list');
     if (cardsList) {
       let cardsHtml = '';
 
       if (supplierObj.openingBalance && supplierObj.openingBalance > 0) {
         cardsHtml += `
-          <div class="app-ledger-card opening-balance-card">
-            <div class="alc-info">
-              <strong class="alc-title">رصيد افتتاحي (مستحق سابقة للمورد)</strong>
+          <div class="ledger-item-card">
+            <div class="lic-main">
+              <div class="lic-title">رصيد افتتاحي (مستحق سابقة للمورد)</div>
             </div>
-            <strong class="alc-price text-danger">${supplierObj.openingBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+            <strong class="lic-price text-danger">${supplierObj.openingBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
           </div>
         `;
       }
 
       (stats.supplierPurchases || []).forEach(pur => {
         cardsHtml += `
-          <div class="app-ledger-card invoice-card" onclick="window.viewPurchaseById(${pur.id})" style="cursor:pointer;">
-            <div class="alc-info">
-              <div class="alc-title">فاتورة توريد #${pur.id} <small class="alc-date">(${pur.date || ''})</small></div>
-              <div class="alc-sub">${(pur.items ? pur.items.length : 0)} أصناف - <span class="alc-status ${pur.status === 'مدفوعة' ? 'status-paid' : 'status-unpaid'}">${pur.status}</span></div>
+          <div class="ledger-item-card" onclick="window.viewPurchaseById(${pur.id})" style="cursor:pointer;">
+            <div class="lic-main">
+              <div class="lic-title">فاتورة توريد #${pur.id} <small style="color:#64748b;">(${pur.date || ''})</small></div>
+              <div class="lic-sub">${(pur.items ? pur.items.length : 0)} أصناف - <span style="font-weight:bold;">${pur.status}</span></div>
             </div>
-            <strong class="alc-price">${(pur.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+            <strong class="lic-price">${(pur.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
           </div>
         `;
       });
@@ -2404,26 +2362,25 @@ window.openSupplierLedger = (supplierName) => {
       (stats.payments || []).forEach((p, pIndex) => {
         const safeSupplierName = (supplierObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
         cardsHtml += `
-          <div class="app-ledger-card payment-card">
-            <div class="alc-info">
-              <div class="alc-title text-success">دفعة سداد نقدي للمورد 💵 <small class="alc-date">(${p.date || ''})</small></div>
-              <div class="alc-actions" style="margin-top: 4px;">
+          <div class="ledger-item-card pay-card">
+            <div class="lic-main">
+              <div class="lic-title text-success">دفعة سداد نقدي للمورد 💵 <small style="color:#64748b;">(${p.date || ''})</small></div>
+              <div class="lic-sub" style="margin-top:4px;">
                 <button class="btn-sm" style="background:#f59e0b; color:#fff; padding: 2px 6px;" onclick="event.stopPropagation(); window.editSupplierPayment('${safeSupplierName}', ${pIndex})">✏️</button>
                 <button class="btn-sm" style="background:#ef4444; color:#fff; padding: 2px 6px;" onclick="event.stopPropagation(); window.deleteSupplierPayment('${safeSupplierName}', ${pIndex})">🗑️</button>
               </div>
             </div>
-            <strong class="alc-price text-success">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+            <strong class="lic-price text-success">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
           </div>
         `;
       });
 
-      cardsList.innerHTML = cardsHtml ? cardsHtml : '<p style="text-align:center; color:var(--text-muted); padding:15px;">لا توجد معاملات مسجلة للمورد</p>';
+      cardsList.innerHTML = cardsHtml ? cardsHtml : '<p style="text-align:center; color:#64748b; padding:15px;">لا توجد معاملات مسجلة للمورد</p>';
     }
 
-    // 3. ورقة كشف الحساب A4 المطبوعة
-    const slPrintPurchases = document.getElementById('sl-print-total-purchases') || document.getElementById('sl-print-purchases');
+    const slPrintPurchases = document.getElementById('sl-print-total-purchases');
     if (slPrintPurchases) slPrintPurchases.textContent = `${stats.totalPurchases.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
-    const slPrintPaid = document.getElementById('sl-print-total-paid') || document.getElementById('sl-print-paid');
+    const slPrintPaid = document.getElementById('sl-print-total-paid');
     if (slPrintPaid) slPrintPaid.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
     const slPrintBal = document.getElementById('sl-print-balance');
     if (slPrintBal) slPrintBal.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
@@ -2463,9 +2420,10 @@ window.openSupplierLedger = (supplierName) => {
       if (supplierObj.openingBalance && supplierObj.openingBalance > 0) {
         rowsHtml += `
           <tr>
-            <td>رصيد افتتاحي (مستحق سابقة للمورد)</td>
             <td>-</td>
+            <td>رصيد افتتاحي (مستحق سابقة للمورد)</td>
             <td>${supplierObj.openingBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
+            <td><span style="color:#dc2626; font-weight:bold;">مستحق للمورد</span></td>
           </tr>
         `;
       }
@@ -2473,31 +2431,32 @@ window.openSupplierLedger = (supplierName) => {
       (stats.supplierPurchases || []).forEach(pur => {
         rowsHtml += `
           <tr>
-            <td>فاتورة توريد / مشتريات #${pur.id} (${(pur.items ? pur.items.length : 0)} أصناف - ${pur.status})</td>
             <td>${pur.date || '-'}</td>
+            <td>فاتورة توريد / مشتريات #${pur.id} (${(pur.items ? pur.items.length : 0)} أصناف)</td>
             <td>${(pur.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
+            <td><span style="font-weight:bold; color:${pur.status === 'مدفوعة' ? '#059669' : (pur.status === 'مدفوعة جزئياً' ? '#d97706' : '#dc2626')};">${pur.status}</span></td>
           </tr>
         `;
       });
 
       (stats.payments || []).forEach((p) => {
         rowsHtml += `
-          <tr>
-            <td>دفعة سداد نقدي للمورد 💵</td>
+          <tr style="background-color: #f0fdf4 !important;">
             <td>${p.date || '-'}</td>
+            <td>دفعة سداد نقدي للمورد 💵</td>
             <td style="color:#059669; font-weight:bold;">-${(p.amount || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
+            <td><span style="color:#059669; font-weight:bold;">تم السداد</span></td>
           </tr>
         `;
       });
 
-      tableBody.innerHTML = rowsHtml ? rowsHtml : '<tr><td colspan="3" style="text-align:center;">لا توجد معاملات مسجلة للمورد</td></tr>';
+      tableBody.innerHTML = rowsHtml ? rowsHtml : '<tr><td colspan="4" style="text-align:center; color:#6b7280;">لا توجد معاملات مسجلة للمورد</td></tr>';
     }
 
     const ledgerModal = document.getElementById('supplier-ledger-modal');
     if (ledgerModal) ledgerModal.classList.remove('hidden');
   } catch (err) {
     console.error("Error in openSupplierLedger:", err);
-    alert('حدث خطأ أثناء فتح كشف الحساب: ' + err.message);
   }
 };
 
@@ -2604,8 +2563,6 @@ if (ledgerSupplierDownloadBtn) {
     const ledgerCard = document.getElementById('supplier-ledger-printable-card');
     if (ledgerCard && typeof html2canvas !== 'undefined') {
       try {
-        ledgerCard.classList.add('rendering-active');
-
         const canvas = await html2canvas(ledgerCard, { 
           scale: 2, 
           backgroundColor: '#ffffff', 
@@ -2614,14 +2571,12 @@ if (ledgerSupplierDownloadBtn) {
         });
 
         const dataUrl = canvas.toDataURL('image/png');
-        const fileName = `كشف_حساب_مورد_${activeLedgerSupplierName || 'Supplier'}.png`;
+        const fileName = `Supplier_Statement_${activeLedgerSupplierName || 'Supplier'}_${Date.now()}.png`;
 
         await saveOrShareFile(dataUrl, fileName, 'image/png', `كشف حساب المورد: ${activeLedgerSupplierName}`);
       } catch (err) {
         console.error("Supplier Ledger Image Error:", err);
         alert("حدث خطأ أثناء تنزيل الصورة.");
-      } finally {
-        ledgerCard.classList.remove('rendering-active');
       }
     }
   });
@@ -2631,7 +2586,7 @@ const ledgerSupplierPrintBtn = document.getElementById('ledger-supplier-print-bt
 if (ledgerSupplierPrintBtn) {
   ledgerSupplierPrintBtn.addEventListener('click', async () => {
     if (!activeLedgerSupplierName) return;
-    await generateAndExportPdf('supplier-ledger-printable-card', `كشف_حساب_مورد_${activeLedgerSupplierName}.pdf`, `كشف حساب المورد: ${activeLedgerSupplierName}`);
+    await generateAndExportPdf('supplier-ledger-printable-card', `Supplier_Statement_${activeLedgerSupplierName}.pdf`, `كشف حساب المورد: ${activeLedgerSupplierName}`);
   });
 }
 
@@ -2990,8 +2945,6 @@ if (supplierDownloadImgBtn) {
     const previewCard = document.getElementById('supplier-invoice-card-preview');
     if (previewCard && typeof html2canvas !== 'undefined') {
       try {
-        previewCard.classList.add('rendering-active');
-
         const canvas = await html2canvas(previewCard, { 
           scale: 2, 
           useCORS: true, 
@@ -3006,8 +2959,6 @@ if (supplierDownloadImgBtn) {
         await saveOrShareFile(dataUrl, fileName, 'image/png', 'فاتورة المشتريات والتوريد');
       } catch (err) {
         console.error("Supplier Image Error:", err);
-      } finally {
-        previewCard.classList.remove('rendering-active');
       }
     }
   });
