@@ -93,7 +93,6 @@ jobs:
 
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
               <queries>
                   <package android:name="com.whatsapp" />
@@ -175,7 +174,7 @@ jobs:
             cp signing.keystore android/app/
           fi
 
-          # 9. إعداد Gradle للتوقيع وضبط إصدار الجافا لـ 21
+          # 9. إعداد Gradle للتوقيع وضبط إصدار الجافا لـ 21 وتحديد رقم الإصدار الجديد
           cat << EOF >> android/app/build.gradle
 
           android {
@@ -183,8 +182,8 @@ jobs:
                   applicationId "io.github.karamegy.Ton2"
                   minSdk 24
                   targetSdk 36
-                  versionCode 80006
-                  versionName "8.0.0.6"
+                  versionCode 80007
+                  versionName "8.0.0.7"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_21
