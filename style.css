@@ -295,7 +295,7 @@ input:focus, select:focus {
   padding: 6px 10px; min-height: 36px; border-radius: 8px; font-size: 0.85rem; background: var(--input-bg);
 }
 
-.item-total-text { font-weight: 800; color: var(--accent); font-size: 0.9rem; text-align: center; display: block; }
+.item-total-text, .p-item-total-text { font-weight: 800; color: var(--accent); font-size: 0.9rem; text-align: center; display: block; }
 
 .btn-add-row {
   width: 100%; margin-top: 8px; padding: 10px; background: rgba(99, 102, 241, 0.08);
@@ -328,16 +328,16 @@ input:focus, select:focus {
   }
 
   .modern-items-table td:nth-child(1) { margin-bottom: 8px; padding-left: 35px !important; }
-  .modern-items-table td:nth-child(2), .modern-items-table td:nth-child(3) {
+  .modern-items-table td:nth-child(2), .modern-items-table td:nth-child(3), .modern-items-table td:nth-child(4) {
     display: inline-block; width: 48%; margin-bottom: 6px;
   }
-  .modern-items-table td:nth-child(4) {
+  .modern-items-table td:nth-child(5) {
     display: flex; justify-content: space-between; align-items: center;
     background: var(--input-bg) !important; padding: 8px 10px !important; border-radius: 8px !important;
     margin-top: 4px;
   }
-  .modern-items-table td:nth-child(4)::before { content: "الإجمالي للصنف:"; font-size: 0.75rem; color: var(--text-muted); }
-  .modern-items-table td:nth-child(5) { position: absolute; top: 10px; left: 10px; width: auto; }
+  .modern-items-table td:nth-child(5)::before { content: "الإجمالي للصنف:"; font-size: 0.75rem; color: var(--text-muted); }
+  .modern-items-table td:last-child { position: absolute; top: 10px; left: 10px; width: auto; }
 }
 
 /* Live Summary Box */
@@ -399,7 +399,7 @@ button {
 
 /* Lists & Modals Overlay */
 .list-container { max-height: 420px; overflow-y: auto; }
-#invoices-container, #products-list-container, #clients-list-container, #expenses-list-container { list-style: none; }
+#invoices-container, #products-list-container, #clients-list-container, #suppliers-list-container, #purchases-list-container, #expenses-list-container { list-style: none; }
 li {
   background: var(--input-bg); padding: 12px 14px; border-radius: 12px; margin-bottom: 8px;
   display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); font-size: 0.85rem;
@@ -479,11 +479,7 @@ li:hover {
 .preview-footer-container, .print-footer-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; gap: 10px; }
 .qrcode-wrapper { background: #ffffff; padding: 6px; border-radius: 6px; display: inline-block; }
 
-.modal-actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
-.ledger-summary-card { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; background: var(--input-bg); padding: 12px; border-radius: 12px; text-align: center; font-size: 0.75rem; margin-bottom: 14px; border: 1px solid var(--border-color); }
-.ledger-summary-card strong { display: block; font-size: 0.95rem; margin-top: 4px; }
-.pay-section { background: rgba(16, 185, 129, .05); padding: 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 14px; }
+.modal-actions-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 
 .sub-text { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; word-break: break-all; }
 
@@ -555,72 +551,218 @@ li:hover {
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-.toast-container {
-  position: fixed; bottom: 20px; right: 20px; z-index: 10000;
-  display: flex; flex-direction: column; gap: 10px; pointer-events: none;
-}
-.toast {
-  background: var(--card-bg); color: var(--text-main);
-  border: 1px solid var(--card-border); padding: 12px 18px;
-  border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 10px;
-  pointer-events: auto;
-  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+/* ==========================================================
+   كشف حساب العميل والمورد - واجهة الموبايل التفاعلية المظلمة
+   ========================================================== */
+.ledger-screen-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+  overflow-y: auto;
+  max-height: 65vh;
+  padding-right: 2px;
 }
 
-@keyframes skeletonPulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-  100% { opacity: 0.4; }
+.ledger-stats-card {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: var(--input-bg);
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  text-align: center;
 }
-.skeleton-loader {
-  background: var(--border-color);
-  border-radius: 8px;
-  animation: skeletonPulse 1.5s infinite ease-in-out;
+
+.l-stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.l-stat-box span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.l-stat-box strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin-top: 2px;
+  color: var(--text-main);
+}
+
+.pay-section-modal {
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.pay-section-modal label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--success);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.pay-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pay-input-group input {
+  flex: 1;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.btn-pay-submit {
+  background: var(--success);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-weight: 800;
+  font-size: 0.88rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+
+.btn-pay-submit:hover {
+  opacity: 0.9;
+}
+
+.ledger-cards-heading {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 4px 0 2px 0;
+}
+
+.ledger-cards-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-left: 2px;
+}
+
+/* كروت الفواتير والدفعات التفاعلية داخل كشف الحساب */
+.app-ledger-card,
+.ledger-item-card {
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-right: 4px solid var(--accent);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.app-ledger-card:hover,
+.ledger-item-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.app-ledger-card.pay-card,
+.ledger-item-card.pay-card,
+.app-ledger-card.payment-card {
+  border-right-color: var(--success);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.app-ledger-card.opening-balance-card {
+  border-right-color: var(--danger);
+}
+
+.alc-info,
+.lic-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.alc-title,
+.lic-title {
+  font-weight: 800;
+  font-size: 0.88rem;
+  color: var(--text-main);
+}
+
+.alc-date {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.alc-sub,
+.lic-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.alc-status.status-paid {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.alc-status.status-unpaid {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.alc-price,
+.lic-price {
+  font-weight: 900;
+  font-size: 0.98rem;
+  color: var(--text-main);
+  white-space: nowrap;
 }
 
 /* ==========================================================
    تنسيق كروت الطباعة والتصدير الورقية (White Printable Cards)
    ========================================================== */
-
 .printable-white-card,
 .invoice-card-preview,
 #invoice-card-preview,
-#supplier-invoice-card-preview,
-#ledger-printable-card,
-#supplier-ledger-printable-card {
+#supplier-invoice-card-preview {
   background-color: #ffffff !important;
   color: #000000 !important;
   border: 1px solid #d1d5db !important;
   box-shadow: none !important;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
-  
-  /* تفعيل التمرير العمودي فقط داخل الكرت الناصع البياض */
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
 }
 
-/* ضبط ألوان النصوص الأساسية واستثناء الألوان التنبيهية (الأخضر والأحمر) */
 .printable-white-card *:not(.text-success):not(.text-danger),
-.invoice-card-preview *:not(.text-success):not(.text-danger),
-#ledger-printable-card *:not(.text-success):not(.text-danger),
-#supplier-ledger-printable-card *:not(.text-success):not(.text-danger) {
+.invoice-card-preview *:not(.text-success):not(.text-danger) {
   color: #1f2937 !important;
   text-shadow: none !important;
 }
 
-/* محاذاة الجداول الرسمية في كشوف الحساب والمعاينة */
 .printable-white-card table,
-.invoice-card-preview table,
-#ledger-printable-card table,
-#supplier-ledger-printable-card table {
+.invoice-card-preview table {
   width: 100% !important;
   border-collapse: collapse !important;
   margin: 12px 0 !important;
@@ -630,11 +772,7 @@ li:hover {
 .printable-white-card th,
 .printable-white-card td,
 .invoice-card-preview th,
-.invoice-card-preview td,
-#ledger-printable-card th,
-#ledger-printable-card td,
-#supplier-ledger-printable-card th,
-#supplier-ledger-printable-card td {
+.invoice-card-preview td {
   border: 1px solid #d1d5db !important;
   padding: 8px 6px !important;
   background-color: #ffffff !important;
@@ -642,12 +780,148 @@ li:hover {
 }
 
 .printable-white-card th,
-.invoice-card-preview th,
-#ledger-printable-card th,
-#supplier-ledger-printable-card th {
+.invoice-card-preview th {
   background-color: #f3f4f6 !important;
   font-weight: 800 !important;
   color: #111827 !important;
+}
+
+/* ==========================================================
+   كشف حساب عميل / مورد المطبوع ورقة A4 البيضاء الرسمية
+   ========================================================== */
+.a4-printable-document,
+#ledger-printable-card,
+#supplier-ledger-printable-card {
+  display: none; /* مخفي في الشاشة العادية للحفاظ على مظهر الموبايل الداكن */
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  padding: 24px !important;
+  font-family: 'Cairo', sans-serif !important;
+  direction: rtl !important;
+  text-align: right !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.a4-printable-document.rendering-active,
+#ledger-printable-card.rendering-active,
+#supplier-ledger-printable-card.rendering-active {
+  display: block !important;
+  position: absolute !important;
+  left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
+  top: 0 !important;
+  width: 750px !important;
+}
+
+.a4-header-center {
+  text-align: center !important;
+  border-bottom: 2px solid #e5e7eb !important;
+  padding-bottom: 12px !important;
+  margin-bottom: 14px !important;
+}
+
+.a4-store-title {
+  font-size: 1.4rem !important;
+  font-weight: 900 !important;
+  color: #111827 !important;
+  margin: 4px 0 !important;
+}
+
+.a4-store-sub {
+  font-size: 0.82rem !important;
+  color: #4b5563 !important;
+  margin: 2px 0 !important;
+}
+
+.a4-doc-title {
+  display: inline-block !important;
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  padding: 6px 20px !important;
+  border-radius: 6px !important;
+  font-size: 1.1rem !important;
+  font-weight: 900 !important;
+  margin-top: 10px !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.a4-client-details {
+  display: flex !important;
+  justify-content: space-between !important;
+  margin-bottom: 14px !important;
+  font-size: 0.9rem !important;
+  color: #1f2937 !important;
+  background: #f9fafb !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.a4-summary-table-box {
+  background: #f9fafb !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 10px !important;
+  padding: 12px 16px !important;
+  margin-bottom: 16px !important;
+  display: flex !important;
+  justify-content: space-around !important;
+  text-align: center !important;
+}
+
+.a4-sum-row {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.a4-sum-row span {
+  font-size: 0.8rem !important;
+  color: #6b7280 !important;
+  font-weight: 700 !important;
+}
+
+.a4-sum-row strong {
+  font-size: 1.1rem !important;
+  font-weight: 900 !important;
+  color: #111827 !important;
+}
+
+.a4-sum-row.highlight-bal strong {
+  color: #dc2626 !important;
+}
+
+.a4-section-title {
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+  color: #111827 !important;
+  margin-bottom: 8px !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  padding-bottom: 4px !important;
+}
+
+.a4-official-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-top: 8px !important;
+}
+
+.a4-official-table th {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+  font-weight: 800 !important;
+  font-size: 0.85rem !important;
+  padding: 8px !important;
+  border: 1px solid #d1d5db !important;
+  text-align: right !important;
+}
+
+.a4-official-table td {
+  padding: 8px !important;
+  border: 1px solid #d1d5db !important;
+  font-size: 0.85rem !important;
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+  text-align: right !important;
 }
 
 /* ==========================================================
@@ -659,32 +933,25 @@ li:hover {
     margin: 10mm 12mm;
   }
 
-  /* إلغاء قيود التمرير والارتفاع عند الطباعة لتظهر جميع الفواتير كاملة */
-  .modal-content,
-  .ledger-modal-content,
-  .preview-modal-content,
-  .printable-white-card,
-  .invoice-card-preview {
-    max-height: none !important;
-    overflow: visible !important;
-    height: auto !important;
-  }
-
   body * {
     visibility: hidden !important;
   }
   
-  /* إظهار بطاقات المعاينة المطبوعة فقط (عملاء / موردين / فواتير) */
+  /* إظهار بطاقات المعاينة المطبوعة فقط */
   .modal:not(.hidden) .printable-white-card, 
   .modal:not(.hidden) .printable-white-card *,
   .modal:not(.hidden) .invoice-card-preview,
-  .modal:not(.hidden) .invoice-card-preview * {
+  .modal:not(.hidden) .invoice-card-preview *,
+  .modal:not(.hidden) .a4-printable-document,
+  .modal:not(.hidden) .a4-printable-document * {
     visibility: visible !important;
   }
 
   /* ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
   .modal:not(.hidden) .printable-white-card,
-  .modal:not(.hidden) .invoice-card-preview {
+  .modal:not(.hidden) .invoice-card-preview,
+  .modal:not(.hidden) .a4-printable-document {
+    display: block !important;
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
@@ -694,6 +961,8 @@ li:hover {
     padding: 10px !important;
     box-shadow: none !important;
     border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
 
   /* إخفاء الأزرار وعناصر التحكم أثناء التصدير والطباعة */
@@ -703,6 +972,7 @@ li:hover {
   .modal-actions-row,
   .pay-section,
   .pay-section-modal,
+  .ledger-screen-view,
   .btn-close {
     display: none !important;
   }
