@@ -17,9 +17,6 @@ import {
 // ==========================================
 const isCapacitorNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
 
-/**
- * دالة حفظ وتصدير الملفات الموحدة (أندرويد Native ومتصفح)
- */
 async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle) {
   try {
     let base64Data = '';
@@ -99,9 +96,6 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
   }
 }
 
-/**
- * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية A4 مع معالجة حماية أبعاد العناصر المقصوصة
- */
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
   if (!element) return false;
@@ -1232,6 +1226,56 @@ if (whatsappBtn) {
 
 let currentActiveInvoiceForPreview = null;
 
+function populatePrintableInvoice(inv) {
+  const prLogo = document.getElementById('pr-v-logo');
+  if (prLogo) {
+    if (storeProfile.logo) {
+      prLogo.src = storeProfile.logo;
+      prLogo.classList.remove('hidden');
+    } else {
+      prLogo.classList.add('hidden');
+    }
+  }
+
+  const prStoreName = document.getElementById('pr-v-store-name');
+  if (prStoreName) prStoreName.textContent = storeProfile.name;
+  const prStorePhone = document.getElementById('pr-v-store-phone');
+  if (prStorePhone) prStorePhone.textContent = storeProfile.phone ? `هاتف: ${storeProfile.phone}` : '';
+  const prStoreVat = document.getElementById('pr-v-store-vat');
+  if (prStoreVat) prStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+  const prStoreAddress = document.getElementById('pr-v-store-address');
+  if (prStoreAddress) prStoreAddress.textContent = storeProfile.address ? `العنوان: ${storeProfile.address}` : '';
+
+  const prInvId = document.getElementById('pr-v-inv-id');
+  if (prInvId) prInvId.textContent = `#${inv.id}`;
+  const prDate = document.getElementById('pr-v-date');
+  if (prDate) prDate.textContent = inv.date;
+  const prClientName = document.getElementById('pr-v-client-name');
+  if (prClientName) prClientName.textContent = inv.client;
+  const prClientPhone = document.getElementById('pr-v-client-phone');
+  if (prClientPhone) prClientPhone.textContent = inv.phone ? inv.phone : '-';
+  const prPaymentStatus = document.getElementById('pr-v-payment-status');
+  if (prPaymentStatus) prPaymentStatus.textContent = inv.status;
+
+  const prSubtotal = document.getElementById('pr-v-subtotal');
+  if (prSubtotal) prSubtotal.textContent = `${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}`;
+  const prDiscount = document.getElementById('pr-v-discount');
+  if (prDiscount) prDiscount.textContent = `${(inv.discount ? inv.discount : 0).toFixed(2)} ${storeProfile.currency}`;
+  const prTax = document.getElementById('pr-v-tax');
+  if (prTax) prTax.textContent = `${inv.taxPercent ? inv.taxPercent : 0}%`;
+  const prTotal = document.getElementById('pr-v-total');
+  if (prTotal) prTotal.textContent = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+
+  const prItemsBody = document.getElementById('pr-v-items-body');
+  if (prItemsBody) {
+    prItemsBody.innerHTML = (inv.items ? inv.items : []).map(item => `
+      <tr><td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td>${(item.qty * item.price).toFixed(2)}</td></tr>
+    `).join('');
+  }
+
+  renderQrCode('pr-preview-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
+}
+
 function openInvoicePreview(inv) {
   currentActiveInvoiceForPreview = inv;
   
@@ -1283,6 +1327,8 @@ function openInvoicePreview(inv) {
   }
 
   renderQrCode('preview-qrcode', inv.zatcaQr ? inv.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, inv.isoTime ? inv.isoTime : new Date().toISOString(), inv.grandTotal, inv.taxAmount ? inv.taxAmount : 0));
+  
+  populatePrintableInvoice(inv);
 }
 
 const closeViewBtn = document.getElementById('close-view-btn');
@@ -1299,8 +1345,9 @@ if (closeViewBtn) {
 const downloadImgBtn = document.getElementById('download-img-btn');
 if (downloadImgBtn) {
   downloadImgBtn.addEventListener('click', async () => {
-    const previewCard = document.getElementById('invoice-card-preview');
-    if (!previewCard) return;
+    if (!currentActiveInvoiceForPreview) return;
+    const printableCard = document.getElementById('invoice-printable-card');
+    if (!printableCard) return;
 
     if (typeof html2canvas === 'undefined') {
       alert('مكتبة معالجة الصور جاري تحميلها، يرجى إعادة المحاولة.');
@@ -1311,16 +1358,22 @@ if (downloadImgBtn) {
       downloadImgBtn.disabled = true;
       downloadImgBtn.textContent = 'جاري التجهيز... ⏳';
 
-      const canvas = await html2canvas(previewCard, { 
+      populatePrintableInvoice(currentActiveInvoiceForPreview);
+      printableCard.classList.add('rendering-active');
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      const canvas = await html2canvas(printableCard, { 
         scale: 2, 
         useCORS: true, 
         allowTaint: false, 
         backgroundColor: '#ffffff',
+        width: 794,
+        windowWidth: 794,
         logging: false 
       });
 
       const dataUrl = canvas.toDataURL('image/png');
-      const fileName = `E-Invoice_${currentActiveInvoiceForPreview ? currentActiveInvoiceForPreview.id : Date.now()}.png`;
+      const fileName = `E-Invoice_${currentActiveInvoiceForPreview.id}.png`;
 
       await saveOrShareFile(dataUrl, fileName, 'image/png', 'الفاتورة الإلكترونية');
 
@@ -1328,6 +1381,7 @@ if (downloadImgBtn) {
       console.error("HTML2Canvas Render Error:", err);
       alert('حدث خطأ أثناء استخراج الصورة.');
     } finally {
+      if (printableCard) printableCard.classList.remove('rendering-active');
       downloadImgBtn.disabled = false;
       downloadImgBtn.textContent = translations[currentLang]?.downloadImg || 'حفظ كصورة 🖼️';
     }
@@ -1338,7 +1392,8 @@ const printViewBtn = document.getElementById('print-view-btn');
 if (printViewBtn) {
   printViewBtn.addEventListener('click', async () => {
     if (currentActiveInvoiceForPreview) {
-      await generateAndExportPdf('invoice-card-preview', `Invoice_${currentActiveInvoiceForPreview.id}.pdf`, `فاتورة مبيعات #${currentActiveInvoiceForPreview.id}`);
+      populatePrintableInvoice(currentActiveInvoiceForPreview);
+      await generateAndExportPdf('invoice-printable-card', `Invoice_${currentActiveInvoiceForPreview.id}.pdf`, `فاتورة مبيعات #${currentActiveInvoiceForPreview.id}`);
     }
   });
 }
@@ -1349,14 +1404,14 @@ if (printBtn) {
     const inv = await saveInvoiceData();
     if (inv) {
       openInvoicePreview(inv);
-      await generateAndExportPdf('invoice-card-preview', `Invoice_${inv.id}.pdf`, `فاتورة مبيعات #${inv.id}`);
+      await generateAndExportPdf('invoice-printable-card', `Invoice_${inv.id}.pdf`, `فاتورة مبيعات #${inv.id}`);
     }
   });
 }
 
 function printInvoice(inv) {
   openInvoicePreview(inv);
-  generateAndExportPdf('invoice-card-preview', `Invoice_${inv.id}.pdf`, `فاتورة مبيعات #${inv.id}`);
+  generateAndExportPdf('invoice-printable-card', `Invoice_${inv.id}.pdf`, `فاتورة مبيعات #${inv.id}`);
 }
 
 window.editInvoiceById = (id) => {
@@ -2782,6 +2837,15 @@ window.updatePurchaseItem = (index, key, val) => {
     activePurchaseItems[index][key] = parseFloat(val) ? parseFloat(val) : 0;
   }
   calculatePurchaseTotals();
+  if (purchaseItemsBody) {
+    const rows = purchaseItemsBody.querySelectorAll('tr');
+    if (rows[index] && activePurchaseItems[index]) {
+      const totalSpan = rows[index].querySelector('.p-item-total-text');
+      if (totalSpan) {
+        totalSpan.textContent = (((activePurchaseItems[index].qty ? activePurchaseItems[index].qty : 0)) * ((activePurchaseItems[index].cost ? activePurchaseItems[index].cost : 0))).toFixed(2);
+      }
+    }
+  }
 };
 
 window.removePurchaseItem = (index) => {
@@ -2930,6 +2994,50 @@ function renderPurchases() {
 
 let currentActivePurchaseForPreview = null;
 
+function populatePrintableSupplierInvoice(pur) {
+  const prLogo = document.getElementById('pr-sv-logo');
+  if (prLogo) {
+    if (storeProfile.logo) {
+      prLogo.src = storeProfile.logo;
+      prLogo.classList.remove('hidden');
+    } else {
+      prLogo.classList.add('hidden');
+    }
+  }
+
+  const prStoreName = document.getElementById('pr-sv-store-name');
+  if (prStoreName) prStoreName.textContent = storeProfile.name;
+  const prStorePhone = document.getElementById('pr-sv-store-phone');
+  if (prStorePhone) prStorePhone.textContent = storeProfile.phone ? `هاتف: ${storeProfile.phone}` : '';
+  const prStoreVat = document.getElementById('pr-sv-store-vat');
+  if (prStoreVat) prStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
+  const prStoreAddress = document.getElementById('pr-sv-store-address');
+  if (prStoreAddress) prStoreAddress.textContent = storeProfile.address ? `العنوان: ${storeProfile.address}` : '';
+
+  const prInvId = document.getElementById('pr-sv-inv-id');
+  if (prInvId) prInvId.textContent = `#${pur.id}`;
+  const prDate = document.getElementById('pr-sv-date');
+  if (prDate) prDate.textContent = pur.date;
+  const prSupplierName = document.getElementById('pr-sv-supplier-name');
+  if (prSupplierName) prSupplierName.textContent = pur.supplier;
+  const prSupplierPhone = document.getElementById('pr-sv-supplier-phone');
+  if (prSupplierPhone) prSupplierPhone.textContent = pur.phone ? pur.phone : '-';
+  const prPaymentStatus = document.getElementById('pr-sv-payment-status');
+  if (prPaymentStatus) prPaymentStatus.textContent = pur.status;
+
+  const prTotal = document.getElementById('pr-sv-total');
+  if (prTotal) prTotal.textContent = `${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+
+  const prItemsBody = document.getElementById('pr-sv-items-body');
+  if (prItemsBody) {
+    prItemsBody.innerHTML = (pur.items ? pur.items : []).map(item => `
+      <tr><td>${item.name}</td><td>${item.qty}</td><td>${(item.cost ? item.cost : 0).toFixed(2)}</td><td>${(item.qty * (item.cost ? item.cost : 0)).toFixed(2)}</td></tr>
+    `).join('');
+  }
+
+  renderQrCode('pr-supplier-preview-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
+}
+
 function openSupplierInvoicePreview(pur) {
   currentActivePurchaseForPreview = pur;
   const modal = document.getElementById('supplier-view-modal');
@@ -2977,6 +3085,8 @@ function openSupplierInvoicePreview(pur) {
   }
 
   renderQrCode('supplier-preview-qrcode', pur.zatcaQr ? pur.zatcaQr : generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, pur.isoTime ? pur.isoTime : new Date().toISOString(), pur.grandTotal, 0));
+  
+  populatePrintableSupplierInvoice(pur);
 }
 
 const closeSupplierViewBtn = document.getElementById('close-supplier-view-btn');
@@ -2990,23 +3100,37 @@ if (closeSupplierViewBtn) {
 const supplierDownloadImgBtn = document.getElementById('supplier-download-img-btn');
 if (supplierDownloadImgBtn) {
   supplierDownloadImgBtn.addEventListener('click', async () => {
-    const previewCard = document.getElementById('supplier-invoice-card-preview');
-    if (previewCard && typeof html2canvas !== 'undefined') {
+    if (!currentActivePurchaseForPreview) return;
+    const printableCard = document.getElementById('supplier-printable-card');
+    if (printableCard && typeof html2canvas !== 'undefined') {
       try {
-        const canvas = await html2canvas(previewCard, { 
+        supplierDownloadImgBtn.disabled = true;
+        supplierDownloadImgBtn.textContent = 'جاري التجهيز... ⏳';
+
+        populatePrintableSupplierInvoice(currentActivePurchaseForPreview);
+        printableCard.classList.add('rendering-active');
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        const canvas = await html2canvas(printableCard, { 
           scale: 2, 
           useCORS: true, 
           allowTaint: false, 
           backgroundColor: '#ffffff',
+          width: 794,
+          windowWidth: 794,
           logging: false 
         });
 
         const dataUrl = canvas.toDataURL('image/png');
-        const fileName = `Purchase_Invoice_${currentActivePurchaseForPreview ? currentActivePurchaseForPreview.id : Date.now()}.png`;
+        const fileName = `Purchase_Invoice_${currentActivePurchaseForPreview.id}.png`;
 
         await saveOrShareFile(dataUrl, fileName, 'image/png', 'فاتورة المشتريات والتوريد');
       } catch (err) {
         console.error("Supplier Image Error:", err);
+      } finally {
+        if (printableCard) printableCard.classList.remove('rendering-active');
+        supplierDownloadImgBtn.disabled = false;
+        supplierDownloadImgBtn.textContent = 'تحميل كصورة 🖼️';
       }
     }
   });
@@ -3016,14 +3140,15 @@ const supplierPrintViewBtn = document.getElementById('supplier-print-view-btn');
 if (supplierPrintViewBtn) {
   supplierPrintViewBtn.addEventListener('click', async () => {
     if (currentActivePurchaseForPreview) {
-      await generateAndExportPdf('supplier-invoice-card-preview', `Purchase_Invoice_${currentActivePurchaseForPreview.id}.pdf`, `فاتورة توريد #${currentActivePurchaseForPreview.id}`);
+      populatePrintableSupplierInvoice(currentActivePurchaseForPreview);
+      await generateAndExportPdf('supplier-printable-card', `Purchase_Invoice_${currentActivePurchaseForPreview.id}.pdf`, `فاتورة توريد #${currentActivePurchaseForPreview.id}`);
     }
   });
 }
 
 function printPurchaseInvoice(pur) {
   openSupplierInvoicePreview(pur);
-  generateAndExportPdf('supplier-invoice-card-preview', `Purchase_Invoice_${pur.id}.pdf`, `فاتورة توريد #${pur.id}`);
+  generateAndExportPdf('supplier-printable-card', `Purchase_Invoice_${pur.id}.pdf`, `فاتورة توريد #${pur.id}`);
 }
 
 function sendSupplierWhatsApp(pur) {
