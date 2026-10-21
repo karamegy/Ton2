@@ -985,15 +985,4 @@ li:hover {
   .btn-close {
     display: none !important;
   }
-}
-
-/* ==========================================================
-   تقليل حجم إطار نافذة إعدادات المنشأة والعملة حصراً
-   ========================================================== */
-#settings-modal .modal-content,
-#settingsModal .modal-content,
-.settings-modal .modal-content,
-.settings-modal-content {
-  max-width: 400px;
-  padding: 14px;
-}
+  }
