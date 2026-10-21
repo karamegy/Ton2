@@ -322,7 +322,7 @@
       </div>
     </section>
 
-    <!-- تبويب الموردين والشركات المطور -->
+    <!-- تبويب الموردين والشركات -->
     <section id="tab-suppliers" class="tab-content">
       <div class="dashboard-grid">
         <div class="card">
@@ -571,11 +571,11 @@
         <div class="a4-summary-table-box">
           <div class="a4-sum-row">
             <span>إجمالي التعاملات:</span>
-            <strong id="cl-print-sales">0.00 ج.م</strong>
+            <strong id="cl-print-total-sales">0.00 ج.م</strong>
           </div>
           <div class="a4-sum-row">
             <span>إجمالي المدفوعات:</span>
-            <strong id="cl-print-paid">0.00 ج.م</strong>
+            <strong id="cl-print-total-paid">0.00 ج.م</strong>
           </div>
           <div class="a4-sum-row highlight-bal">
             <span>الرصيد المتبقي / المديونية:</span>
@@ -588,8 +588,8 @@
         <table class="a4-official-table">
           <thead>
             <tr>
-              <th style="width: 50%;">بيان المعاملة</th>
               <th style="width: 25%;">التاريخ</th>
+              <th style="width: 50%;">بيان المعاملة</th>
               <th style="width: 25%;">المبلغ</th>
             </tr>
           </thead>
@@ -607,17 +607,38 @@
         <h3 id="ledger-supplier-title">🏭 كشف حساب مورد</h3>
         <button id="close-supplier-ledger-btn" class="btn-close">✕</button>
       </div>
-      
-      <div class="pay-section-modal">
-        <label>تسجيل دفعة سداد نقدي للمورد</label>
-        <div class="pay-input-group">
-          <input type="number" id="supplier-pay-amount-input" placeholder="أدخل المبلغ...">
-          <button id="submit-supplier-payment-btn" class="btn-success">سداد للمورد 💵</button>
+
+      <!-- واجهة شاشة الموبايل المظلمة للمورد -->
+      <div class="ledger-screen-view">
+        <div class="ledger-stats-card">
+          <div class="l-stat-box">
+            <span>إجمالي المشتريات:</span>
+            <strong id="ledger-supplier-total-purchases">0.00 ج.م</strong>
+          </div>
+          <div class="l-stat-box">
+            <span>المسدد للمورد:</span>
+            <strong id="ledger-supplier-total-paid" class="text-success">0.00 ج.م</strong>
+          </div>
+          <div class="l-stat-box">
+            <span>الصافي / المستحق:</span>
+            <strong id="ledger-supplier-balance" class="text-danger">0.00 ج.م</strong>
+          </div>
         </div>
+
+        <div class="pay-section-modal">
+          <label>تسجيل دفعة سداد نقدي للمورد</label>
+          <div class="pay-input-group">
+            <input type="number" id="supplier-pay-amount-input" placeholder="أدخل المبلغ...">
+            <button id="submit-supplier-payment-btn" class="btn-success">سداد للمورد 💵</button>
+          </div>
+        </div>
+
+        <h4 class="ledger-cards-heading">سجل حركة التوريد والدفعات:</h4>
+        <div id="supplier-ledger-cards-list" class="ledger-cards-scroll"></div>
       </div>
 
-      <!-- كشف حساب المورد المطبوع كفاتورة بيضاء رسمية -->
-      <div id="supplier-ledger-printable-card" class="printable-white-card">
+      <!-- كشف حساب المورد المطبوع كفاتورة بيضاء رسمية A4 -->
+      <div id="supplier-ledger-printable-card" class="a4-printable-document printable-white-card">
         <div style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 12px;">
           <img id="sl-logo" class="preview-logo hidden" alt="Logo" style="max-height: 55px; margin-bottom: 5px;">
           <h2 id="sl-store-name" style="margin:0; font-size: 1.4rem; color:#111827; font-weight: 800;">اسم المنشأة</h2>
@@ -650,7 +671,7 @@
         </div>
 
         <h4 style="margin: 10px 0 8px 0; color:#111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">جدول حركة التوريدات والدفعات:</h4>
-        <table style="width:100%; border-collapse:collapse;">
+        <table style="width:100%; border-collapse:collapse;" class="a4-official-table">
           <thead>
             <tr>
               <th style="width: 20%;">التاريخ</th>
@@ -842,11 +863,9 @@
     </div>
   </div>
 
-  <!-- قالب الطباعة -->
   <div id="print-template" class="print-only"></div>
 
-  <!-- استدعاء جسر كاباسيتور والأنظمة -->
   <script src="capacitor.js"></script>
   <script type="module" src="app.js"></script>
 </body>
-</html>
+      </html>
