@@ -455,6 +455,32 @@ li:hover {
 .ledger-modal-content { max-width: 750px !important; }
 .preview-modal-content { max-width: 520px !important; }
 
+/* ==========================================================
+   تصغير نافذة إعدادات المنشأة والعملة وتفعيل التمرير العمودي
+   ========================================================== */
+#settings-modal .modal-content {
+  max-height: 85vh !important;
+  overflow-y: auto !important;
+  padding: 14px 16px !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+#settings-modal .modal-header h3 {
+  font-size: 0.95rem !important;
+}
+
+#settings-modal .form-group label {
+  font-size: 0.72rem !important;
+  margin-bottom: 3px !important;
+}
+
+#settings-modal input,
+#settings-modal select {
+  padding: 6px 10px !important;
+  min-height: 36px !important;
+  font-size: 0.82rem !important;
+}
+
 @keyframes modalPop {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
