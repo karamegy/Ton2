@@ -692,7 +692,7 @@
     </table>
   </div>
 
-  <!-- Modal معاينة الفاتورة الإلكترونية -->
+  <!-- Modal معاينة الفاتورة الإلكترونية (تبقى المعاينة المباشرة بنفس تصميم واجهة التطبيق الأصلية) -->
   <div id="view-modal" class="modal hidden">
     <div class="modal-content preview-modal-content">
       <div class="modal-header">
@@ -744,6 +744,52 @@
     </div>
   </div>
 
+  <!-- العنصر الورقي الأبيض المجمّع A4 لتصدير صورة وتحميل الفاتورة دون التأثير على شكل المعاينة -->
+  <div id="invoice-printable-card" class="a4-printable-document printable-white-card">
+    <div class="a4-header-center">
+      <img id="pr-v-logo" class="preview-logo hidden" alt="Logo">
+      <h2 id="pr-v-store-name" class="a4-store-title">اسم المنشأة</h2>
+      <p id="pr-v-store-phone" class="a4-store-sub"></p>
+      <p id="pr-v-store-vat" class="a4-store-sub"></p>
+      <p id="pr-v-store-address" class="a4-store-sub"></p>
+      <h3 class="a4-doc-title">فاتورة مبيعات</h3>
+    </div>
+
+    <div class="a4-client-details" style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+      <div>
+        <p><strong>العميل:</strong> <span id="pr-v-client-name"></span></p>
+        <p><strong>الهاتف:</strong> <span id="pr-v-client-phone"></span></p>
+      </div>
+      <div style="text-align: left;">
+        <p><strong>رقم الفاتورة:</strong> <span id="pr-v-inv-id"></span></p>
+        <p><strong>التاريخ:</strong> <span id="pr-v-date"></span></p>
+        <p><strong>حالة الدفع:</strong> <span id="pr-v-payment-status"></span></p>
+      </div>
+    </div>
+
+    <table class="a4-official-table">
+      <thead>
+        <tr>
+          <th>الصنف</th>
+          <th>الكمية</th>
+          <th>السعر</th>
+          <th>الإجمالي</th>
+        </tr>
+      </thead>
+      <tbody id="pr-v-items-body"></tbody>
+    </table>
+
+    <div class="preview-footer-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 2px solid #e5e7eb; padding-top: 10px;">
+      <div class="preview-totals" style="font-size: 0.95rem;">
+        <p style="margin: 2px 0;">المجموع الفرعي: <span id="pr-v-subtotal" style="font-weight: bold; color:#111827;"></span></p>
+        <p style="margin: 2px 0;">الخصم: <span id="pr-v-discount" style="font-weight: bold; color:#ef4444;"></span></p>
+        <p style="margin: 2px 0;">الضريبة: <span id="pr-v-tax" style="font-weight: bold; color:#111827;"></span></p>
+        <h3 style="margin: 5px 0 0 0; color: #10b981; font-size: 1.2rem;">الإجمالي الكلي: <span id="pr-v-total"></span></h3>
+      </div>
+      <div id="pr-preview-qrcode" class="qrcode-wrapper" style="background:#fff; padding:4px; border:1px solid #ccc; border-radius:6px;"></div>
+    </div>
+  </div>
+
   <!-- Modal معاينة فاتورة مشتريات / توريد المورد -->
   <div id="supplier-view-modal" class="modal hidden">
     <div class="modal-content preview-modal-content">
@@ -790,6 +836,49 @@
         <button id="supplier-download-img-btn" class="btn-primary">تحميل كصورة 🖼️</button>
         <button id="supplier-print-view-btn" class="btn-success">طباعة / PDF 🖨️</button>
       </div>
+    </div>
+  </div>
+
+  <!-- العنصر الورقي الأبيض المجمّع A4 لتصدير فاتورة المشتريات دون التأثير على شكل المعاينة -->
+  <div id="supplier-printable-card" class="a4-printable-document printable-white-card">
+    <div class="a4-header-center">
+      <img id="pr-sv-logo" class="preview-logo hidden" alt="Logo">
+      <h2 id="pr-sv-store-name" class="a4-store-title">اسم المنشأة</h2>
+      <p id="pr-sv-store-phone" class="a4-store-sub"></p>
+      <p id="pr-sv-store-vat" class="a4-store-sub"></p>
+      <p id="pr-sv-store-address" class="a4-store-sub"></p>
+      <h3 class="a4-doc-title">فاتورة مشتريات</h3>
+    </div>
+
+    <div class="a4-client-details" style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+      <div>
+        <p><strong>المورد:</strong> <span id="pr-sv-supplier-name"></span></p>
+        <p><strong>الهاتف:</strong> <span id="pr-sv-supplier-phone"></span></p>
+      </div>
+      <div style="text-align: left;">
+        <p><strong>رقم الفاتورة:</strong> <span id="pr-sv-inv-id"></span></p>
+        <p><strong>التاريخ:</strong> <span id="pr-sv-date"></span></p>
+        <p><strong>حالة الدفع:</strong> <span id="pr-sv-payment-status"></span></p>
+      </div>
+    </div>
+
+    <table class="a4-official-table">
+      <thead>
+        <tr>
+          <th>الصنف</th>
+          <th>الكمية</th>
+          <th>سعر التكلفة</th>
+          <th>الإجمالي</th>
+        </tr>
+      </thead>
+      <tbody id="pr-sv-items-body"></tbody>
+    </table>
+
+    <div class="preview-footer-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 2px solid #e5e7eb; padding-top: 10px;">
+      <div class="preview-totals" style="font-size: 0.95rem;">
+        <h3 style="margin: 5px 0 0 0; color: #ef4444; font-size: 1.2rem;">الإجمالي الكلي: <span id="pr-sv-total"></span></h3>
+      </div>
+      <div id="pr-supplier-preview-qrcode" class="qrcode-wrapper" style="background:#fff; padding:4px; border:1px solid #ccc; border-radius:6px;"></div>
     </div>
   </div>
 
