@@ -217,8 +217,8 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 }
 .stat-title { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 .stat-value { font-size: 1.2rem; color: var(--accent); margin-top: 4px; display: block; font-weight: 800; }
-.text-success { color: #059669 !important; }
-.text-danger { color: #dc2626 !important; }
+.text-success { color: var(--success) !important; }
+.text-danger { color: var(--danger) !important; }
 
 /* Layout Grid */
 .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -433,6 +433,7 @@ li:hover {
   transform: translateZ(0); 
 }
 
+/* ضبط إطار النافذة المنبثقة الخارجي ليكون ثابتاً في ارتفاعه */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
@@ -443,10 +444,10 @@ li:hover {
   max-width: 480px; 
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-  max-height: 88vh !important;
+  max-height: 88vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
   display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
+  flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
+  overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -459,6 +460,7 @@ li:hover {
   to { opacity: 1; transform: scale(1); }
 }
 
+/* تثبيت العناصر الخارجية لمنع اختفائها أو حركتها عند التمرير */
 .modal-header,
 .pay-section,
 .pay-section-modal,
@@ -478,6 +480,10 @@ li:hover {
 .qrcode-wrapper { background: #ffffff; padding: 6px; border-radius: 6px; display: inline-block; }
 
 .modal-actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.ledger-summary-card { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; background: var(--input-bg); padding: 12px; border-radius: 12px; text-align: center; font-size: 0.75rem; margin-bottom: 14px; border: 1px solid var(--border-color); }
+.ledger-summary-card strong { display: block; font-size: 0.95rem; margin-top: 4px; }
+.pay-section { background: rgba(16, 185, 129, .05); padding: 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 14px; }
 
 .sub-text { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; word-break: break-all; }
 
@@ -549,164 +555,38 @@ li:hover {
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-/* =========================================================
-   تنسيقات كشف الحساب الأبيض الحديث مع الكروت (معدلة)
-   ========================================================= */
-.ledger-card-style {
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  border-radius: 20px !important;
-  padding: 18px !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+.toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 10000;
+  display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+}
+.toast {
+  background: var(--card-bg); color: var(--text-main);
+  border: 1px solid var(--card-border); padding: 12px 18px;
+  border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 10px;
+  pointer-events: auto;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
-.ledger-stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
-  text-align: center;
-  margin-bottom: 12px;
+@keyframes skeletonPulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
 }
-
-.l-stat-card span {
-  display: block;
-  font-size: 0.72rem;
-  color: #64748b !important;
-  font-weight: 700;
-}
-
-.l-stat-card strong {
-  display: block;
-  font-size: 0.95rem;
-  font-weight: 800;
-  margin-top: 2px;
-}
-
-.pay-section-box {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.pay-section-box label {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #166534 !important;
-  display: block;
-  margin-bottom: 6px;
-}
-
-.pay-input-row {
-  display: flex;
-  gap: 8px;
-}
-
-.pay-input-row input {
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
-  color: #0f172a !important;
+.skeleton-loader {
+  background: var(--border-color);
   border-radius: 8px;
-  font-weight: bold;
-}
-
-.btn-pay-submit {
-  background: #16a34a !important;
-  color: #ffffff !important;
-  font-weight: 800;
-  padding: 0 16px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-}
-
-.ledger-section-title {
-  font-size: 0.85rem;
-  font-weight: 800;
-  margin: 10px 0 8px 0;
-  color: #0f172a !important;
-}
-
-.ledger-cards-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 240px;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.ledger-item-card {
-  background: #ffffff;
-  border: 1px solid #0284c7;
-  border-left: 5px solid #0284c7;
-  border-radius: 10px;
-  padding: 10px 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.ledger-item-card.pay-card {
-  border-color: #16a34a;
-  border-left-color: #16a34a;
-  background: #f0fdf4;
-}
-
-.lic-title {
-  font-weight: 800;
-  font-size: 0.85rem;
-  color: #0f172a !important;
-}
-
-.lic-sub {
-  font-size: 0.72rem;
-  color: #64748b !important;
-  margin-top: 2px;
-}
-
-.lic-price {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.ledger-actions-3 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.btn-ledger-wa {
-  background: #16a34a !important;
-  color: #ffffff !important;
-  font-weight: 800;
-  border-radius: 10px;
-}
-
-.btn-ledger-img {
-  background: #0284c7 !important;
-  color: #ffffff !important;
-  font-weight: 800;
-  border-radius: 10px;
-}
-
-.btn-ledger-pdf {
-  background: #16a34a !important;
-  color: #ffffff !important;
-  font-weight: 800;
-  border-radius: 10px;
+  animation: skeletonPulse 1.5s infinite ease-in-out;
 }
 
 /* ==========================================================
    تنسيق كروت الطباعة والتصدير الورقية (White Printable Cards)
    ========================================================== */
+
 .printable-white-card,
 .invoice-card-preview,
 #invoice-card-preview,
@@ -719,12 +599,15 @@ li:hover {
   box-shadow: none !important;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
+  
+  /* تفعيل التمرير العمودي فقط داخل الكرت الناصع البياض */
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
 }
 
+/* ضبط ألوان النصوص الأساسية واستثناء الألوان التنبيهية (الأخضر والأحمر) */
 .printable-white-card *:not(.text-success):not(.text-danger),
 .invoice-card-preview *:not(.text-success):not(.text-danger),
 #ledger-printable-card *:not(.text-success):not(.text-danger),
@@ -733,6 +616,7 @@ li:hover {
   text-shadow: none !important;
 }
 
+/* محاذاة الجداول الرسمية في كشوف الحساب والمعاينة */
 .printable-white-card table,
 .invoice-card-preview table,
 #ledger-printable-card table,
@@ -775,6 +659,7 @@ li:hover {
     margin: 10mm 12mm;
   }
 
+  /* إلغاء قيود التمرير والارتفاع عند الطباعة لتظهر جميع الفواتير كاملة */
   .modal-content,
   .ledger-modal-content,
   .preview-modal-content,
@@ -789,6 +674,7 @@ li:hover {
     visibility: hidden !important;
   }
   
+  /* إظهار بطاقات المعاينة المطبوعة فقط (عملاء / موردين / فواتير) */
   .modal:not(.hidden) .printable-white-card, 
   .modal:not(.hidden) .printable-white-card *,
   .modal:not(.hidden) .invoice-card-preview,
@@ -796,6 +682,7 @@ li:hover {
     visibility: visible !important;
   }
 
+  /* ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
   .modal:not(.hidden) .printable-white-card,
   .modal:not(.hidden) .invoice-card-preview {
     position: absolute !important;
@@ -809,6 +696,7 @@ li:hover {
     border: none !important;
   }
 
+  /* إخفاء الأزرار وعناصر التحكم أثناء التصدير والطباعة */
   .no-print,
   button,
   .modal-header,
@@ -818,4 +706,4 @@ li:hover {
   .btn-close {
     display: none !important;
   }
-}
+            }
