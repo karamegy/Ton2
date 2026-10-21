@@ -753,6 +753,8 @@ li:hover {
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
+  padding: 16px !important;
+  border-radius: 12px !important;
 }
 
 .printable-white-card *:not(.text-success):not(.text-danger),
@@ -777,6 +779,7 @@ li:hover {
   padding: 8px 6px !important;
   background-color: #ffffff !important;
   font-size: 0.85rem !important;
+  text-align: right !important;
 }
 
 .printable-white-card th,
@@ -855,6 +858,8 @@ li:hover {
   padding: 8px 12px !important;
   border-radius: 8px !important;
   border: 1px solid #e5e7eb !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
 }
 
 .a4-summary-table-box {
