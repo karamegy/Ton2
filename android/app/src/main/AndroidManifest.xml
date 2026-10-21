@@ -12,10 +12,9 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
-    <!-- أذونات الملفات والصور -->
+    <!-- أذونات الملفات للإصدارات القديمة فقط -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <!-- الاستعلام عن الواتساب والتطبيقات الخارجية -->
     <queries>
