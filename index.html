@@ -551,53 +551,53 @@
         <button id="ledger-download-btn" class="btn-primary">صورة 🖼️</button>
         <button id="ledger-print-btn" class="btn-success">طباعة / PDF 🖨️</button>
       </div>
-
-      <!-- 2. التقرير الورقي الأبيض المجمع A4 -->
-      <div id="ledger-printable-card" class="a4-printable-document printable-white-card">
-        <div class="a4-header-center">
-          <img id="cl-logo" class="preview-logo hidden" alt="Logo">
-          <h2 id="cl-store-name" class="a4-store-title">اسم المنشأة</h2>
-          <p id="cl-store-phone" class="a4-store-sub"></p>
-          <p id="cl-store-vat" class="a4-store-sub"></p>
-          
-          <h3 class="a4-doc-title">كشف حساب عميل</h3>
-        </div>
-
-        <div class="a4-client-details">
-          <p><strong>اسم العميل:</strong> <span id="cl-client-name"></span></p>
-          <p><strong>تاريخ التقرير:</strong> <span id="cl-date"></span></p>
-        </div>
-
-        <div class="a4-summary-table-box">
-          <div class="a4-sum-row">
-            <span>إجمالي التعاملات:</span>
-            <strong id="cl-print-total-sales">0.00 ج.م</strong>
-          </div>
-          <div class="a4-sum-row">
-            <span>إجمالي المدفوعات:</span>
-            <strong id="cl-print-total-paid">0.00 ج.م</strong>
-          </div>
-          <div class="a4-sum-row highlight-bal">
-            <span>الرصيد المتبقي / المديونية:</span>
-            <strong id="cl-print-balance">0.00 ج.م</strong>
-          </div>
-        </div>
-
-        <h4 class="a4-section-title">سجل الحركة الحسابية التفصيلي:</h4>
-        
-        <table class="a4-official-table">
-          <thead>
-            <tr>
-              <th style="width: 25%;">التاريخ</th>
-              <th style="width: 50%;">بيان المعاملة</th>
-              <th style="width: 25%;">المبلغ</th>
-            </tr>
-          </thead>
-          <tbody id="client-ledger-table-body"></tbody>
-        </table>
-      </div>
-
     </div>
+  </div>
+
+  <!-- 2. التقرير الورقي الأبيض المجمع A4 لكشف حساب العميل (موجود خارجيًا لضمان تصديره كصورة أو PDF بوضوح وبدون قص) -->
+  <div id="ledger-printable-card" class="a4-printable-document printable-white-card">
+    <div class="a4-header-center">
+      <img id="cl-logo" class="preview-logo hidden" alt="Logo">
+      <h2 id="cl-store-name" class="a4-store-title">اسم المنشأة</h2>
+      <p id="cl-store-phone" class="a4-store-sub"></p>
+      <p id="cl-store-vat" class="a4-store-sub"></p>
+      <p id="cl-store-address" class="a4-store-sub"></p>
+      
+      <h3 class="a4-doc-title">كشف حساب عميل</h3>
+    </div>
+
+    <div class="a4-client-details">
+      <p><strong>اسم العميل:</strong> <span id="cl-client-name"></span></p>
+      <p><strong>تاريخ التقرير:</strong> <span id="cl-date"></span></p>
+    </div>
+
+    <div class="a4-summary-table-box">
+      <div class="a4-sum-row">
+        <span>إجمالي التعاملات:</span>
+        <strong id="cl-print-total-sales">0.00 ج.م</strong>
+      </div>
+      <div class="a4-sum-row">
+        <span>إجمالي المدفوعات:</span>
+        <strong id="cl-print-total-paid">0.00 ج.م</strong>
+      </div>
+      <div class="a4-sum-row highlight-bal">
+        <span>الرصيد المتبقي / المديونية:</span>
+        <strong id="cl-print-balance">0.00 ج.م</strong>
+      </div>
+    </div>
+
+    <h4 class="a4-section-title">سجل الحركة الحسابية التفصيلي:</h4>
+    
+    <table class="a4-official-table">
+      <thead>
+        <tr>
+          <th style="width: 50%;">بيان المعاملة</th>
+          <th style="width: 25%;">التاريخ</th>
+          <th style="width: 25%;">المبلغ</th>
+        </tr>
+      </thead>
+      <tbody id="client-ledger-table-body"></tbody>
+    </table>
   </div>
 
   <!-- Modal كشف حساب مورد مجمع والتسديد -->
@@ -637,59 +637,59 @@
         <div id="supplier-ledger-cards-list" class="ledger-cards-scroll"></div>
       </div>
 
-      <!-- كشف حساب المورد المطبوع كفاتورة بيضاء رسمية A4 -->
-      <div id="supplier-ledger-printable-card" class="a4-printable-document printable-white-card">
-        <div style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 12px;">
-          <img id="sl-logo" class="preview-logo hidden" alt="Logo" style="max-height: 55px; margin-bottom: 5px;">
-          <h2 id="sl-store-name" style="margin:0; font-size: 1.4rem; color:#111827; font-weight: 800;">اسم المنشأة</h2>
-          <p id="sl-store-phone" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
-          <p id="sl-store-vat" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
-          <div style="display: flex; justify-content: space-between; margin-top: 10px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; font-weight: bold;">
-            <span style="color:#111827;">🏭 كشف حساب توريدات ومشتريات</span>
-            <span id="sl-date" style="color:#111827;"></span>
-          </div>
-        </div>
-
-        <div style="margin-bottom: 12px; font-size: 0.95rem;">
-          <p style="margin:3px 0;"><strong style="color:#111827;">المورد / الشركة:</strong> <span id="sl-supplier-name" style="color:#374151; font-weight:700;"></span></p>
-          <p style="margin:3px 0;"><strong style="color:#111827;">رقم الهاتف:</strong> <span id="sl-supplier-phone" style="color:#374151;"></span></p>
-        </div>
-
-        <div style="background:#f9fafb !important; border:1px solid #e5e7eb !important; border-radius:8px; padding:12px; display:flex; justify-content:space-around; margin-bottom: 15px; text-align: center;">
-          <div>
-            <span style="font-size:0.85rem; color:#6b7280 !important;">إجمالي المشتريات</span>
-            <strong id="sl-print-total-purchases" style="display:block; font-size:1.1rem; color:#111827 !important;">0.00</strong>
-          </div>
-          <div>
-            <span style="font-size:0.85rem; color:#6b7280 !important;">المسدد للمورد</span>
-            <strong id="sl-print-total-paid" style="display:block; font-size:1.1rem; color:#059669 !important;">0.00</strong>
-          </div>
-          <div>
-            <span style="font-size:0.85rem; color:#6b7280 !important;">الصافي / المستحق للمورد</span>
-            <strong id="sl-print-balance" style="display:block; font-size:1.1rem; color:#dc2626 !important;">0.00</strong>
-          </div>
-        </div>
-
-        <h4 style="margin: 10px 0 8px 0; color:#111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">جدول حركة التوريدات والدفعات:</h4>
-        <table style="width:100%; border-collapse:collapse;" class="a4-official-table">
-          <thead>
-            <tr>
-              <th style="width: 20%;">التاريخ</th>
-              <th style="width: 45%;">نوع الحركة / البيان</th>
-              <th style="width: 20%;">المبلغ</th>
-              <th style="width: 15%;">الحالة</th>
-            </tr>
-          </thead>
-          <tbody id="supplier-ledger-table-body"></tbody>
-        </table>
-      </div>
-
       <div class="modal-actions-row">
         <button id="ledger-supplier-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
         <button id="ledger-supplier-download-btn" class="btn-primary">صورة 🖼️</button>
         <button id="ledger-supplier-print-btn" class="btn-success">طباعة / PDF 🖨️</button>
       </div>
     </div>
+  </div>
+
+  <!-- كشف حساب المورد المطبوع كفاتورة بيضاء رسمية A4 -->
+  <div id="supplier-ledger-printable-card" class="a4-printable-document printable-white-card">
+    <div style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 12px;">
+      <img id="sl-logo" class="preview-logo hidden" alt="Logo" style="max-height: 55px; margin-bottom: 5px;">
+      <h2 id="sl-store-name" style="margin:0; font-size: 1.4rem; color:#111827; font-weight: 800;">اسم المنشأة</h2>
+      <p id="sl-store-phone" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
+      <p id="sl-store-vat" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
+      <div style="display: flex; justify-content: space-between; margin-top: 10px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; font-weight: bold;">
+        <span style="color:#111827;">🏭 كشف حساب توريدات ومشتريات</span>
+        <span id="sl-date" style="color:#111827;"></span>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 12px; font-size: 0.95rem;">
+      <p style="margin:3px 0;"><strong style="color:#111827;">المورد / الشركة:</strong> <span id="sl-supplier-name" style="color:#374151; font-weight:700;"></span></p>
+      <p style="margin:3px 0;"><strong style="color:#111827;">رقم الهاتف:</strong> <span id="sl-supplier-phone" style="color:#374151;"></span></p>
+    </div>
+
+    <div style="background:#f9fafb !important; border:1px solid #e5e7eb !important; border-radius:8px; padding:12px; display:flex; justify-content:space-around; margin-bottom: 15px; text-align: center;">
+      <div>
+        <span style="font-size:0.85rem; color:#6b7280 !important;">إجمالي المشتريات</span>
+        <strong id="sl-print-total-purchases" style="display:block; font-size:1.1rem; color:#111827 !important;">0.00</strong>
+      </div>
+      <div>
+        <span style="font-size:0.85rem; color:#6b7280 !important;">المسدد للمورد</span>
+        <strong id="sl-print-total-paid" style="display:block; font-size:1.1rem; color:#059669 !important;">0.00</strong>
+      </div>
+      <div>
+        <span style="font-size:0.85rem; color:#6b7280 !important;">الصافي / المستحق للمورد</span>
+        <strong id="sl-print-balance" style="display:block; font-size:1.1rem; color:#dc2626 !important;">0.00</strong>
+      </div>
+    </div>
+
+    <h4 style="margin: 10px 0 8px 0; color:#111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">جدول حركة التوريدات والدفعات:</h4>
+    <table style="width:100%; border-collapse:collapse;" class="a4-official-table">
+      <thead>
+        <tr>
+          <th style="width: 20%;">التاريخ</th>
+          <th style="width: 45%;">نوع الحركة / البيان</th>
+          <th style="width: 20%;">المبلغ</th>
+          <th style="width: 15%;">الحالة</th>
+        </tr>
+      </thead>
+      <tbody id="supplier-ledger-table-body"></tbody>
+    </table>
   </div>
 
   <!-- Modal معاينة الفاتورة الإلكترونية -->
@@ -868,4 +868,4 @@
   <script src="capacitor.js"></script>
   <script type="module" src="app.js"></script>
 </body>
-      </html>
+</html>
