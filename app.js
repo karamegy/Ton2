@@ -100,63 +100,66 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
 }
 
 /**
- * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية A4
+ * دالة تصدير وطباعة الـ PDF الموحدة بخلفية بيضاء رسمية A4 مع معالجة حماية أبعاد العناصر المقصوصة
  */
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
   if (!element) return false;
 
-  const originalDisplay = element.style.display;
-  if (element.classList.contains('hidden') || getComputedStyle(element).display === 'none') {
-    element.style.display = 'block';
-  }
-
+  element.classList.add('rendering-active');
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  if (typeof html2pdf !== 'undefined') {
-    const opt = {
-      margin:       [5, 5, 5, 5],
-      filename:     fileName,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { 
-        scale: 2, 
-        useCORS: true, 
-        logging: false, 
-        backgroundColor: '#ffffff',
-        scrollX: 0,
-        scrollY: 0
-      },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+  try {
+    if (typeof html2pdf !== 'undefined') {
+      const opt = {
+        margin:       [5, 5, 5, 5],
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { 
+          scale: 2, 
+          useCORS: true, 
+          logging: false, 
+          backgroundColor: '#ffffff',
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
 
-    try {
-      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-      if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
-      return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
-    } catch (e) {
-      console.warn("html2pdf error, falling back to canvas:", e);
+      try {
+        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+        element.classList.remove('rendering-active');
+        return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
+      } catch (e) {
+        console.warn("html2pdf error, falling back to canvas:", e);
+      }
     }
-  }
 
-  if (typeof html2canvas !== 'undefined') {
-    try {
-      const canvas = await html2canvas(element, { 
-        scale: 2, 
-        useCORS: true, 
-        backgroundColor: '#ffffff',
-        scrollX: 0,
-        scrollY: 0
-      });
-      const imgData = canvas.toDataURL('image/png');
-      if (element.style.display !== originalDisplay) element.style.display = originalDisplay;
-      return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
-    } catch (e) {
-      console.error("Canvas export failed:", e);
+    if (typeof html2canvas !== 'undefined') {
+      try {
+        const canvas = await html2canvas(element, { 
+          scale: 2, 
+          useCORS: true, 
+          backgroundColor: '#ffffff',
+          scrollX: 0,
+          scrollY: 0
+        });
+        const imgData = canvas.toDataURL('image/png');
+        element.classList.remove('rendering-active');
+        return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
+      } catch (e) {
+        console.error("Canvas export failed:", e);
+      }
     }
-  }
 
-  window.print();
-  return true;
+    element.classList.remove('rendering-active');
+    window.print();
+    return true;
+  } catch (err) {
+    element.classList.remove('rendering-active');
+    console.error("Export Error:", err);
+    return false;
+  }
 }
 
 function initCapacitorBridge() {
@@ -1954,6 +1957,9 @@ window.openClientLedger = (clientName) => {
     const clStoreVat = document.getElementById('cl-store-vat');
     if (clStoreVat) clStoreVat.textContent = storeProfile.vatNo ? `الرقم الضريبي: ${storeProfile.vatNo}` : '';
 
+    const clStoreAddress = document.getElementById('cl-store-address');
+    if (clStoreAddress) clStoreAddress.textContent = storeProfile.address ? `العنوان: ${storeProfile.address}` : '';
+
     const clDate = document.getElementById('cl-date');
     if (clDate) clDate.textContent = new Date().toLocaleDateString('ar-EG');
 
@@ -1967,8 +1973,8 @@ window.openClientLedger = (clientName) => {
       if (clientObj.openingBalance && clientObj.openingBalance > 0) {
         rowsHtml += `
           <tr>
-            <td>-</td>
             <td>رصيد افتتاحي (مديونية سابقة)</td>
+            <td>-</td>
             <td>${clientObj.openingBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
           </tr>
         `;
@@ -1977,8 +1983,8 @@ window.openClientLedger = (clientName) => {
       stats.clientInvoices.forEach(inv => {
         rowsHtml += `
           <tr>
+            <td>فاتورة مبيعات #${inv.id} (${(inv.items ? inv.items.length : 0)} أصناف - ${inv.status})</td>
             <td>${inv.date || '-'}</td>
-            <td>فاتورة مبيعات #${inv.id} (${(inv.items ? inv.items.length : 0)} أصناف)</td>
             <td>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
           </tr>
         `;
@@ -1987,8 +1993,8 @@ window.openClientLedger = (clientName) => {
       stats.payments.forEach((p) => {
         rowsHtml += `
           <tr style="background-color: #f0fdf4 !important;">
-            <td>${p.date || '-'}</td>
             <td>دفعة سداد نقدي 💵</td>
+            <td>${p.date || '-'}</td>
             <td style="color:#059669; font-weight:bold;">-${p.amount.toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
           </tr>
         `;
@@ -2081,11 +2087,19 @@ if (ledgerDownloadBtn) {
     const ledgerCard = document.getElementById('ledger-printable-card');
     if (ledgerCard && typeof html2canvas !== 'undefined') {
       try {
+        ledgerDownloadBtn.disabled = true;
+        ledgerDownloadBtn.textContent = 'جاري التجهيز... ⏳';
+
+        ledgerCard.classList.add('rendering-active');
+        await new Promise(resolve => setTimeout(resolve, 200));
+
         const canvas = await html2canvas(ledgerCard, { 
           scale: 2, 
           backgroundColor: '#ffffff', 
           useCORS: true, 
-          allowTaint: false 
+          allowTaint: false,
+          width: 794,
+          windowWidth: 794
         });
 
         const dataUrl = canvas.toDataURL('image/png');
@@ -2095,6 +2109,10 @@ if (ledgerDownloadBtn) {
       } catch (err) {
         console.error("Ledger Image Error:", err);
         alert("حدث خطأ أثناء تنزيل الصورة.");
+      } finally {
+        ledgerCard.classList.remove('rendering-active');
+        ledgerDownloadBtn.disabled = false;
+        ledgerDownloadBtn.textContent = 'صورة 🖼️';
       }
     }
   });
@@ -2103,8 +2121,17 @@ if (ledgerDownloadBtn) {
 const ledgerPrintBtn = document.getElementById('ledger-print-btn');
 if (ledgerPrintBtn) {
   ledgerPrintBtn.addEventListener('click', async () => {
-    if (!activeLedgerClientName) return;
-    await generateAndExportPdf('ledger-printable-card', `Statement_${activeLedgerClientName}.pdf`, `كشف حساب العميل: ${activeLedgerClientName}`);
+    const ledgerCard = document.getElementById('ledger-printable-card');
+    if (!activeLedgerClientName || !ledgerCard) return;
+
+    try {
+      ledgerCard.classList.add('rendering-active');
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      await generateAndExportPdf('ledger-printable-card', `Statement_${activeLedgerClientName}.pdf`, `كشف حساب العميل: ${activeLedgerClientName}`);
+    } finally {
+      ledgerCard.classList.remove('rendering-active');
+    }
   });
 }
 
@@ -2563,11 +2590,19 @@ if (ledgerSupplierDownloadBtn) {
     const ledgerCard = document.getElementById('supplier-ledger-printable-card');
     if (ledgerCard && typeof html2canvas !== 'undefined') {
       try {
+        ledgerSupplierDownloadBtn.disabled = true;
+        ledgerSupplierDownloadBtn.textContent = 'جاري التجهيز... ⏳';
+
+        ledgerCard.classList.add('rendering-active');
+        await new Promise(resolve => setTimeout(resolve, 200));
+
         const canvas = await html2canvas(ledgerCard, { 
           scale: 2, 
           backgroundColor: '#ffffff', 
           useCORS: true, 
-          allowTaint: false 
+          allowTaint: false,
+          width: 794,
+          windowWidth: 794
         });
 
         const dataUrl = canvas.toDataURL('image/png');
@@ -2577,6 +2612,10 @@ if (ledgerSupplierDownloadBtn) {
       } catch (err) {
         console.error("Supplier Ledger Image Error:", err);
         alert("حدث خطأ أثناء تنزيل الصورة.");
+      } finally {
+        ledgerCard.classList.remove('rendering-active');
+        ledgerSupplierDownloadBtn.disabled = false;
+        ledgerSupplierDownloadBtn.textContent = 'صورة 🖼️';
       }
     }
   });
@@ -2585,8 +2624,17 @@ if (ledgerSupplierDownloadBtn) {
 const ledgerSupplierPrintBtn = document.getElementById('ledger-supplier-print-btn');
 if (ledgerSupplierPrintBtn) {
   ledgerSupplierPrintBtn.addEventListener('click', async () => {
-    if (!activeLedgerSupplierName) return;
-    await generateAndExportPdf('supplier-ledger-printable-card', `Supplier_Statement_${activeLedgerSupplierName}.pdf`, `كشف حساب المورد: ${activeLedgerSupplierName}`);
+    const ledgerCard = document.getElementById('supplier-ledger-printable-card');
+    if (!activeLedgerSupplierName || !ledgerCard) return;
+
+    try {
+      ledgerCard.classList.add('rendering-active');
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      await generateAndExportPdf('supplier-ledger-printable-card', `Supplier_Statement_${activeLedgerSupplierName}.pdf`, `كشف حساب المورد: ${activeLedgerSupplierName}`);
+    } finally {
+      ledgerCard.classList.remove('rendering-active');
+    }
   });
 }
 
