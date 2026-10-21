@@ -21,126 +21,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6651309355082807" crossorigin="anonymous"></script>
-  
-  <style>
-    /* =========================================================
-       تثبيت إطار النوافذ المنبثقة وتفعيل التمرير الداخلي للفواتير
-       ========================================================= */
-    .modal-content,
-    .ledger-modal-content,
-    .preview-modal-content {
-      max-height: 88vh !important;       /* أقصى ارتفاع للنافذة المنبثقة */
-      display: flex !important;
-      flex-direction: column !important; /* ترتيب العناصر رأسياً */
-      overflow: hidden !important;       /* تثبيت الإطار الخارجي من الحركة */
-      border-radius: 16px;
-    }
-
-    /* تثبيت الهيدر، قسم تسجيل السداد، وأزرار التحكم السفلية */
-    .modal-header,
-    .pay-section-modal,
-    .modal-actions-row {
-      flex-shrink: 0 !important; /* يمنع انكماش أو اختفاء هذه العناصر */
-    }
-
-    /* حصر التمرير الداخلي داخل كشف الحساب/الفاتورة البيضاء فقط */
-    .printable-white-card {
-      flex: 1 1 auto !important;
-      min-height: 0 !important;
-      overflow-y: auto !important;        /* تفعيل Scroll عمودي بداخل البطاقة */
-      -webkit-overflow-scrolling: touch;  /* تمرير ناعم للشاشات اللمسية */
-      margin-top: 8px;
-      margin-bottom: 8px;
-    }
-
-    /* =========================================================
-       تنسيقات الفواتير وكشوف الحسابات بيضاء ناصعة المظهر
-       ========================================================= */
-    .printable-white-card,
-    .printable-white-card * {
-      color: #111827 !important;
-      text-shadow: none !important;
-      box-shadow: none !important;
-    }
-
-    .printable-white-card {
-      background-color: #ffffff !important;
-      padding: 24px;
-      border-radius: 12px;
-      font-family: 'Cairo', sans-serif;
-      border: 1px solid #e5e7eb !important;
-    }
-
-    .printable-white-card div, 
-    .printable-white-card li, 
-    .printable-white-card ul, 
-    .printable-white-card table, 
-    .printable-white-card tr, 
-    .printable-white-card td, 
-    .printable-white-card th {
-      background-color: #ffffff !important;
-      color: #111827 !important;
-    }
-
-    .printable-white-card table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-      border: 1px solid #e5e7eb !important;
-    }
-
-    .printable-white-card th {
-      background-color: #f3f4f6 !important;
-      color: #111827 !important;
-      font-weight: 700;
-      padding: 10px 8px;
-      border: 1px solid #d1d5db !important;
-      text-align: right;
-    }
-
-    .printable-white-card td {
-      padding: 10px 8px;
-      border: 1px solid #e5e7eb !important;
-      color: #1f2937 !important;
-      background-color: #ffffff !important;
-    }
-
-    .printable-white-card tr:nth-child(even) td {
-      background-color: #f9fafb !important;
-    }
-
-    /* إلغاء قيود التمرير عند الطباعة والتصدير */
-    @media print {
-      .modal-content,
-      .ledger-modal-content,
-      .preview-modal-content,
-      .printable-white-card {
-        max-height: none !important;
-        overflow: visible !important;
-        height: auto !important;
-      }
-      body * {
-        visibility: hidden !important;
-      }
-      .modal:not(.hidden) .printable-white-card, 
-      .modal:not(.hidden) .printable-white-card * {
-        visibility: visible !important;
-      }
-      .modal:not(.hidden) .printable-white-card {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 15px !important;
-        box-shadow: none !important;
-        border: none !important;
-      }
-      .no-print {
-        display: none !important;
-      }
-    }
-  </style>
 </head>
 <body>
 
@@ -629,148 +509,199 @@
     </div>
   </div>
 
-  <!-- Modal كشف حساب عميل مجمع والتسديد -->
+  <!-- Modal كشف حساب عميل مجمع والتسديد (التصميم الأبيض المطور المطابق) -->
   <div id="client-ledger-modal" class="modal hidden">
-    <div class="modal-content ledger-modal-content" style="max-width: 750px;">
-      <div class="modal-header">
-        <h3 id="ledger-client-title">👤 كشف حساب عميل</h3>
+    <div class="modal-content ledger-modal-content ledger-card-style" style="max-width: 480px;">
+      <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+        <h3 id="ledger-client-title" style="margin: 0; font-weight: 800; font-size: 1.25rem; color: #111827;">👤 كشف حساب: Emad</h3>
         <button id="close-ledger-btn" class="btn-close">✕</button>
       </div>
       
-      <!-- قسم تسجيل السداد خارج كشف الحساب المطبوع -->
-      <div class="pay-section-modal" style="margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-        <label style="font-weight:600; display:block; margin-bottom: 6px;">تسجيل دفعة سداد نقدي من العميل</label>
-        <div style="display:flex; gap:8px;">
-          <input type="number" id="pay-amount-input" placeholder="أدخل المبلغ..." style="flex:1;">
-          <button id="submit-payment-btn" class="btn-success">تسجيل السداد 💵</button>
+      <div class="ledger-modal-body" style="padding-top: 10px;">
+        <!-- كروت الإحصائيات المجمعة -->
+        <div class="ledger-stats-grid">
+          <div class="l-stat-card">
+            <span>إجمالي التعاملات:</span>
+            <strong id="ledger-total-sales">0.00</strong>
+          </div>
+          <div class="l-stat-card">
+            <span>المدفوع:</span>
+            <strong id="ledger-total-paid" class="text-success">0.00</strong>
+          </div>
+          <div class="l-stat-card">
+            <span>الصافي / المديونية:</span>
+            <strong id="ledger-balance" class="text-danger">0.00</strong>
+          </div>
+        </div>
+
+        <!-- قسم تسجيل السداد النقدي -->
+        <div class="pay-section-box">
+          <label>تسجيل دفعة سداد نقدي من العميل</label>
+          <div class="pay-input-row">
+            <input type="number" id="pay-amount-input" placeholder="المبلغ">
+            <button id="submit-payment-btn" class="btn-pay-submit">سداد 💵</button>
+          </div>
+        </div>
+
+        <h4 class="ledger-section-title">سجل الفواتير والدفعات المجمعة:</h4>
+
+        <!-- قائمة كروت الفواتير والدفعات -->
+        <div class="ledger-list-container">
+          <div id="client-ledger-cards-list" class="ledger-cards-wrapper"></div>
         </div>
       </div>
 
-      <!-- كشف الحساب المطبوع كفاتورة رسمية بيضاء -->
-      <div id="ledger-printable-card" class="printable-white-card">
-        <div style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 12px;">
-          <img id="cl-logo" class="preview-logo hidden" alt="Logo" style="max-height: 55px; margin-bottom: 5px;">
-          <h2 id="cl-store-name" style="margin:0; font-size: 1.4rem; color:#111827; font-weight: 800;">اسم المنشأة</h2>
-          <p id="cl-store-phone" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
-          <p id="cl-store-vat" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
-          <div style="display: flex; justify-content: space-between; margin-top: 10px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; font-weight: bold;">
-            <span style="color:#111827;">📑 كشف حساب تفصيلي</span>
-            <span id="cl-date" style="color:#111827;"></span>
-          </div>
-        </div>
-
-        <div style="margin-bottom: 12px; font-size: 0.95rem;">
-          <p style="margin:3px 0;"><strong style="color:#111827;">العميل / الشركة:</strong> <span id="cl-client-name" style="color:#374151; font-weight:700;"></span></p>
-          <p style="margin:3px 0;"><strong style="color:#111827;">رقم الهاتف:</strong> <span id="cl-client-phone" style="color:#374151;"></span></p>
-        </div>
-
-        <div style="background:#f9fafb !important; border:1px solid #e5e7eb !important; border-radius:8px; padding:12px; display:flex; justify-content:space-around; margin-bottom: 15px; text-align: center;">
-          <div>
-            <span style="font-size:0.85rem; color:#6b7280 !important;">إجمالي التعاملات</span>
-            <strong id="ledger-total-sales" style="display:block; font-size:1.1rem; color:#111827 !important;">0.00</strong>
-          </div>
-          <div>
-            <span style="font-size:0.85rem; color:#6b7280 !important;">إجمالي المدفوع</span>
-            <strong id="ledger-total-paid" style="display:block; font-size:1.1rem; color:#059669 !important;">0.00</strong>
-          </div>
-          <div>
-            <span style="font-size:0.85rem; color:#6b7280 !important;">الصافي / المديونية</span>
-            <strong id="ledger-balance" style="display:block; font-size:1.1rem; color:#dc2626 !important;">0.00</strong>
-          </div>
-        </div>
-
-        <h4 style="margin: 10px 0 8px 0; color:#111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">جدول الحركة المجمعة والسداد:</h4>
-        <table style="width:100%; border-collapse:collapse;">
-          <thead>
-            <tr>
-              <th style="width: 15%;">التاريخ</th>
-              <th style="width: 45%;">نوع الحركة / البيان</th>
-              <th style="width: 20%;">المبلغ</th>
-              <th style="width: 20%;">الحالة</th>
-            </tr>
-          </thead>
-          <tbody id="client-ledger-table-body"></tbody>
-        </table>
-      </div>
-
-      <div class="modal-actions-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-        <button id="ledger-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
-        <button id="ledger-download-btn" class="btn-primary">صورة 🖼️</button>
-        <button id="ledger-print-btn" class="btn-success">طباعة / PDF 🖨️</button>
+      <!-- أزرار الإجراءات السفلية الثلاثة -->
+      <div class="modal-actions-row ledger-actions-3">
+        <button id="ledger-whatsapp-btn" class="btn-ledger-wa">واتساب 💬</button>
+        <button id="ledger-download-btn" class="btn-ledger-img">صورة 🖼️</button>
+        <button id="ledger-print-btn" class="btn-ledger-pdf">طباعة / PDF 🖨️</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal كشف حساب مورد مجمع والتسديد -->
+  <!-- Modal كشف حساب مورد مجمع والتسديد (التصميم الأبيض المطور المطابق) -->
   <div id="supplier-ledger-modal" class="modal hidden">
-    <div class="modal-content ledger-modal-content" style="max-width: 750px;">
-      <div class="modal-header">
-        <h3 id="ledger-supplier-title">🏭 كشف حساب مورد</h3>
+    <div class="modal-content ledger-modal-content ledger-card-style" style="max-width: 480px;">
+      <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+        <h3 id="ledger-supplier-title" style="margin: 0; font-weight: 800; font-size: 1.25rem; color: #111827;">🏭 كشف حساب مورد: عماد حمدي</h3>
         <button id="close-supplier-ledger-btn" class="btn-close">✕</button>
       </div>
       
-      <!-- قسم تسجيل السداد للمورد خارج كشف الحساب المطبوع -->
-      <div class="pay-section-modal" style="margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-        <label style="font-weight:600; display:block; margin-bottom: 6px;">تسجيل دفعة سداد نقدي للمورد</label>
-        <div style="display:flex; gap:8px;">
-          <input type="number" id="supplier-pay-amount-input" placeholder="أدخل المبلغ..." style="flex:1;">
-          <button id="submit-supplier-payment-btn" class="btn-success">سداد للمورد 💵</button>
+      <div class="ledger-modal-body" style="padding-top: 10px;">
+        <!-- كروت الإحصائيات المجمعة للمورد -->
+        <div class="ledger-stats-grid">
+          <div class="l-stat-card">
+            <span>إجمالي المشتريات:</span>
+            <strong id="ledger-supplier-total-purchases">0.00</strong>
+          </div>
+          <div class="l-stat-card">
+            <span>المسدد للمورد:</span>
+            <strong id="ledger-supplier-total-paid" class="text-success">0.00</strong>
+          </div>
+          <div class="l-stat-card">
+            <span>الصافي / المستحق للمورد:</span>
+            <strong id="ledger-supplier-balance" class="text-danger">0.00</strong>
+          </div>
+        </div>
+
+        <!-- قسم تسجيل السداد للمورد -->
+        <div class="pay-section-box">
+          <label>تسجيل دفعة سداد نقدي للمورد</label>
+          <div class="pay-input-row">
+            <input type="number" id="supplier-pay-amount-input" placeholder="المبلغ">
+            <button id="submit-supplier-payment-btn" class="btn-pay-submit">سداد للمورد 💵</button>
+          </div>
+        </div>
+
+        <h4 class="ledger-section-title">سجل فواتير التوريد والدفعات:</h4>
+
+        <!-- قائمة كروت فواتير المورد والدفعات -->
+        <div class="ledger-list-container">
+          <div id="supplier-ledger-cards-list" class="ledger-cards-wrapper"></div>
         </div>
       </div>
 
-      <!-- كشف حساب المورد المطبوع كفاتورة بيضاء رسمية -->
-      <div id="supplier-ledger-printable-card" class="printable-white-card">
-        <div style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 12px;">
-          <img id="sl-logo" class="preview-logo hidden" alt="Logo" style="max-height: 55px; margin-bottom: 5px;">
-          <h2 id="sl-store-name" style="margin:0; font-size: 1.4rem; color:#111827; font-weight: 800;">اسم المنشأة</h2>
-          <p id="sl-store-phone" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
-          <p id="sl-store-vat" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
-          <div style="display: flex; justify-content: space-between; margin-top: 10px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; font-weight: bold;">
-            <span style="color:#111827;">🏭 كشف حساب توريدات ومشتريات</span>
-            <span id="sl-date" style="color:#111827;"></span>
-          </div>
-        </div>
-
-        <div style="margin-bottom: 12px; font-size: 0.95rem;">
-          <p style="margin:3px 0;"><strong style="color:#111827;">المورد / الشركة:</strong> <span id="sl-supplier-name" style="color:#374151; font-weight:700;"></span></p>
-          <p style="margin:3px 0;"><strong style="color:#111827;">رقم الهاتف:</strong> <span id="sl-supplier-phone" style="color:#374151;"></span></p>
-        </div>
-
-        <div style="background:#f9fafb !important; border:1px solid #e5e7eb !important; border-radius:8px; padding:12px; display:flex; justify-content:space-around; margin-bottom: 15px; text-align: center;">
-          <div>
-            <span style="font-size:0.85rem; color:#6b7280 !important;">إجمالي المشتريات</span>
-            <strong id="ledger-supplier-total-purchases" style="display:block; font-size:1.1rem; color:#111827 !important;">0.00</strong>
-          </div>
-          <div>
-            <span style="font-size:0.85rem; color:#6b7280 !important;">المسدد للمورد</span>
-            <strong id="ledger-supplier-total-paid" style="display:block; font-size:1.1rem; color:#059669 !important;">0.00</strong>
-          </div>
-          <div>
-            <span style="font-size:0.85rem; color:#6b7280 !important;">الصافي / المستحق للمورد</span>
-            <strong id="ledger-supplier-balance" style="display:block; font-size:1.1rem; color:#dc2626 !important;">0.00</strong>
-          </div>
-        </div>
-
-        <h4 style="margin: 10px 0 8px 0; color:#111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">جدول حركة التوريدات والدفعات:</h4>
-        <table style="width:100%; border-collapse:collapse;">
-          <thead>
-            <tr>
-              <th style="width: 15%;">التاريخ</th>
-              <th style="width: 45%;">نوع الحركة / البيان</th>
-              <th style="width: 20%;">المبلغ</th>
-              <th style="width: 20%;">الحالة</th>
-            </tr>
-          </thead>
-          <tbody id="supplier-ledger-table-body"></tbody>
-        </table>
-      </div>
-
-      <div class="modal-actions-row" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-        <button id="ledger-supplier-whatsapp-btn" class="btn-whatsapp">واتساب 💬</button>
-        <button id="ledger-supplier-download-btn" class="btn-primary">صورة 🖼️</button>
-        <button id="ledger-supplier-print-btn" class="btn-success">طباعة / PDF 🖨️</button>
+      <!-- أزرار الإجراءات السفلية الثلاثة -->
+      <div class="modal-actions-row ledger-actions-3">
+        <button id="ledger-supplier-whatsapp-btn" class="btn-ledger-wa">واتساب 💬</button>
+        <button id="ledger-supplier-download-btn" class="btn-ledger-img">صورة 🖼️</button>
+        <button id="ledger-supplier-print-btn" class="btn-ledger-pdf">طباعة / PDF 🖨️</button>
       </div>
     </div>
+  </div>
+
+  <!-- قوالب الطباعة والـ PDF المستقلة المطبوعة بصيغة A4 -->
+  <div id="ledger-printable-card" class="printable-white-card hidden" style="position: absolute; left: -9999px; width: 750px;">
+    <div style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 12px;">
+      <img id="cl-logo" class="preview-logo hidden" alt="Logo" style="max-height: 55px; margin-bottom: 5px;">
+      <h2 id="cl-store-name" style="margin:0; font-size: 1.4rem; color:#111827; font-weight: 800;">اسم المنشأة</h2>
+      <p id="cl-store-phone" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
+      <p id="cl-store-vat" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
+      <div style="display: flex; justify-content: space-between; margin-top: 10px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; font-weight: bold;">
+        <span style="color:#111827;">📑 كشف حساب تفصيلي</span>
+        <span id="cl-date" style="color:#111827;"></span>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 12px; font-size: 0.95rem;">
+      <p style="margin:3px 0;"><strong style="color:#111827;">العميل / الشركة:</strong> <span id="cl-client-name" style="color:#374151; font-weight:700;"></span></p>
+      <p style="margin:3px 0;"><strong style="color:#111827;">رقم الهاتف:</strong> <span id="cl-client-phone" style="color:#374151;"></span></p>
+    </div>
+
+    <div style="background:#f9fafb !important; border:1px solid #e5e7eb !important; border-radius:8px; padding:12px; display:flex; justify-content:space-around; margin-bottom: 15px; text-align: center;">
+      <div>
+        <span style="font-size:0.85rem; color:#6b7280 !important;">إجمالي التعاملات</span>
+        <strong id="cl-print-total-sales" style="display:block; font-size:1.1rem; color:#111827 !important;">0.00</strong>
+      </div>
+      <div>
+        <span style="font-size:0.85rem; color:#6b7280 !important;">إجمالي المدفوع</span>
+        <strong id="cl-print-total-paid" style="display:block; font-size:1.1rem; color:#059669 !important;">0.00</strong>
+      </div>
+      <div>
+        <span style="font-size:0.85rem; color:#6b7280 !important;">الصافي / المديونية</span>
+        <strong id="cl-print-balance" style="display:block; font-size:1.1rem; color:#dc2626 !important;">0.00</strong>
+      </div>
+    </div>
+
+    <h4 style="margin: 10px 0 8px 0; color:#111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">جدول الحركة المجمعة والسداد:</h4>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="width: 15%;">التاريخ</th>
+          <th style="width: 45%;">نوع الحركة / البيان</th>
+          <th style="width: 20%;">المبلغ</th>
+          <th style="width: 20%;">الحالة</th>
+        </tr>
+      </thead>
+      <tbody id="client-ledger-table-body"></tbody>
+    </table>
+  </div>
+
+  <div id="supplier-ledger-printable-card" class="printable-white-card hidden" style="position: absolute; left: -9999px; width: 750px;">
+    <div style="text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 12px;">
+      <img id="sl-logo" class="preview-logo hidden" alt="Logo" style="max-height: 55px; margin-bottom: 5px;">
+      <h2 id="sl-store-name" style="margin:0; font-size: 1.4rem; color:#111827; font-weight: 800;">اسم المنشأة</h2>
+      <p id="sl-store-phone" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
+      <p id="sl-store-vat" style="margin:2px 0; font-size: 0.85rem; color:#4b5563;"></p>
+      <div style="display: flex; justify-content: space-between; margin-top: 10px; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; font-weight: bold;">
+        <span style="color:#111827;">🏭 كشف حساب توريدات ومشتريات</span>
+        <span id="sl-date" style="color:#111827;"></span>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 12px; font-size: 0.95rem;">
+      <p style="margin:3px 0;"><strong style="color:#111827;">المورد / الشركة:</strong> <span id="sl-supplier-name" style="color:#374151; font-weight:700;"></span></p>
+      <p style="margin:3px 0;"><strong style="color:#111827;">رقم الهاتف:</strong> <span id="sl-supplier-phone" style="color:#374151;"></span></p>
+    </div>
+
+    <div style="background:#f9fafb !important; border:1px solid #e5e7eb !important; border-radius:8px; padding:12px; display:flex; justify-content:space-around; margin-bottom: 15px; text-align: center;">
+      <div>
+        <span style="font-size:0.85rem; color:#6b7280 !important;">إجمالي المشتريات</span>
+        <strong id="sl-print-total-purchases" style="display:block; font-size:1.1rem; color:#111827 !important;">0.00</strong>
+      </div>
+      <div>
+        <span style="font-size:0.85rem; color:#6b7280 !important;">المسدد للمورد</span>
+        <strong id="sl-print-total-paid" style="display:block; font-size:1.1rem; color:#059669 !important;">0.00</strong>
+      </div>
+      <div>
+        <span style="font-size:0.85rem; color:#6b7280 !important;">الصافي / المستحق للمورد</span>
+        <strong id="sl-print-balance" style="display:block; font-size:1.1rem; color:#dc2626 !important;">0.00</strong>
+      </div>
+    </div>
+
+    <h4 style="margin: 10px 0 8px 0; color:#111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;">جدول حركة التوريدات والدفعات:</h4>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="width: 15%;">التاريخ</th>
+          <th style="width: 45%;">نوع الحركة / البيان</th>
+          <th style="width: 20%;">المبلغ</th>
+          <th style="width: 20%;">الحالة</th>
+        </tr>
+      </thead>
+      <tbody id="supplier-ledger-table-body"></tbody>
+    </table>
   </div>
 
   <!-- Modal معاينة الفاتورة الإلكترونية -->
@@ -951,4 +882,4 @@
   <script src="capacitor.js"></script>
   <script type="module" src="app.js"></script>
 </body>
-                                                   </html>
+                                           </html>
