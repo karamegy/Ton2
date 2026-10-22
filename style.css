@@ -416,7 +416,7 @@ li:hover {
 .badge-partial { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
 /* ==========================================================
-   إعادة هيكلة النوافذ المنبثقة (Flexbox Modal Architecture)
+   1. تصغير حجم النوافذ المنبثقة والتجاوب مع كافة الأجهزة
    ========================================================== */
 .modal { 
   position: fixed; 
@@ -428,25 +428,25 @@ li:hover {
   justify-content: center; 
   align-items: center; 
   z-index: 9999; 
-  padding: 15px; 
+  padding: 10px !important; 
   will-change: opacity;
   transform: translateZ(0); 
 }
 
-/* ضبط إطار النافذة المنبثقة الخارجي ليكون ثابتاً في ارتفاعه */
+/* ضبط إطار النافذة المنبثقة الخارجي ليكون متجاوباً تماماً */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
   background: var(--card-bg); 
-  padding: 22px; 
+  padding: 16px 18px !important; 
   border-radius: 18px; 
   width: 100%; 
-  max-width: 480px; 
+  max-width: 440px !important;       /* تصغير العرض ليتناسب مع شاشات الموبايل */
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-  max-height: 88vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
+  max-height: 85vh !important;       /* ضبط الحد الأقصى للارتفاع لعدم تجاوز الشاشة */
   display: flex !important;
-  flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
+  flex-direction: column !important; 
   overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -455,12 +455,35 @@ li:hover {
 .ledger-modal-content { max-width: 750px !important; }
 .preview-modal-content { max-width: 520px !important; }
 
+/* تفعيل التمرير الداخلي للنموذج والمدخلات مع الحفاظ على الأزرار ورأس النافذة */
+.modal-content form,
+.modal-content .modal-body-scroll {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  overflow-y: auto !important;       /* تفعيل التمرير الداخلي لمنع الاختفاء */
+  flex: 1 !important;
+  padding: 4px;
+  margin-top: 6px;
+}
+
+.modal-content form .form-group {
+  margin-bottom: 2px;
+}
+
+.modal-content form input,
+.modal-content form select {
+  min-height: 38px !important;       /* ضغط الارتفاع لراحة الشاشات الصغيرة */
+  padding: 8px 12px !important;
+  font-size: 0.85rem !important;
+}
+
 @keyframes modalPop {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
-/* تثبيت العناصر الخارجية لمنع اختفائها أو حركتها عند التمرير */
+/* تثبيت العناصر الخارجية لمنع حركتها عند التمرير */
 .modal-header,
 .pay-section,
 .pay-section-modal,
@@ -790,7 +813,7 @@ li:hover {
 }
 
 /* ==========================================================
-   كشف حساب عميل / مورد وفواتير التصدير الرسمية A4
+   2. تصحيح ورقة A4 الخلفية وحل مشكلة الصفحة البيضاء في الـ PDF
    ========================================================== */
 .a4-printable-document,
 #invoice-printable-card,
@@ -808,16 +831,21 @@ li:hover {
   box-shadow: none !important;
 }
 
+/* التموضع عند (0,0) خلف التطبيق ليتم التقاطه بواسطة الكانفاس بدقة وبدون صفحات بيضاء */
 .a4-printable-document.rendering-active,
 #invoice-printable-card.rendering-active,
 #supplier-printable-card.rendering-active,
 #ledger-printable-card.rendering-active,
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
-  position: absolute !important;
-  left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
+  position: fixed !important;
+  left: 0 !important;             /* إلغاء left: -9999px التي تتسبب في الصفحة البيضاء */
   top: 0 !important;
-  width: 794px !important;  /* مقاس عرض ورقة A4 القياسية */
+  z-index: -9999 !important;       /* إخفاء العنصر خلف واجهة الشاشة */
+  width: 794px !important;        /* مقاس عرض ورقة A4 الحقيقية */
+  height: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .a4-header-center {
