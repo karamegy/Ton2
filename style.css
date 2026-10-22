@@ -433,7 +433,6 @@ li:hover {
   transform: translateZ(0); 
 }
 
-/* ضبط إطار النافذة المنبثقة الخارجي ليكون ثابتاً في ارتفاعه */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
@@ -444,10 +443,10 @@ li:hover {
   max-width: 480px; 
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-  max-height: 88vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
+  max-height: 88vh !important;       
   display: flex !important;
-  flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
-  overflow: auto !important;       /* منع تمرير الإطار الخارجي */
+  flex-direction: column !important; 
+  overflow: auto !important;       
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -460,7 +459,6 @@ li:hover {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* تثبيت العناصر الخارجية لمنع اختفائها أو حركتها عند التمرير */
 .modal-header,
 .pay-section,
 .pay-section-modal,
@@ -661,7 +659,6 @@ li:hover {
   padding-left: 2px;
 }
 
-/* كروت الفواتير والدفعات التفاعلية داخل كشف الحساب */
 .app-ledger-card,
 .ledger-item-card {
   background: var(--input-bg);
@@ -790,14 +787,14 @@ li:hover {
 }
 
 /* ==========================================================
-   كشف حساب عميل / مورد وفواتير التصدير الرسمية A4
+   كشف حساب عميل / مورد وفواتير التصدير الرسمية A4 (الحل الهندسي المتوافق مع الإزاحة السالبة)
    ========================================================== */
 .a4-printable-document,
 #invoice-printable-card,
 #supplier-printable-card,
 #ledger-printable-card,
 #supplier-ledger-printable-card {
-  display: none; 
+  display: none !important;
   background-color: #ffffff !important;
   color: #000000 !important;
   padding: 24px !important;
@@ -808,6 +805,7 @@ li:hover {
   box-shadow: none !important;
 }
 
+/* عند التصدير، يتم جلب العنصر إلى الذاكرة الرسومية مع الحفاظ على الإبعاد 794px وظهوره الكامل لكي يلتقطه الـ html2pdf بجودة تامة */
 .a4-printable-document.rendering-active,
 #invoice-printable-card.rendering-active,
 #supplier-printable-card.rendering-active,
@@ -815,21 +813,42 @@ li:hover {
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
   position: absolute !important;
-  left: -9999px !important; 
+  left: -9999px !important;
   top: 0 !important;
   width: 794px !important;  
+  min-height: 1123px !important;
   background-color: #ffffff !important;
   color: #000000 !important;
+  z-index: 2147483647 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  box-sizing: border-box !important;
 }
 
-.a4-printable-document.rendering-active *:not(img):not(.badge):not(.text-success):not(.text-danger),
-#invoice-printable-card.rendering-active *:not(img):not(.badge):not(.text-success):not(.text-danger),
-#supplier-printable-card.rendering-active *:not(img):not(.badge):not(.text-success):not(.text-danger),
-#ledger-printable-card.rendering-active *:not(img):not(.badge):not(.text-success):not(.text-danger),
-#supplier-ledger-printable-card.rendering-active *:not(img):not(.badge):not(.text-success):not(.text-danger) {
+.a4-printable-document.rendering-active *,
+#invoice-printable-card.rendering-active *,
+#supplier-printable-card.rendering-active *,
+#ledger-printable-card.rendering-active *,
+#supplier-ledger-printable-card.rendering-active * {
   color: #000000 !important;
   background-color: transparent !important;
   text-shadow: none !important;
+}
+
+.a4-printable-document.rendering-active .text-success,
+#invoice-printable-card.rendering-active .text-success,
+#supplier-printable-card.rendering-active .text-success,
+#ledger-printable-card.rendering-active .text-success,
+#supplier-ledger-printable-card.rendering-active .text-success {
+  color: #16a34a !important;
+}
+
+.a4-printable-document.rendering-active .text-danger,
+#invoice-printable-card.rendering-active .text-danger,
+#supplier-printable-card.rendering-active .text-danger,
+#ledger-printable-card.rendering-active .text-danger,
+#supplier-ledger-printable-card.rendering-active .text-danger {
+  color: #dc2626 !important;
 }
 
 .a4-printable-document img,
@@ -861,7 +880,7 @@ li:hover {
 
 .a4-store-sub {
   font-size: 0.82rem !important;
-  color: #000000 !important;
+  color: #4b5563 !important;
   margin: 2px 0 !important;
 }
 
@@ -910,7 +929,7 @@ li:hover {
 
 .a4-sum-row span {
   font-size: 0.8rem !important;
-  color: #000000 !important;
+  color: #4b5563 !important;
   font-weight: 700 !important;
 }
 
@@ -946,7 +965,7 @@ li:hover {
   font-weight: 800 !important;
   font-size: 0.85rem !important;
   padding: 8px !important;
-  border: 1px solid #000000 !important;
+  border: 1px solid #111827 !important;
   text-align: right !important;
 }
 
@@ -954,7 +973,7 @@ li:hover {
   padding: 8px !important;
   border: 1px solid #d1d5db !important;
   font-size: 0.85rem !important;
-  color: #000000 !important;
+  color: #111827 !important;
   background-color: #ffffff !important;
   text-align: right !important;
 }
