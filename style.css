@@ -447,7 +447,7 @@ li:hover {
   max-height: 88vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
   display: flex !important;
   flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
-  overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
+  overflow: auto !important;       /* منع تمرير الإطار الخارجي */
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
