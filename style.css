@@ -742,6 +742,7 @@ li:hover {
 .printable-white-card,
 .invoice-card-preview,
 #invoice-card-preview,
+#invoice-preview-container,
 #supplier-invoice-card-preview {
   background-color: #ffffff !important;
   color: #000000 !important;
@@ -796,6 +797,7 @@ li:hover {
 #invoice-printable-card,
 #supplier-printable-card,
 #ledger-printable-card,
+#invoice-preview-container,
 #supplier-ledger-printable-card {
   display: none; /* مخفي في الشاشة العادية للحفاظ على مظهر الموبايل الداكن */
   background-color: #ffffff !important;
