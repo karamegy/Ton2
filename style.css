@@ -433,23 +433,62 @@ li:hover {
   transform: translateZ(0); 
 }
 
-/* ضبط إطار النافذة المنبثقة الخارجي ليكون ثابتاً في ارتفاعه */
+/* 1. ضبط النافذة المنبثقة للعمل بكفاءة على الشاشات الصغرى */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
   background: var(--card-bg); 
-  padding: 22px; 
-  border-radius: 18px; 
-  width: 100%; 
+  padding: 12px 14px !important;     /* تقليل الهوامش الداخلية لتوفير مساحة عمودية */
+  border-radius: 16px; 
+  width: 95% !important; 
   max-width: 480px; 
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-  max-height: 80vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
+  max-height: 88vh !important;       /* زيادة أقصى ارتفاع للنافذة لاستغلال الشاشة */
   display: flex !important;
-  flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
-  overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
+  flex-direction: column !important; /* ترتيب عمودي ذكي */
+  overflow: hidden !important;       /* منع تمرير النافذة نفسها */
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 2. جعل حاوية الجدول أو المعاينة هي الجزء الوحيد القابل للتمرير */
+.invoice-card-preview,
+.ledger-screen-view,
+.modal-content .list-container,
+.modal-content .modern-table-container,
+.modal-content .table-container {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;          /* حاسمة لعمل Flexbox والسيطرة على ارتفاع الجدول */
+  overflow-y: auto !important;       /* تفعيل التمرير العمودي داخل الجدول */
+  overflow-x: auto !important;       /* تفعيل التمرير الأفقي للشاشات الضيقة */
+  margin-bottom: 8px;
+}
+
+/* 3. تصغير أحجام الجداول والخلايا لتناسب الهواتف */
+.modal-content table,
+.preview-table,
+.modern-items-table {
+  width: 100%;
+  font-size: 0.8rem !important;      /* تصغير حجم الخط لتقليل ارتفاع الصفوف */
+  border-collapse: collapse;
+}
+
+.modal-content th,
+.modal-content td,
+.preview-table th,
+.preview-table td {
+  padding: 5px 6px !important;       /* ضغط الحشو الداخلي لكل خلية */
+  line-height: 1.25 !important;
+}
+
+/* 4. تثبيت أزرار الحفظ والإجراءات في الأسفل بشكل دائم */
+.modal-actions-row,
+.form-actions,
+.modal-footer {
+  flex-shrink: 0 !important;         /* منع انكماش أو اختفاء أزرار الحفظ والطباعة */
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .ledger-modal-content { max-width: 750px !important; }
@@ -985,4 +1024,4 @@ li:hover {
   .btn-close {
     display: none !important;
   }
-  }
+}
