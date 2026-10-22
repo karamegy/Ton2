@@ -433,12 +433,12 @@ li:hover {
   transform: translateZ(0); 
 }
 
-/* ضبط إطار النافذة المنبثقة الخارجي ليكون ثابتاً في ارتفاعه وشكله */
+/* ضبط إطار النافذة المنبثقة الخارجي ليكون ثابتاً في ارتفاعه */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
   background: var(--card-bg); 
-  padding: 20px; 
+  padding: 22px; 
   border-radius: 18px; 
   width: 100%; 
   max-width: 480px; 
@@ -446,9 +446,8 @@ li:hover {
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
   max-height: 88vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
   display: flex !important;
-  flex-direction: column !important; /* ترتيب الجزء الداخلي أفقياً */
-  overflow: hidden !important;       /* منع انشطار الإطار الخارجي */
-  position: relative;
+  flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
+  overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -461,32 +460,8 @@ li:hover {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* تثبيت رأس النافذة المنبثقة وزر الإغلاق */
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 10px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0 !important;
-}
-
-/* حل مشكلة التمرير الداخلي للنماذج (إعدادات المنشأة / إضافة العناصر) مع حماية زر الإرسال والحفظ */
-.modal-content form,
-.modal-body,
-.modal-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow-y: auto !important;
-  flex: 1 1 auto;
-  padding-right: 4px;
-  padding-bottom: 12px; /* مساحة كافية حتى لا يتصق الزر بالقاع */
-  -webkit-overflow-scrolling: touch;
-}
-
 /* تثبيت العناصر الخارجية لمنع اختفائها أو حركتها عند التمرير */
+.modal-header,
 .pay-section,
 .pay-section-modal,
 .modal-actions-row { 
@@ -833,21 +808,16 @@ li:hover {
   box-shadow: none !important;
 }
 
-/* إظهار كرت الطباعة والتصدير أعلى الشاشة أفقياً عند الالتقاط بـ html2canvas لمنع ظهور صفحة بيضاء */
 .a4-printable-document.rendering-active,
 #invoice-printable-card.rendering-active,
 #supplier-printable-card.rendering-active,
 #ledger-printable-card.rendering-active,
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
-  position: fixed !important;
-  left: 0 !important;
+  position: absolute !important;
+  left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
   top: 0 !important;
-  z-index: 99999 !important;
   width: 794px !important;  /* مقاس عرض ورقة A4 القياسية */
-  background-color: #ffffff !important;
-  visibility: visible !important;
-  opacity: 1 !important;
 }
 
 .a4-header-center {
