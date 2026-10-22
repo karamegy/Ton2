@@ -789,7 +789,6 @@ li:hover {
 
 /* ==========================================================
    كشف حساب عميل / مورد وفواتير التصدير الرسمية A4
-   (إجبار الوضع الفاتح الكامل لمنع تحويل الألوان في الوضع الداكن)
    ========================================================== */
 .a4-printable-document,
 #invoice-printable-card,
@@ -808,7 +807,6 @@ li:hover {
   box-shadow: none !important;
 }
 
-/* إعادة تعيين كل الألوان الداخلية لتكون سوداء وفاتحة بوضوح تام في الـ PDF */
 .a4-printable-document *,
 #invoice-printable-card *,
 #supplier-printable-card *,
@@ -946,68 +944,29 @@ li:hover {
 }
 
 /* ==========================================================
-   إعدادات الطباعة وتصدير الـ PDF بمقاس A4 لجميع الأقسام
+   إعدادات الطباعة المصلحة (مباشرة لطباعة المتصفح)
    ========================================================== */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 0;
+    margin: 10mm;
+  }
+
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-scheme: light !important;
   }
 
   body {
-    background-color: #ffffff !important;
+    background: #ffffff !important;
     color: #000000 !important;
-    color-scheme: light !important;
-  }
-
-  body * {
-    visibility: hidden !important;
-  }
-
-  .a4-printable-document.rendering-active,
-  .a4-printable-document.rendering-active *,
-  #invoice-printable-card.rendering-active,
-  #invoice-printable-card.rendering-active *,
-  #supplier-printable-card.rendering-active,
-  #supplier-printable-card.rendering-active *,
-  #ledger-printable-card.rendering-active,
-  #ledger-printable-card.rendering-active *,
-  #supplier-ledger-printable-card.rendering-active,
-  #supplier-ledger-printable-card.rendering-active *,
-  .modal:not(.hidden) .printable-white-card,
-  .modal:not(.hidden) .printable-white-card *,
-  .modal:not(.hidden) .invoice-card-preview,
-  .modal:not(.hidden) .invoice-card-preview *,
-  .modal:not(.hidden) .a4-printable-document,
-  .modal:not(.hidden) .a4-printable-document * {
-    visibility: visible !important;
-    color-scheme: light !important;
-  }
-
-  .a4-printable-document.rendering-active,
-  #invoice-printable-card.rendering-active,
-  #supplier-printable-card.rendering-active,
-  #ledger-printable-card.rendering-active,
-  #supplier-ledger-printable-card.rendering-active,
-  .modal:not(.hidden) .printable-white-card,
-  .modal:not(.hidden) .invoice-card-preview,
-  .modal:not(.hidden) .a4-printable-document {
-    display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
+    padding: 0 !important;
     margin: 0 !important;
-    padding: 15mm !important;
-    box-shadow: none !important;
-    border: none !important;
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 
+  /* إخفاء عناصر التحكم وأزرار الواجهة فقط */
+  #main-app,
   .no-print,
   button,
   .modal-header,
@@ -1016,8 +975,54 @@ li:hover {
   .pay-section-modal,
   .ledger-screen-view,
   .btn-close,
-  #main-app,
-  .modal:not(.hidden) .modal-content {
+  .app-header,
+  .app-nav {
     display: none !important;
+  }
+
+  /* فتح إطار المودال ليتمكن المتصفح من إظهار الفاتورة التي بداخله */
+  .modal {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: block !important;
+    backdrop-filter: none !important;
+  }
+
+  .modal-content,
+  .ledger-modal-content,
+  .preview-modal-content {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* إظهار كروت الطباعة بوضوح وحجم كامل على ورق A4 */
+  .a4-printable-document,
+  #invoice-printable-card,
+  #supplier-printable-card,
+  #ledger-printable-card,
+  #supplier-ledger-printable-card,
+  .printable-white-card,
+  .invoice-card-preview {
+    display: block !important;
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 10mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    visibility: visible !important;
   }
 }
