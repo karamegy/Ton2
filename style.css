@@ -164,10 +164,9 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 }
 
 .app-header.glass-nav {
-  background: var(--card-bg);
+  background: color-mix(in srgb, var(--card-bg) 85%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background-opacity: 0.85;
 }
 
 .brand-container { display: flex; align-items: center; gap: 12px; }
