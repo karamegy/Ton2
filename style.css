@@ -815,11 +815,9 @@ li:hover {
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
   position: absolute !important;
-  left: 0 !important;
+  left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
   top: 0 !important;
   width: 794px !important;  /* مقاس عرض ورقة A4 القياسية */
-  z-index: 99999 !important;
-  opacity: 1 !important;
 }
 
 .a4-header-center {
@@ -987,4 +985,4 @@ li:hover {
   .btn-close {
     display: none !important;
   }
-}
+  }
