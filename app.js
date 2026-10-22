@@ -97,7 +97,6 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
 }
 
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
-async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
   if (!element) return false;
 
@@ -108,7 +107,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   await new Promise(resolve => setTimeout(resolve, 500));
 
   try {
-    // المحاولة الأولى: استخدام مكتبة html2pdf لتوليد ملف PDF احترافي
+    // استخدام مكتبة html2pdf لتوليد ملف PDF احترافي
     if (typeof html2pdf !== 'undefined') {
       const opt = {
         margin:       [5, 5, 5, 5],
@@ -125,39 +124,42 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      try {
-        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-        element.classList.remove('rendering-active');
-        
-        // استخدام مشاركة النظام مباشرة (تتجنب أخطاء التنزيل المباشر وتعمل بروعة على أندرويد)
-        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: shareTitle || 'مستند',
-            files: [file]
-          });
-          return true;
-        } else if (typeof saveOrShareFile === 'function') {
-          return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
-        }
-      } catch (e) {
-        console.warn("html2pdf error, falling back to canvas/print:", e);
+      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      element.classList.remove('rendering-active');
+
+      // إنشاء كينونة ملف لتجاوز أخطاء التنزيل المباشر نهائياً والاعتماد على مشاركة النظام
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // فتح نافذة مشاركة أندرويد (تتيح حفظ الملف في المجلدات أو إرساله مباشرة)
+        await navigator.share({
+          title: shareTitle || 'فاتورة',
+          text: 'مستند الفاتورة جاهز',
+          files: [file]
+        });
+        return true;
+      } else {
+        // بديل آمن 100% في حال عدم دعم المشاركة المباشرة: فتح محرك الطباعة للحفظ كـ PDF
+        window.print();
+        return true;
       }
     }
 
-    // المحاولة الثانية: نافذة الطباعة والنظام الرسمية (تتيح حفظ PDF أو الطباعة بضغطة زر وبدون أخطاء)
+    // حل أخیر إذا لم تتوفر المكتبة: نافذة الطباعة الرسمية للنظام
     element.classList.remove('rendering-active');
     window.print();
     return true;
 
   } catch (err) {
     element.classList.remove('rendering-active');
-    console.error("Export Error:", err);
-    // كحل أخير مضمون 100% لتجنب أي رسائل خطأ
+    console.error("PDF Export Error:", err);
+    
+    // منع ظهور رسالة الخطأ المزعجة والتوجه مباشرة للطباعة كـ PDF كخيار بديل آمن
     window.print();
     return false;
   }
 }
+
 
 function initCapacitorBridge() {
   if (isCapacitorNative) {
