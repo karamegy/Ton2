@@ -121,7 +121,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
       };
 
       try {
-        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+        const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
         element.classList.remove('rendering-active');
         return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
       } catch (e) {
