@@ -433,44 +433,41 @@ li:hover {
   transform: translateZ(0); 
 }
 
-/* 1. ضبط النافذة المنبثقة للعمل بكفاءة على الشاشات الصغرى */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
   background: var(--card-bg); 
-  padding: 12px 14px !important;     /* تقليل الهوامش الداخلية لتوفير مساحة عمودية */
+  padding: 14px 16px !important;     
   border-radius: 16px; 
   width: 95% !important; 
   max-width: 480px; 
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-  max-height: 88vh !important;       /* زيادة أقصى ارتفاع للنافذة لاستغلال الشاشة */
+  max-height: 88vh !important;       
   display: flex !important;
-  flex-direction: column !important; /* ترتيب عمودي ذكي */
-  overflow: hidden !important;       /* منع تمرير النافذة نفسها */
+  flex-direction: column !important; 
+  overflow: hidden !important;       
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* 2. جعل حاوية الجدول أو المعاينة هي الجزء الوحيد القابل للتمرير */
-.invoice-card-preview,
+/* التمرير خاص بحاويات الجداول والقوائم الداخلية فقط دون التأثير على كارت A4 */
 .ledger-screen-view,
 .modal-content .list-container,
 .modal-content .modern-table-container,
 .modal-content .table-container {
   flex: 1 1 auto !important;
-  min-height: 0 !important;          /* حاسمة لعمل Flexbox والسيطرة على ارتفاع الجدول */
-  overflow-y: auto !important;       /* تفعيل التمرير العمودي داخل الجدول */
-  overflow-x: auto !important;       /* تفعيل التمرير الأفقي للشاشات الضيقة */
+  min-height: 0 !important;          
+  overflow-y: auto !important;       
+  overflow-x: auto !important;       
   margin-bottom: 8px;
 }
 
-/* 3. تصغير أحجام الجداول والخلايا لتناسب الهواتف */
 .modal-content table,
 .preview-table,
 .modern-items-table {
   width: 100%;
-  font-size: 0.8rem !important;      /* تصغير حجم الخط لتقليل ارتفاع الصفوف */
+  font-size: 0.8rem !important;      
   border-collapse: collapse;
 }
 
@@ -478,15 +475,14 @@ li:hover {
 .modal-content td,
 .preview-table th,
 .preview-table td {
-  padding: 5px 6px !important;       /* ضغط الحشو الداخلي لكل خلية */
+  padding: 5px 6px !important;       
   line-height: 1.25 !important;
 }
 
-/* 4. تثبيت أزرار الحفظ والإجراءات في الأسفل بشكل دائم */
 .modal-actions-row,
 .form-actions,
 .modal-footer {
-  flex-shrink: 0 !important;         /* منع انكماش أو اختفاء أزرار الحفظ والطباعة */
+  flex-shrink: 0 !important;         
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -499,7 +495,6 @@ li:hover {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* تثبيت العناصر الخارجية لمنع اختفائها أو حركتها عند التمرير */
 .modal-header,
 .pay-section,
 .pay-section-modal,
@@ -700,7 +695,6 @@ li:hover {
   padding-left: 2px;
 }
 
-/* كروت الفواتير والدفعات التفاعلية داخل كشف الحساب */
 .app-ledger-card,
 .ledger-item-card {
   background: var(--input-bg);
@@ -776,7 +770,7 @@ li:hover {
 }
 
 /* ==========================================================
-   تنسيق كروت الطباعة والتصدير الورقية (White Printable Cards)
+   تنسيق كروت المعاينة البيضاء (White Printable Cards)
    ========================================================== */
 .printable-white-card,
 .invoice-card-preview,
@@ -788,12 +782,9 @@ li:hover {
   box-shadow: none !important;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch;
   padding: 16px !important;
   border-radius: 12px !important;
+  overflow: visible !important;
 }
 
 .printable-white-card *:not(.text-success):not(.text-danger),
@@ -836,7 +827,7 @@ li:hover {
 #supplier-printable-card,
 #ledger-printable-card,
 #supplier-ledger-printable-card {
-  display: none; /* مخفي في الشاشة العادية للحفاظ على مظهر الموبايل الداكن */
+  display: none; 
   background-color: #ffffff !important;
   color: #111827 !important;
   padding: 24px !important;
@@ -854,9 +845,11 @@ li:hover {
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
   position: absolute !important;
-  left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
+  left: -9999px !important; 
   top: 0 !important;
-  width: 794px !important;  /* مقاس عرض ورقة A4 القياسية */
+  width: 794px !important;  /* مقاس A4 القياسي */
+  height: auto !important;
+  overflow: visible !important;
 }
 
 .a4-header-center {
@@ -985,26 +978,28 @@ li:hover {
     visibility: hidden !important;
   }
   
-  /* إظهار بطاقات المعاينة المطبوعة فقط */
-  .modal:not(.hidden) .printable-white-card, 
-  .modal:not(.hidden) .printable-white-card *,
-  .modal:not(.hidden) .invoice-card-preview,
-  .modal:not(.hidden) .invoice-card-preview *,
-  .modal:not(.hidden) .a4-printable-document,
-  .modal:not(.hidden) .a4-printable-document * {
+  /* إظهار كروت المعاينة والمستندات بجميع أماكنها داخل وخارج النافذة */
+  .printable-white-card, 
+  .printable-white-card *,
+  .invoice-card-preview,
+  .invoice-card-preview *,
+  .a4-printable-document,
+  .a4-printable-document * {
     visibility: visible !important;
   }
 
   /* ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
-  .modal:not(.hidden) .printable-white-card,
-  .modal:not(.hidden) .invoice-card-preview,
-  .modal:not(.hidden) .a4-printable-document {
+  .printable-white-card,
+  .invoice-card-preview,
+  .a4-printable-document {
     display: block !important;
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
     margin: 0 !important;
     padding: 10px !important;
     box-shadow: none !important;
