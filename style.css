@@ -422,45 +422,38 @@ li:hover {
   position: fixed; 
   inset: 0; 
   background: rgba(8, 12, 20, 0.85); 
-  backdrop-filter: blur(4px); 
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(3px); 
+  -webkit-backdrop-filter: blur(3px);
   display: flex; 
   justify-content: center; 
   align-items: center; 
   z-index: 9999; 
-  padding: 12px; 
+  padding: 15px; 
   will-change: opacity;
   transform: translateZ(0); 
 }
 
-/* ضبط إطار النافذة المنبثقة المرن لتفعيل التمرير الداخلي التلقائي */
+/* ضبط إطار النافذة المنبثقة الخارجي ليكون ثابتاً في ارتفاعه */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
   background: var(--card-bg); 
-  padding: 20px; 
+  padding: 22px; 
   border-radius: 18px; 
   width: 100%; 
-  max-width: 520px; 
+  max-width: 480px; 
   border: 1px solid var(--card-border); 
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
-  max-height: 90vh !important;       /* أقصى ارتفاع للنافذة 90% من الشاشة */
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
+  max-height: 88vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
   display: flex !important;
   flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
-  overflow-y: auto !important;       /* تفعيل التمرير العمودي لجميع أجزاء النافذة */
-  box-sizing: border-box;
+  overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .ledger-modal-content { max-width: 750px !important; }
-.preview-modal-content { max-width: 560px !important; }
-
-/* إطار خاص بنافذة إعدادات المنشأة */
-#settings-modal .modal-content {
-  max-width: 500px;
-  gap: 12px;
-}
+.preview-modal-content { max-width: 520px !important; }
 
 @keyframes modalPop {
   from { opacity: 0; transform: scale(0.96); }
@@ -992,4 +985,4 @@ li:hover {
   .btn-close {
     display: none !important;
   }
-}
+                                               }
