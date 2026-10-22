@@ -934,20 +934,30 @@ li:hover {
 }
 
 /* ==========================================================
-   إعدادات الطباعة وتصدير الـ PDF بمقاس A4 لجميع الأقسام
+   إعدادات الطباعة وتصدير الـ PDF بمقاس A4 لجميع الأقسام (مُصححة)
    ========================================================== */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm 12mm;
+    margin: 0;
   }
 
   body * {
     visibility: hidden !important;
   }
-  
-  /* إظهار بطاقات المعاينة المطبوعة فقط */
-  .modal:not(.hidden) .printable-white-card, 
+
+  /* إظهار كروت الطباعة بوضوح ومنع إخفائها بواسطة المتصفح */
+  .a4-printable-document.rendering-active,
+  .a4-printable-document.rendering-active *,
+  #invoice-printable-card.rendering-active,
+  #invoice-printable-card.rendering-active *,
+  #supplier-printable-card.rendering-active,
+  #supplier-printable-card.rendering-active *,
+  #ledger-printable-card.rendering-active,
+  #ledger-printable-card.rendering-active *,
+  #supplier-ledger-printable-card.rendering-active,
+  #supplier-ledger-printable-card.rendering-active *,
+  .modal:not(.hidden) .printable-white-card,
   .modal:not(.hidden) .printable-white-card *,
   .modal:not(.hidden) .invoice-card-preview,
   .modal:not(.hidden) .invoice-card-preview *,
@@ -956,7 +966,12 @@ li:hover {
     visibility: visible !important;
   }
 
-  /* ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
+  /* إعادة سحب عنصر الفاتورة أو كشف الحساب من موقع -9999px ليكون في منتصف صفحة A4 تماماً */
+  .a4-printable-document.rendering-active,
+  #invoice-printable-card.rendering-active,
+  #supplier-printable-card.rendering-active,
+  #ledger-printable-card.rendering-active,
+  #supplier-ledger-printable-card.rendering-active,
   .modal:not(.hidden) .printable-white-card,
   .modal:not(.hidden) .invoice-card-preview,
   .modal:not(.hidden) .a4-printable-document {
@@ -967,14 +982,16 @@ li:hover {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 10px !important;
+    padding: 15mm !important;
     box-shadow: none !important;
     border: none !important;
-    background: #ffffff !important;
+    background-color: #ffffff !important;
     color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* إخفاء الأزرار وعناصر التحكم أثناء التصدير والطباعة */
+  /* إخفاء الواجهة المظلمة والأزرار بالكامل أثناء الطباعة */
   .no-print,
   button,
   .modal-header,
@@ -982,7 +999,9 @@ li:hover {
   .pay-section,
   .pay-section-modal,
   .ledger-screen-view,
-  .btn-close {
+  .btn-close,
+  #main-app,
+  .modal:not(.hidden) .modal-content {
     display: none !important;
   }
-  }
+}
