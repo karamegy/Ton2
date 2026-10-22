@@ -101,7 +101,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   if (!element) return false;
 
   element.classList.add('rendering-active');
-  await new Promise(resolve => setTimeout(resolve, 300));
+  await new Promise(resolve => setTimeout(resolve, 350));
 
   try {
     if (typeof html2pdf !== 'undefined') {
