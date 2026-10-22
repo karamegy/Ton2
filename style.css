@@ -433,21 +433,21 @@ li:hover {
   transform: translateZ(0); 
 }
 
-/* هيكل النافذة المنبثقة الذكي والتفاعلي */
+/* ضبط إطار النافذة المنبثقة الخارجي ليكون ثابتاً في ارتفاعه */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
   background: var(--card-bg); 
-  padding: 16px 20px; 
+  padding: 22px; 
   border-radius: 18px; 
   width: 100%; 
   max-width: 480px; 
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-  max-height: 85vh !important;       
+  max-height: 88vh !important;       /* أقصى ارتفاع للنافذة 88% من الشاشة */
   display: flex !important;
-  flex-direction: column !important; 
-  overflow: hidden !important;       /* منع التمرير العام للنافذة بالكامل */
+  flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
+  overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -460,36 +460,12 @@ li:hover {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* رأس النافذة (العنوان وزر الإغلاق) ثابت بالأعلى لا يتحرك */
-.modal-header {
-  flex-shrink: 0 !important;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 10px;
-}
-
-/* حقول الإدخال والنموذج الداخلي هي وحدها التي تتحرك وتتزلج (Scrollable) */
-.modal-content form,
-.modal-content .modal-body-scroll {
-  flex: 1 1 auto !important;
-  overflow-y: auto !important;
-  max-height: calc(85vh - 120px) !important;
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
-/* زر الحفظ والأزرار السفلية (بما فيها السياسة والخصوصية) ثابتة وبارزة بالأسفل تماماً */
-.modal-content button[type="submit"],
-.modal-content .btn-primary,
-.modal-content .btn-success,
-.modal-actions-row,
+/* تثبيت العناصر الخارجية لمنع اختفائها أو حركتها عند التمرير */
+.modal-header,
 .pay-section,
-.pay-section-modal {
-  flex-shrink: 0 !important;
-  margin-top: 10px !important;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-color);
-  background: var(--card-bg);
+.pay-section-modal,
+.modal-actions-row { 
+  flex-shrink: 0 !important; 
 }
 
 .btn-close { background: transparent; color: var(--text-muted); font-size: 1.2rem; min-height: auto; padding: 4px; }
@@ -781,12 +757,10 @@ li:hover {
   border-radius: 12px !important;
 }
 
-/* إجبار النصوص والبطاقات على الظهور بشكل واضح للطباعة والبي دي إف */
 .printable-white-card *:not(.text-success):not(.text-danger),
 .invoice-card-preview *:not(.text-success):not(.text-danger) {
   color: #1f2937 !important;
   text-shadow: none !important;
-  background-color: transparent !important;
 }
 
 .printable-white-card table,
@@ -806,7 +780,6 @@ li:hover {
   background-color: #ffffff !important;
   font-size: 0.85rem !important;
   text-align: right !important;
-  color: #111827 !important;
 }
 
 .printable-white-card th,
@@ -824,7 +797,7 @@ li:hover {
 #supplier-printable-card,
 #ledger-printable-card,
 #supplier-ledger-printable-card {
-  display: none; 
+  display: none; /* مخفي في الشاشة العادية للحفاظ على مظهر الموبايل الداكن */
   background-color: #ffffff !important;
   color: #111827 !important;
   padding: 24px !important;
@@ -842,9 +815,9 @@ li:hover {
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
   position: absolute !important;
-  left: -9999px !important; 
+  left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
   top: 0 !important;
-  width: 794px !important;  
+  width: 794px !important;  /* مقاس عرض ورقة A4 القياسية */
 }
 
 .a4-header-center {
@@ -961,7 +934,7 @@ li:hover {
 }
 
 /* ==========================================================
-   إعدادات الطباعة وتصدير الـ PDF بمقاس A4 لجميع الأقسام (مصححة)
+   إعدادات الطباعة وتصدير الـ PDF بمقاس A4 لجميع الأقسام
    ========================================================== */
 @media print {
   @page {
@@ -969,7 +942,39 @@ li:hover {
     margin: 10mm 12mm;
   }
 
-  body *:not(.modal):not(.modal *),
+  body * {
+    visibility: hidden !important;
+  }
+  
+  /* إظهار بطاقات المعاينة المطبوعة فقط */
+  .modal:not(.hidden) .printable-white-card, 
+  .modal:not(.hidden) .printable-white-card *,
+  .modal:not(.hidden) .invoice-card-preview,
+  .modal:not(.hidden) .invoice-card-preview *,
+  .modal:not(.hidden) .a4-printable-document,
+  .modal:not(.hidden) .a4-printable-document * {
+    visibility: visible !important;
+  }
+
+  /* ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
+  .modal:not(.hidden) .printable-white-card,
+  .modal:not(.hidden) .invoice-card-preview,
+  .modal:not(.hidden) .a4-printable-document {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* إخفاء الأزرار وعناصر التحكم أثناء التصدير والطباعة */
   .no-print,
   button,
   .modal-header,
@@ -980,34 +985,4 @@ li:hover {
   .btn-close {
     display: none !important;
   }
-  
-  .modal:not(.hidden),
-  .modal:not(.hidden) .modal-content,
-  .modal:not(.hidden) .printable-white-card, 
-  .modal:not(.hidden) .invoice-card-preview,
-  .modal:not(.hidden) .a4-printable-document {
-    visibility: visible !important;
-    display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    max-height: none !important;
-    overflow: visible !important;
-    margin: 0 !important;
-    padding: 10px !important;
-    box-shadow: none !important;
-    border: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-  }
-
-  .modal:not(.hidden) .printable-white-card *,
-  .modal:not(.hidden) .invoice-card-preview *,
-  .modal:not(.hidden) .a4-printable-document * {
-    visibility: visible !important;
-    color: #000000 !important;
-    background: transparent !important;
-  }
-}
+                  }
