@@ -815,13 +815,13 @@ li:hover {
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
   position: absolute !important;
-  left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
+  left: 0 !important;
   top: 0 !important;
   width: 794px !important;  /* مقاس عرض ورقة A4 القياسية */
-  z-index: -9999 !important;          /* وضعه في الطبقة الخلفية تماماً خلف كافة عناصر التطبيق */
-  opacity: 0 !important;              /* جعله شفافاً كليا (غير مرئي للعين) ولكن مرئياً للـ Canvas */
-  pointer-events: none !important;    /* منع أي تفاعلات باللمس أو الماوس عليه */
+  z-index: 99999 !important;
+  opacity: 1 !important;
 }
+
 .a4-header-center {
   text-align: center !important;
   border-bottom: 2px solid #e5e7eb !important;
@@ -987,4 +987,4 @@ li:hover {
   .btn-close {
     display: none !important;
   }
-  }
+}
