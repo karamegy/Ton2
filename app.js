@@ -100,17 +100,21 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
   if (!element) return false;
 
+  // إظهار كرت المعاينة المخصص للتصدير في الخلفية
   element.classList.add('rendering-active');
-  await new Promise(resolve => setTimeout(resolve, 350));
+  
+  // زيادة وقت الانتظار قليلاً لضمان تحميل الصور والـ DOM بالكامل على الموبايل
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   try {
+    // المحاولة الأولى: استخدام مكتبة html2pdf لتوليد ملف PDF احترافي
     if (typeof html2pdf !== 'undefined') {
       const opt = {
         margin:       [5, 5, 5, 5],
         filename:     fileName,
-        image:        { type: 'jpeg', quality: 0.98 },
+        image:        { type: 'jpeg', quality: 0.92 }, // تقليل الجودة قليلاً لمنع استهلاك الذاكرة
         html2canvas:  { 
-          scale: 2, 
+          scale: 1.5,     // تم التعديل من 2 إلى 1.5 لحل مشكلة انهيار الذاكرة على الهواتف وتطبيقات Capacitor
           useCORS: true, 
           logging: false, 
           backgroundColor: '#ffffff',
@@ -129,10 +133,11 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
       }
     }
 
+    // المحاولة الثانية: إذا فشل الـ PDF، يتم التحويل لصورة PNG (لتشغيل زر تحميل الصورة)
     if (typeof html2canvas !== 'undefined') {
       try {
         const canvas = await html2canvas(element, { 
-          scale: 2, 
+          scale: 1.5,     // تقليل الـ scale هنا أيضاً لحماية الذاكرة العشوائية للموبايل
           useCORS: true, 
           backgroundColor: '#ffffff',
           scrollX: 0,
@@ -146,15 +151,18 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
       }
     }
 
+    // المحاولة الأخيرة: كحل بديل ومضمون 100% في حال تعذر المكتبات
     element.classList.remove('rendering-active');
     window.print();
     return true;
+
   } catch (err) {
     element.classList.remove('rendering-active');
     console.error("Export Error:", err);
     return false;
   }
 }
+
 
 function initCapacitorBridge() {
   if (isCapacitorNative) {
