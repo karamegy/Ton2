@@ -101,12 +101,12 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   if (!element) return false;
 
   element.classList.add('rendering-active');
-  await new Promise(resolve => setTimeout(resolve, 300));
+  await new Promise(resolve => setTimeout(resolve, 350));
 
   try {
     if (typeof html2pdf !== 'undefined') {
       const opt = {
-        margin:       [5, 5, 5, 5],
+        margin:       [4, 4, 4, 4],
         filename:     fileName,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
@@ -136,7 +136,8 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
           useCORS: true, 
           backgroundColor: '#ffffff',
           scrollX: 0,
-          scrollY: 0
+          scrollY: 0,
+          width: 794
         });
         const imgData = canvas.toDataURL('image/png');
         element.classList.remove('rendering-active');
@@ -153,6 +154,8 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
     element.classList.remove('rendering-active');
     console.error("Export Error:", err);
     return false;
+  } finally {
+    element.classList.remove('rendering-active');
   }
 }
 
@@ -1360,7 +1363,7 @@ if (downloadImgBtn) {
 
       populatePrintableInvoice(currentActiveInvoiceForPreview);
       printableCard.classList.add('rendering-active');
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 250));
 
       const canvas = await html2canvas(printableCard, { 
         scale: 2, 
@@ -2146,7 +2149,7 @@ if (ledgerDownloadBtn) {
         ledgerDownloadBtn.textContent = 'جاري التجهيز... ⏳';
 
         ledgerCard.classList.add('rendering-active');
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 250));
 
         const canvas = await html2canvas(ledgerCard, { 
           scale: 2, 
@@ -2181,7 +2184,7 @@ if (ledgerPrintBtn) {
 
     try {
       ledgerCard.classList.add('rendering-active');
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 250));
 
       await generateAndExportPdf('ledger-printable-card', `Statement_${activeLedgerClientName}.pdf`, `كشف حساب العميل: ${activeLedgerClientName}`);
     } finally {
@@ -2649,7 +2652,7 @@ if (ledgerSupplierDownloadBtn) {
         ledgerSupplierDownloadBtn.textContent = 'جاري التجهيز... ⏳';
 
         ledgerCard.classList.add('rendering-active');
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 250));
 
         const canvas = await html2canvas(ledgerCard, { 
           scale: 2, 
@@ -2684,7 +2687,7 @@ if (ledgerSupplierPrintBtn) {
 
     try {
       ledgerCard.classList.add('rendering-active');
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 250));
 
       await generateAndExportPdf('supplier-ledger-printable-card', `Supplier_Statement_${activeLedgerSupplierName}.pdf`, `كشف حساب المورد: ${activeLedgerSupplierName}`);
     } finally {
@@ -3109,7 +3112,7 @@ if (supplierDownloadImgBtn) {
 
         populatePrintableSupplierInvoice(currentActivePurchaseForPreview);
         printableCard.classList.add('rendering-active');
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 250));
 
         const canvas = await html2canvas(printableCard, { 
           scale: 2, 
