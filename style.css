@@ -1,3 +1,8 @@
+/* ==========================================================
+   تنسيق شامل وتصحيح كامل للتطبيق والطباعة ورسائل الـ PDF
+   ========================================================== */
+
+/* 1. الثيمات والمتغيرات الأساسية */
 :root, [data-theme="dark"] {
   --bg-main: #080c14;
   --card-bg: #111827;
@@ -849,7 +854,7 @@ li:hover {
 }
 
 /* ==========================================================
-   4. حل مشكلة زر الـ PDF لطباعة ورقة A4 بيضاء رسمية دائماً
+   4. التنسيق الشامل لطباعة ورقة A4 وتصدير الـ PDF (حل الصفحة الفارغة)
    ========================================================== */
 .a4-printable-document,
 #invoice-printable-card,
@@ -865,30 +870,32 @@ li:hover {
   text-align: right !important;
   border-radius: 0 !important;
   box-shadow: none !important;
+  color-scheme: light !important;
 }
 
-/* التنسيق البرمجي عند التفعيل بواسطة زر الـ PDF */
+/* التنسيق البرمجي عند التفعيل بواسطة زر الـ PDF للالتقاط */
 .a4-printable-document.rendering-active,
 #invoice-printable-card.rendering-active,
 #supplier-printable-card.rendering-active,
 #ledger-printable-card.rendering-active,
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
-  position: fixed !important;
+  position: absolute !important;
   top: 0 !important;
   left: 0 !important;
-  width: 794px !important;        /* مقاس ورقة A4 */
-  min-height: 1123px !important;   /* طول ورقة A4 */
-  z-index: 99999 !important;       /* يرتفع فوق كل شيء لحظة الالتقاط */
+  width: 794px !important;
+  min-height: 1123px !important;
+  z-index: 999999 !important;
   background-color: #ffffff !important;
   color: #111827 !important;
   opacity: 1 !important;
   visibility: visible !important;
   transform: none !important;
   animation: none !important;
+  color-scheme: light !important;
 }
 
-/* إجبار كافة النصوص والجداول داخل الـ A4 أن تكون باللون الأسود والخلفية البيضاء دائماً */
+/* إجبار النص والجداول أن تكون خلفيتها بيضاء بخط أسود */
 .rendering-active,
 .rendering-active *,
 .rendering-active *::before,
@@ -902,6 +909,7 @@ li:hover {
   visibility: visible !important;
   text-shadow: none !important;
   box-shadow: none !important;
+  color-scheme: light !important;
 }
 
 .rendering-active th {
@@ -1037,30 +1045,39 @@ li:hover {
 }
 
 /* ==========================================================
-   5. إعدادات الطباعة الرسمية
+   5. إعدادات الطباعة الرسمية (ضمان طباعة الورقة المخفية دائماً)
    ========================================================== */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm 12mm;
+    margin: 5mm;
   }
 
+  html, body {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    color-scheme: light !important;
+  }
+
+  /* إخفاء كافة عناصر الواجهة الخارجية */
   body * {
     visibility: hidden !important;
   }
   
-  .modal:not(.hidden) .printable-white-card, 
-  .modal:not(.hidden) .printable-white-card *,
-  .modal:not(.hidden) .invoice-card-preview,
-  .modal:not(.hidden) .invoice-card-preview *,
-  .modal:not(.hidden) .a4-printable-document,
-  .modal:not(.hidden) .a4-printable-document * {
+  /* إظهار ورقة الطباعة سواء كانت داخل المودال أو خادمة بالخلفية */
+  .rendering-active,
+  .rendering-active *,
+  .a4-printable-document,
+  .a4-printable-document *,
+  .printable-white-card,
+  .printable-white-card * {
     visibility: visible !important;
   }
 
-  .modal:not(.hidden) .printable-white-card,
-  .modal:not(.hidden) .invoice-card-preview,
-  .modal:not(.hidden) .a4-printable-document {
+  /* تثبيت مكان الورقة لتبدأ من أعلى اليسار بدون فراغات */
+  .rendering-active,
+  .a4-printable-document.rendering-active,
+  .printable-white-card {
     display: block !important;
     position: absolute !important;
     left: 0 !important;
@@ -1072,7 +1089,8 @@ li:hover {
     box-shadow: none !important;
     border: none !important;
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #111827 !important;
+    z-index: 999999 !important;
   }
 
   .no-print,
@@ -1082,7 +1100,11 @@ li:hover {
   .pay-section,
   .pay-section-modal,
   .ledger-screen-view,
-  .btn-close {
+  .btn-close,
+  .app-header,
+  .app-nav,
+  .stats-grid,
+  .dashboard-grid {
     display: none !important;
   }
 }
