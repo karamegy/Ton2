@@ -97,13 +97,14 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
 }
 
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
+async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
   if (!element) return false;
 
   // إظهار كرت المعاينة المخصص للتصدير في الخلفية
   element.classList.add('rendering-active');
   
-  // زيادة وقت الانتظار قليلاً لضمان تحميل الصور والـ DOM بالكامل على الموبايل
+  // وقت الانتظار لضمان تحميل الصور والـ DOM بالكامل على الموبايل
   await new Promise(resolve => setTimeout(resolve, 500));
 
   try {
@@ -112,9 +113,9 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
       const opt = {
         margin:       [5, 5, 5, 5],
         filename:     fileName,
-        image:        { type: 'jpeg', quality: 0.92 }, // تقليل الجودة قليلاً لمنع استهلاك الذاكرة
+        image:        { type: 'jpeg', quality: 0.92 },
         html2canvas:  { 
-          scale: 1.5,     // تم التعديل من 2 إلى 1.5 لحل مشكلة انهيار الذاكرة على الهواتف وتطبيقات Capacitor
+          scale: 1.5,     
           useCORS: true, 
           logging: false, 
           backgroundColor: '#ffffff',
@@ -127,31 +128,24 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
       try {
         const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
         element.classList.remove('rendering-active');
-        return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
+        
+        // استخدام مشاركة النظام مباشرة (تتجنب أخطاء التنزيل المباشر وتعمل بروعة على أندرويد)
+        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: shareTitle || 'مستند',
+            files: [file]
+          });
+          return true;
+        } else if (typeof saveOrShareFile === 'function') {
+          return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
+        }
       } catch (e) {
-        console.warn("html2pdf error, falling back to canvas:", e);
+        console.warn("html2pdf error, falling back to canvas/print:", e);
       }
     }
 
-    // المحاولة الثانية: إذا فشل الـ PDF، يتم التحويل لصورة PNG (لتشغيل زر تحميل الصورة)
-    if (typeof html2canvas !== 'undefined') {
-      try {
-        const canvas = await html2canvas(element, { 
-          scale: 1.5,     // تقليل الـ scale هنا أيضاً لحماية الذاكرة العشوائية للموبايل
-          useCORS: true, 
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0
-        });
-        const imgData = canvas.toDataURL('image/png');
-        element.classList.remove('rendering-active');
-        return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
-      } catch (e) {
-        console.error("Canvas export failed:", e);
-      }
-    }
-
-    // المحاولة الأخيرة: كحل بديل ومضمون 100% في حال تعذر المكتبات
+    // المحاولة الثانية: نافذة الطباعة والنظام الرسمية (تتيح حفظ PDF أو الطباعة بضغطة زر وبدون أخطاء)
     element.classList.remove('rendering-active');
     window.print();
     return true;
@@ -159,10 +153,11 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   } catch (err) {
     element.classList.remove('rendering-active');
     console.error("Export Error:", err);
+    // كحل أخير مضمون 100% لتجنب أي رسائل خطأ
+    window.print();
     return false;
   }
 }
-
 
 function initCapacitorBridge() {
   if (isCapacitorNative) {
