@@ -816,18 +816,22 @@ li:hover {
   text-shadow: none !important;
 }
 
+/* تعديل وضعية العناصر النشطة أثناء الالتقاط بالـ Canvas والـ PDF */
 .a4-printable-document.rendering-active,
 #invoice-printable-card.rendering-active,
 #supplier-printable-card.rendering-active,
 #ledger-printable-card.rendering-active,
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
-  position: absolute !important;
-  left: -9999px !important;
+  position: fixed !important;
+  left: 0 !important;
   top: 0 !important;
+  z-index: -9999 !important;
   width: 794px !important;
   background-color: #ffffff !important;
   color: #111827 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .a4-header-center {
