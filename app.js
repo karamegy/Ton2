@@ -100,21 +100,17 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
   if (!element) return false;
 
-  // إظهار كرت المعاينة المخصص للتصدير في الخلفية
   element.classList.add('rendering-active');
-  
-  // وقت الانتظار لضمان تحميل الصور والـ DOM بالكامل على الموبايل
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 350));
 
   try {
-    // استخدام مكتبة html2pdf لتوليد ملف PDF احترافي
     if (typeof html2pdf !== 'undefined') {
       const opt = {
         margin:       [5, 5, 5, 5],
         filename:     fileName,
-        image:        { type: 'jpeg', quality: 0.92 },
+        image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
-          scale: 1.5,     
+          scale: 2, 
           useCORS: true, 
           logging: false, 
           backgroundColor: '#ffffff',
@@ -124,42 +120,41 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-      element.classList.remove('rendering-active');
-
-      // إنشاء كينونة ملف لتجاوز أخطاء التنزيل المباشر نهائياً والاعتماد على مشاركة النظام
-      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        // فتح نافذة مشاركة أندرويد (تتيح حفظ الملف في المجلدات أو إرساله مباشرة)
-        await navigator.share({
-          title: shareTitle || 'فاتورة',
-          text: 'مستند الفاتورة جاهز',
-          files: [file]
-        });
-        return true;
-      } else {
-        // بديل آمن 100% في حال عدم دعم المشاركة المباشرة: فتح محرك الطباعة للحفظ كـ PDF
-        window.print();
-        return true;
+      try {
+        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+        element.classList.remove('rendering-active');
+        return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
+      } catch (e) {
+        console.warn("html2pdf error, falling back to canvas:", e);
       }
     }
 
-    // حل أخیر إذا لم تتوفر المكتبة: نافذة الطباعة الرسمية للنظام
+    if (typeof html2canvas !== 'undefined') {
+      try {
+        const canvas = await html2canvas(element, { 
+          scale: 2, 
+          useCORS: true, 
+          backgroundColor: '#ffffff',
+          scrollX: 0,
+          scrollY: 0
+        });
+        const imgData = canvas.toDataURL('image/png');
+        element.classList.remove('rendering-active');
+        return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
+      } catch (e) {
+        console.error("Canvas export failed:", e);
+      }
+    }
+
     element.classList.remove('rendering-active');
     window.print();
     return true;
-
   } catch (err) {
     element.classList.remove('rendering-active');
-    console.error("PDF Export Error:", err);
-    
-    // منع ظهور رسالة الخطأ المزعجة والتوجه مباشرة للطباعة كـ PDF كخيار بديل آمن
-    window.print();
+    console.error("Export Error:", err);
     return false;
   }
 }
-
 
 function initCapacitorBridge() {
   if (isCapacitorNative) {
