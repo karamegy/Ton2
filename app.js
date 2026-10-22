@@ -115,7 +115,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
           logging: false, 
           backgroundColor: '#ffffff',
           scrollX: 0,
-          scrollY: 0
+          scrollY: 0,
           width: 794,
           windowWidth: 794,
         },
