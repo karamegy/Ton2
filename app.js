@@ -101,7 +101,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   if (!element) return false;
 
   element.classList.add('rendering-active');
-  await new Promise(resolve => setTimeout(resolve, 400));
+  await new Promise(resolve => setTimeout(resolve, 350));
 
   try {
     if (typeof html2pdf !== 'undefined') {
@@ -115,11 +115,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
           logging: false, 
           backgroundColor: '#ffffff',
           scrollX: 0,
-          scrollY: 0,
-          width: 794,
-          windowWidth: 794,
-          x: 0,
-          y: 0
+          scrollY: 0
         },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
@@ -140,11 +136,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
           useCORS: true, 
           backgroundColor: '#ffffff',
           scrollX: 0,
-          scrollY: 0,
-          width: 794,
-          windowWidth: 794,
-          x: 0,
-          y: 0
+          scrollY: 0
         });
         const imgData = canvas.toDataURL('image/png');
         element.classList.remove('rendering-active');
