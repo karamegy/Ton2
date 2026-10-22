@@ -1,8 +1,3 @@
-/* ==========================================================
-   تنسيق شامل وتصحيح كامل للتطبيق والطباعة ورسائل الـ PDF
-   ========================================================== */
-
-/* 1. الثيمات والمتغيرات الأساسية */
 :root, [data-theme="dark"] {
   --bg-main: #080c14;
   --card-bg: #111827;
@@ -79,13 +74,7 @@
   --radius: 16px;
 }
 
-/* 2. التجميع والعناصر العامة */
-* { 
-  box-sizing: border-box; 
-  margin: 0; 
-  padding: 0; 
-  font-family: 'Cairo', system-ui, -apple-system, sans-serif; 
-}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', system-ui, -apple-system, sans-serif; }
 
 html {
   background-color: transparent;
@@ -103,7 +92,7 @@ body {
   min-height: 100vh;
 }
 
-/* خلفية الإضاءة والدخان المتحرك */
+/* خلفية إضاءة ودخان ملون متحرك وناعم */
 body::before {
   content: '';
   position: fixed;
@@ -121,7 +110,7 @@ body::before {
   transform: translateZ(0);
 }
 
-/* الشعار الدوار في الخلفية */
+/* اللوجو الخلفي الثابت في المنتصف ويدور حول محوره */
 body::after {
   content: '';
   position: fixed;
@@ -163,20 +152,13 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 
 /* Header & Nav Styling */
 .app-header {
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center;
-  padding: 12px 18px; 
-  background: var(--card-bg);
-  border: 1px solid var(--card-border); 
-  border-radius: var(--radius);
-  margin-bottom: 12px; 
-  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-  flex-wrap: wrap; 
-  gap: 10px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 18px; background: var(--card-bg);
+  border: 1px solid var(--card-border); border-radius: var(--radius);
+  margin-bottom: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  flex-wrap: wrap; gap: 10px;
   transition: box-shadow 0.2s ease;
 }
-
 .app-header:hover {
   box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
 }
@@ -185,6 +167,7 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
   background: var(--card-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  background-opacity: 0.85;
 }
 
 .brand-container { display: flex; align-items: center; gap: 12px; }
@@ -201,29 +184,16 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 }
 
 .app-nav {
-  display: flex; 
-  gap: 6px; 
-  margin-bottom: 16px;
-  background: var(--card-bg); 
-  border: 1px solid var(--card-border);
-  padding: 6px; 
-  border-radius: var(--radius); 
-  overflow-x: auto;
+  display: flex; gap: 6px; margin-bottom: 16px;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  padding: 6px; border-radius: var(--radius); overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 .app-nav::-webkit-scrollbar { display: none; }
 .nav-tab {
-  flex: 1 0 auto; 
-  min-width: max-content; 
-  background: transparent; 
-  border: none;
-  color: var(--text-muted); 
-  padding: 10px 18px; 
-  border-radius: 12px;
-  font-weight: 700; 
-  font-size: 0.85rem; 
-  cursor: pointer; 
-  transition: all 0.2s ease;
+  flex: 1 0 auto; min-width: max-content; background: transparent; border: none;
+  color: var(--text-muted); padding: 10px 18px; border-radius: 12px;
+  font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;
 }
 .nav-tab:hover { color: var(--text-main); background: rgba(99, 102, 241, 0.08); }
 .nav-tab.active { 
@@ -238,13 +208,13 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 /* Stats Grid */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .stat-card {
-  background: var(--card-bg); 
-  padding: 14px 16px; 
-  border-radius: var(--radius);
+  background: var(--card-bg); padding: 14px 16px; border-radius: var(--radius);
   border: 1px solid var(--card-border);
   transition: border-color 0.2s ease;
 }
-.stat-card:hover { border-color: var(--accent); }
+.stat-card:hover {
+  border-color: var(--accent);
+}
 .stat-title { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 .stat-value { font-size: 1.2rem; color: var(--accent); margin-top: 4px; display: block; font-weight: 800; }
 .text-success { color: var(--success) !important; }
@@ -255,11 +225,8 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 @media (min-width: 850px) { .dashboard-grid { grid-template-columns: 1.4fr 1fr; } }
 
 .card {
-  background: var(--card-bg); 
-  border-radius: var(--radius); 
-  padding: 18px;
-  border: 1px solid var(--card-border); 
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  background: var(--card-bg); border-radius: var(--radius); padding: 18px;
+  border: 1px solid var(--card-border); box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 
@@ -291,16 +258,9 @@ html[dir="ltr"] th, html[dir="ltr"] td { text-align: left; }
 .form-group label { display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 700; }
 
 input, select {
-  width: 100%; 
-  padding: 10px 14px; 
-  background: var(--input-bg);
-  border: 1px solid var(--border-color); 
-  border-radius: 10px;
-  color: var(--text-main); 
-  font-size: 0.9rem; 
-  font-weight: 600; 
-  outline: none; 
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%; padding: 10px 14px; background: var(--input-bg);
+  border: 1px solid var(--border-color); border-radius: 10px;
+  color: var(--text-main); font-size: 0.9rem; font-weight: 600; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease;
   min-height: 42px;
 }
 input:focus, select:focus { 
@@ -308,7 +268,7 @@ input:focus, select:focus {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25); 
 }
 
-/* Modern Table Architecture */
+/* High-End Modern Table Architecture */
 .modern-table-container {
   background: var(--input-bg);
   border: 1px solid var(--border-color);
@@ -344,7 +304,7 @@ input:focus, select:focus {
 }
 .btn-add-row:hover { background: rgba(99, 102, 241, 0.15); }
 
-/* Mobile Table Adaptations */
+/* Mobile Adaptations for Modern Table */
 @media (max-width: 650px) {
   .modern-items-table thead { display: none; }
   .modern-items-table, .modern-items-table tbody, .modern-items-table tr, .modern-items-table td {
@@ -380,7 +340,7 @@ input:focus, select:focus {
   .modern-items-table td:last-child { position: absolute; top: 10px; left: 10px; width: auto; }
 }
 
-/* Summary Box */
+/* Live Summary Box */
 .live-summary-box {
   background: var(--input-bg); padding: 16px; border-radius: 14px; border: 1px solid var(--border-color);
 }
@@ -456,7 +416,7 @@ li:hover {
 .badge-partial { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
 /* ==========================================================
-   3. حل مشكلة ظهور زر "حفظ التغييرات" في الهواتف
+   إعادة هيكلة النوافذ المنبثقة (Flexbox Modal Architecture)
    ========================================================== */
 .modal { 
   position: fixed; 
@@ -473,65 +433,46 @@ li:hover {
   transform: translateZ(0); 
 }
 
+/* ضبط إطار النافذة المنبثقة المرن لتفعيل التمرير الداخلي التلقائي */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
   background: var(--card-bg); 
-  padding: 20px 16px 14px 16px; 
-  border-radius: 20px; 
+  padding: 20px; 
+  border-radius: 18px; 
   width: 100%; 
-  max-width: 480px; 
+  max-width: 520px; 
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
-  max-height: 88vh !important;       /* ارتفاع مناسب ومضمون لكل الشاشات */
+  max-height: 90vh !important;       /* أقصى ارتفاع للنافذة 90% من الشاشة */
   display: flex !important;
-  flex-direction: column !important; 
-  overflow: hidden !important;       
+  flex-direction: column !important; /* ترتيب رأس كامل الأجزاء */
+  overflow-y: auto !important;       /* تفعيل التمرير العمودي لجميع أجزاء النافذة */
+  box-sizing: border-box;
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .ledger-modal-content { max-width: 750px !important; }
-.preview-modal-content { max-width: 520px !important; }
+.preview-modal-content { max-width: 560px !important; }
+
+/* إطار خاص بنافذة إعدادات المنشأة */
+#settings-modal .modal-content {
+  max-width: 500px;
+  gap: 12px;
+}
 
 @keyframes modalPop {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
-/* جعل النماذج والحقول قابلة للتمرير الداخلي بسلاسة */
-.modal-content form,
-.modal-body-scroll,
-#settings-modal .modal-content,
-#settings-modal .modal-content form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch;
-  padding-right: 4px;
-  padding-bottom: 12px;
-  flex: 1 1 auto;
-}
-
+/* تثبيت العناصر الخارجية لمنع اختفائها أو حركتها عند التمرير */
 .modal-header,
 .pay-section,
-.pay-section-modal { 
-  flex-shrink: 0 !important; 
-}
-
-/* تثبيت زر حفظ التغييرات والأزرار السفلية بوضوح */
-#save-settings-btn,
-.modal-content button[type="submit"],
-.modal-content .btn-primary:last-child,
+.pay-section-modal,
 .modal-actions-row { 
-  flex-shrink: 0 !important;
-  width: 100% !important;
-  min-height: 44px !important;
-  margin-top: 10px !important;
-  position: sticky !important;
-  bottom: 0 !important;
-  z-index: 10 !important;
+  flex-shrink: 0 !important; 
 }
 
 .btn-close { background: transparent; color: var(--text-muted); font-size: 1.2rem; min-height: auto; padding: 4px; }
@@ -707,7 +648,9 @@ li:hover {
   transition: opacity 0.2s ease;
 }
 
-.btn-pay-submit:hover { opacity: 0.9; }
+.btn-pay-submit:hover {
+  opacity: 0.9;
+}
 
 .ledger-cards-heading {
   font-size: 0.85rem;
@@ -854,14 +797,14 @@ li:hover {
 }
 
 /* ==========================================================
-   4. التنسيق الشامل لطباعة ورقة A4 وتصدير الـ PDF (حل الصفحة الفارغة)
+   كشف حساب عميل / مورد وفواتير التصدير الرسمية A4
    ========================================================== */
 .a4-printable-document,
 #invoice-printable-card,
 #supplier-printable-card,
 #ledger-printable-card,
 #supplier-ledger-printable-card {
-  display: none;
+  display: none; /* مخفي في الشاشة العادية للحفاظ على مظهر الموبايل الداكن */
   background-color: #ffffff !important;
   color: #111827 !important;
   padding: 24px !important;
@@ -870,10 +813,8 @@ li:hover {
   text-align: right !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  color-scheme: light !important;
 }
 
-/* التنسيق البرمجي عند التفعيل بواسطة زر الـ PDF للالتقاط */
 .a4-printable-document.rendering-active,
 #invoice-printable-card.rendering-active,
 #supplier-printable-card.rendering-active,
@@ -881,54 +822,9 @@ li:hover {
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
   position: absolute !important;
+  left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
   top: 0 !important;
-  left: 0 !important;
-  width: 794px !important;
-  min-height: 1123px !important;
-  z-index: 999999 !important;
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: none !important;
-  animation: none !important;
-  color-scheme: light !important;
-}
-
-/* إجبار النص والجداول أن تكون خلفيتها بيضاء بخط أسود */
-.rendering-active,
-.rendering-active *,
-.rendering-active *::before,
-.rendering-active *::after {
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  border-color: #d1d5db !important;
-  animation: none !important;
-  transition: none !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  text-shadow: none !important;
-  box-shadow: none !important;
-  color-scheme: light !important;
-}
-
-.rendering-active th {
-  background-color: #f3f4f6 !important;
-  color: #111827 !important;
-  font-weight: 800 !important;
-}
-
-.rendering-active td {
-  background-color: #ffffff !important;
-  color: #1f2937 !important;
-}
-
-.rendering-active .a4-doc-title,
-.rendering-active .a4-summary-table-box,
-.rendering-active .a4-client-details {
-  background-color: #f9fafb !important;
-  color: #111827 !important;
-  border: 1px solid #e5e7eb !important;
+  width: 794px !important;  /* مقاس عرض ورقة A4 القياسية */
 }
 
 .a4-header-center {
@@ -1045,39 +941,32 @@ li:hover {
 }
 
 /* ==========================================================
-   5. إعدادات الطباعة الرسمية (ضمان طباعة الورقة المخفية دائماً)
+   إعدادات الطباعة وتصدير الـ PDF بمقاس A4 لجميع الأقسام
    ========================================================== */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 5mm;
+    margin: 10mm 12mm;
   }
 
-  html, body {
-    background-color: #ffffff !important;
-    color: #111827 !important;
-    color-scheme: light !important;
-  }
-
-  /* إخفاء كافة عناصر الواجهة الخارجية */
   body * {
     visibility: hidden !important;
   }
   
-  /* إظهار ورقة الطباعة سواء كانت داخل المودال أو خادمة بالخلفية */
-  .rendering-active,
-  .rendering-active *,
-  .a4-printable-document,
-  .a4-printable-document *,
-  .printable-white-card,
-  .printable-white-card * {
+  /* إظهار بطاقات المعاينة المطبوعة فقط */
+  .modal:not(.hidden) .printable-white-card, 
+  .modal:not(.hidden) .printable-white-card *,
+  .modal:not(.hidden) .invoice-card-preview,
+  .modal:not(.hidden) .invoice-card-preview *,
+  .modal:not(.hidden) .a4-printable-document,
+  .modal:not(.hidden) .a4-printable-document * {
     visibility: visible !important;
   }
 
-  /* تثبيت مكان الورقة لتبدأ من أعلى اليسار بدون فراغات */
-  .rendering-active,
-  .a4-printable-document.rendering-active,
-  .printable-white-card {
+  /* ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
+  .modal:not(.hidden) .printable-white-card,
+  .modal:not(.hidden) .invoice-card-preview,
+  .modal:not(.hidden) .a4-printable-document {
     display: block !important;
     position: absolute !important;
     left: 0 !important;
@@ -1089,10 +978,10 @@ li:hover {
     box-shadow: none !important;
     border: none !important;
     background: #ffffff !important;
-    color: #111827 !important;
-    z-index: 999999 !important;
+    color: #000000 !important;
   }
 
+  /* إخفاء الأزرار وعناصر التحكم أثناء التصدير والطباعة */
   .no-print,
   button,
   .modal-header,
@@ -1100,11 +989,7 @@ li:hover {
   .pay-section,
   .pay-section-modal,
   .ledger-screen-view,
-  .btn-close,
-  .app-header,
-  .app-nav,
-  .stats-grid,
-  .dashboard-grid {
+  .btn-close {
     display: none !important;
   }
 }
