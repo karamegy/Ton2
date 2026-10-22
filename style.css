@@ -818,6 +818,10 @@ li:hover {
   left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
   top: 0 !important;
   width: 794px !important;  /* مقاس عرض ورقة A4 القياسية */
+  z-index: -9999 !important;          /* وضعه في الطبقة الخلفية تماماً خلف كافة عناصر التطبيق */
+  opacity: 0 !important;              /* جعله شفافاً كليا (غير مرئي للعين) ولكن مرئياً للـ Canvas */
+  pointer-events: none !important;    /* منع أي تفاعلات باللمس أو الماوس عليه */
+}
 }
 
 .a4-header-center {
