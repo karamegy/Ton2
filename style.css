@@ -416,7 +416,7 @@ li:hover {
 .badge-partial { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
 /* ==========================================================
-   1. تصغير حجم النوافذ المنبثقة والتجاوب مع كافة الأجهزة
+   إعادة هيكلة النوافذ المنبثقة (Modals Architecture)
    ========================================================== */
 .modal { 
   position: fixed; 
@@ -428,53 +428,59 @@ li:hover {
   justify-content: center; 
   align-items: center; 
   z-index: 9999; 
-  padding: 10px !important; 
+  padding: 12px; 
   will-change: opacity;
   transform: translateZ(0); 
 }
 
-/* ضبط إطار النافذة المنبثقة الخارجي ليكون متجاوباً تماماً */
+/* ضبط إطار النوافذ المنبثقة العامة */
 .modal-content,
 .ledger-modal-content,
 .preview-modal-content { 
   background: var(--card-bg); 
-  padding: 16px 18px !important; 
+  padding: 20px; 
   border-radius: 18px; 
   width: 100%; 
-  max-width: 440px !important;       /* تصغير العرض ليتناسب مع شاشات الموبايل */
+  max-width: 480px; 
   border: 1px solid var(--card-border); 
   box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
-  max-height: 85vh !important;       /* ضبط الحد الأقصى للارتفاع لعدم تجاوز الشاشة */
+  max-height: 88vh !important;       
   display: flex !important;
   flex-direction: column !important; 
-  overflow: hidden !important;       /* منع تمرير الإطار الخارجي */
+  overflow: hidden !important;       
   will-change: transform, opacity;
   animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .ledger-modal-content { max-width: 750px !important; }
-.preview-modal-content { max-width: 520px !important; }
+.preview-modal-content { max-width: 500px !important; }
 
-/* تفعيل التمرير الداخلي للنموذج والمدخلات مع الحفاظ على الأزرار ورأس النافذة */
-.modal-content form,
-.modal-content .modal-body-scroll {
+/* ==========================================================
+   تصغير وتعديل إطار نافذة إعدادات المنشأة والعملة تحديداً
+   ========================================================== */
+#settings-modal .modal-content {
+  max-width: 380px !important;       /* إطار صغير ومتناسق مع شاشات الموبايل */
+  max-height: 82vh !important;
+  padding: 16px !important;
+}
+
+#settings-modal .modal-content form {
   display: flex !important;
   flex-direction: column !important;
   gap: 8px !important;
-  overflow-y: auto !important;       /* تفعيل التمرير الداخلي لمنع الاختفاء */
+  overflow-y: auto !important;       /* تفعيل التمرير الداخلي للنموذج */
   flex: 1 !important;
-  padding: 4px;
-  margin-top: 6px;
+  padding-right: 4px;
 }
 
-.modal-content form .form-group {
-  margin-bottom: 2px;
+#settings-modal .form-group {
+  margin-bottom: 4px !important;
 }
 
-.modal-content form input,
-.modal-content form select {
-  min-height: 38px !important;       /* ضغط الارتفاع لراحة الشاشات الصغيرة */
-  padding: 8px 12px !important;
+#settings-modal input,
+#settings-modal select {
+  min-height: 36px !important;
+  padding: 6px 10px !important;
   font-size: 0.85rem !important;
 }
 
@@ -483,7 +489,7 @@ li:hover {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* تثبيت العناصر الخارجية لمنع حركتها عند التمرير */
+/* تثبيت العناصر الخارجية لمنع اختفائها أو حركتها عند التمرير */
 .modal-header,
 .pay-section,
 .pay-section-modal,
@@ -813,15 +819,16 @@ li:hover {
 }
 
 /* ==========================================================
-   2. تصحيح ورقة A4 الخلفية وحل مشكلة الصفحة البيضاء في الـ PDF
+   حل مشكلة الصفحة البيضاء والخيالات السوداء في تصدير الـ PDF
    ========================================================== */
 .a4-printable-document,
 #invoice-printable-card,
 #supplier-printable-card,
 #ledger-printable-card,
 #supplier-ledger-printable-card {
-  display: none; /* مخفي في الشاشة العادية للحفاظ على مظهر الموبايل الداكن */
+  display: none;
   background-color: #ffffff !important;
+  background: #ffffff !important;
   color: #111827 !important;
   padding: 24px !important;
   font-family: 'Cairo', sans-serif !important;
@@ -831,7 +838,7 @@ li:hover {
   box-shadow: none !important;
 }
 
-/* التموضع عند (0,0) خلف التطبيق ليتم التقاطه بواسطة الكانفاس بدقة وبدون صفحات بيضاء */
+/* إظهار المستند في أعلى الطبقات (z-index: 999999) بخلفية بيضاء ناصعة أثناء توليد البي دي اف */
 .a4-printable-document.rendering-active,
 #invoice-printable-card.rendering-active,
 #supplier-printable-card.rendering-active,
@@ -839,13 +846,57 @@ li:hover {
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
   position: fixed !important;
-  left: 0 !important;             /* إلغاء left: -9999px التي تتسبب في الصفحة البيضاء */
+  left: 0 !important;
   top: 0 !important;
-  z-index: -9999 !important;       /* إخفاء العنصر خلف واجهة الشاشة */
-  width: 794px !important;        /* مقاس عرض ورقة A4 الحقيقية */
-  height: auto !important;
-  visibility: visible !important;
+  z-index: 999999 !important;       /* يمنع التقاط خلفية الشاشة الداكنة نهائياً */
+  width: 794px !important;           /* أبعاد ورقة A4 */
+  min-height: 100vh !important;
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+  box-shadow: none !important;
   opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* إجبار محتويات الورقة على اللون الأبيض والخط الداكن */
+.a4-printable-document *,
+#invoice-printable-card *,
+#supplier-printable-card *,
+#ledger-printable-card *,
+#supplier-ledger-printable-card * {
+  color: #111827 !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+.a4-printable-document table,
+#invoice-printable-card table,
+#supplier-printable-card table,
+#ledger-printable-card table,
+#supplier-ledger-printable-card table {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+.a4-printable-document th,
+#invoice-printable-card th,
+#supplier-printable-card th,
+#ledger-printable-card th,
+#supplier-ledger-printable-card th {
+  background-color: #f3f4f6 !important;
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.a4-printable-document td,
+#invoice-printable-card td,
+#supplier-printable-card td,
+#ledger-printable-card td,
+#supplier-ledger-printable-card td {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #111827 !important;
 }
 
 .a4-header-center {
@@ -962,7 +1013,7 @@ li:hover {
 }
 
 /* ==========================================================
-   إعدادات الطباعة وتصدير الـ PDF بمقاس A4 لجميع الأقسام
+   إعدادات الطباعة المباشرة عبر المطبوعات A4
    ========================================================== */
 @media print {
   @page {
@@ -974,7 +1025,6 @@ li:hover {
     visibility: hidden !important;
   }
   
-  /* إظهار بطاقات المعاينة المطبوعة فقط */
   .modal:not(.hidden) .printable-white-card, 
   .modal:not(.hidden) .printable-white-card *,
   .modal:not(.hidden) .invoice-card-preview,
@@ -984,7 +1034,6 @@ li:hover {
     visibility: visible !important;
   }
 
-  /* ضبط أبعاد الكرت لملء ورقة الـ A4 بالكامل دون قطع */
   .modal:not(.hidden) .printable-white-card,
   .modal:not(.hidden) .invoice-card-preview,
   .modal:not(.hidden) .a4-printable-document {
@@ -1002,7 +1051,6 @@ li:hover {
     color: #000000 !important;
   }
 
-  /* إخفاء الأزرار وعناصر التحكم أثناء التصدير والطباعة */
   .no-print,
   button,
   .modal-header,
