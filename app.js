@@ -110,14 +110,13 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
         filename:     fileName,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
-          scale: 2, 
-          useCORS: true, 
-          logging: false, 
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0
-          width: 794,
-          windowWidth: 794
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        width: 794,
+        windowWidth
         },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
@@ -134,13 +133,13 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
     if (typeof html2canvas !== 'undefined') {
       try {
         const canvas = await html2canvas(element, { 
-          scale: 2, 
-          useCORS: true, 
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0
-          width: 794,
-          windowWidth: 794
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        width: 794,
+        windowWidth
         });
         const imgData = canvas.toDataURL('image/png');
         element.classList.remove('rendering-active');
