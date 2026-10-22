@@ -116,7 +116,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
         scrollX: 0,
         scrollY: 0,
         width: 794,
-        windowWidth
+        windowWidth 794,
         },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
@@ -139,7 +139,7 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
         scrollX: 0,
         scrollY: 0,
         width: 794,
-        windowWidth
+        windowWidth 794,
         });
         const imgData = canvas.toDataURL('image/png');
         element.classList.remove('rendering-active');
