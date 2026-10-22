@@ -808,16 +808,21 @@ li:hover {
   box-shadow: none !important;
 }
 
+/* الوضع النشط للتصدير: مرئي لمحرّك الرسم، غير مرئي للمستخدم، وبدون إعاقة لمس الشاشة */
 .a4-printable-document.rendering-active,
 #invoice-printable-card.rendering-active,
 #supplier-printable-card.rendering-active,
 #ledger-printable-card.rendering-active,
 #supplier-ledger-printable-card.rendering-active {
   display: block !important;
-  position: absolute !important;
-  left: -9999px !important; /* إبقاء المستند خارج الشاشة ولكن مرئي لـ html2canvas */
+  position: fixed !important;
+  left: 0 !important;
   top: 0 !important;
-  width: 794px !important;  /* مقاس عرض ورقة A4 القياسية */
+  width: 794px !important;
+  max-width: 794px !important;
+  opacity: 0 !important;           /* إخفاء تام لمنع ظهور ورقة بيضاء فوق التطبيق */
+  z-index: 99999 !important;       /* إجبار محرك WebView على رسم البيانات بالكامل في الذاكرة */
+  pointer-events: none !important; /* منع إعاقة اللمس أثناء التصدير */
 }
 
 .a4-header-center {
@@ -985,4 +990,4 @@ li:hover {
   .btn-close {
     display: none !important;
   }
-  }
+}
