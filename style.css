@@ -822,8 +822,6 @@ li:hover {
   opacity: 0 !important;              /* جعله شفافاً كليا (غير مرئي للعين) ولكن مرئياً للـ Canvas */
   pointer-events: none !important;    /* منع أي تفاعلات باللمس أو الماوس عليه */
 }
-}
-
 .a4-header-center {
   text-align: center !important;
   border-bottom: 2px solid #e5e7eb !important;
