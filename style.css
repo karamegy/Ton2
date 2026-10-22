@@ -742,7 +742,6 @@ li:hover {
 .printable-white-card,
 .invoice-card-preview,
 #invoice-card-preview,
-#invoice-preview-container,
 #supplier-invoice-card-preview {
   background-color: #ffffff !important;
   color: #000000 !important;
@@ -986,4 +985,4 @@ li:hover {
   .btn-close {
     display: none !important;
   }
-    }
+  }
