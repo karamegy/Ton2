@@ -349,7 +349,7 @@ input:focus, select:focus {
     background: var(--input-bg) !important; padding: 8px 10px !important; border-radius: 8px !important;
     margin-top: 4px;
   }
-  .modern-items-table td:nth-child(5)::before { content: "الإجمالي للصنف:"; font-size: 0.75rem; color: var(--text-muted); }
+  .modern-items-table td:nth-child(5)::before { content: " حذف:"; font-size: 0.75rem; color: var(--text-muted); }
   .modern-items-table td:last-child { position: absolute; top: 10px; left: 10px; width: auto; z-index: 10; }
 }
 
