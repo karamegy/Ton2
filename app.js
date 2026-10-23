@@ -96,6 +96,9 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
   }
 }
 
+// ==========================================
+// PDF Engine (HTML2Canvas -> jsPDF Blob Direct Conversion)
+// ==========================================
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
   if (!element) return false;
@@ -104,45 +107,36 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
   await new Promise(resolve => setTimeout(resolve, 350));
 
   try {
-    if (typeof html2pdf !== 'undefined') {
-      const opt = {
-        margin:       [5, 5, 5, 5],
-        filename:     fileName,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { 
-          scale: 2, 
-          useCORS: true, 
-          logging: false, 
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0
-        },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      try {
-        const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
-        element.classList.remove('rendering-active');
-        return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
-      } catch (e) {
-        console.warn("html2pdf error, falling back to canvas:", e);
-      }
-    }
-
     if (typeof html2canvas !== 'undefined') {
-      try {
-        const canvas = await html2canvas(element, { 
-          scale: 2, 
-          useCORS: true, 
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        useCORS: true, 
+        logging: false, 
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      
+      const jsPDF = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+
+      if (typeof jsPDF !== 'undefined') {
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
         });
-        const imgData = canvas.toDataURL('image/png');
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        
+        const pdfBlob = pdf.output('blob');
         element.classList.remove('rendering-active');
-        return await saveOrShareFile(imgData, fileName.replace('.pdf', '.png'), 'image/png', shareTitle);
-      } catch (e) {
-        console.error("Canvas export failed:", e);
+        
+        return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
       }
     }
 
@@ -150,9 +144,12 @@ async function generateAndExportPdf(elementId, fileName, shareTitle) {
     window.print();
     return true;
   } catch (err) {
+    console.error("PDF Export Error:", err);
     element.classList.remove('rendering-active');
-    console.error("Export Error:", err);
+    window.print();
     return false;
+  } finally {
+    element.classList.remove('rendering-active');
   }
 }
 
