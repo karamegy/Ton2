@@ -97,56 +97,66 @@ async function saveOrShareFile(fileDataUrlOrBlob, fileName, mimeType, shareTitle
 }
 
 // ==========================================
-// PDF Engine (HTML2Canvas -> jsPDF Blob Direct Conversion)
+// PDF Engine (HTML2Canvas -> jsPDF Multi-page Support)
 // ==========================================
 async function generateAndExportPdf(elementId, fileName, shareTitle) {
   const element = document.getElementById(elementId);
-  if (!element) return false;
+  if (!element) {
+    alert("⚠️ تعذر العثور على العنصر المراد تصديره.");
+    return false;
+  }
+
+  const jsPDFClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+  if (typeof html2canvas === 'undefined' || typeof jsPDFClass === 'undefined') {
+    alert("⚠️ لم يتم العثور على مكتبات html2canvas أو jsPDF. تأكد من إضافتها في ملف index.html");
+    return false;
+  }
 
   element.classList.add('rendering-active');
   await new Promise(resolve => setTimeout(resolve, 350));
 
   try {
-    if (typeof html2canvas !== 'undefined') {
-      const canvas = await html2canvas(element, { 
-        scale: 2, 
-        useCORS: true, 
-        logging: false, 
-        backgroundColor: '#ffffff',
-        scrollX: 0,
-        scrollY: 0
-      });
+    const canvas = await html2canvas(element, { 
+      scale: 2, 
+      useCORS: true, 
+      logging: false, 
+      backgroundColor: '#ffffff',
+      scrollX: 0,
+      scrollY: 0
+    });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.98);
-      
-      const jsPDF = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const pdf = new jsPDFClass({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
 
-      if (typeof jsPDF !== 'undefined') {
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4'
-        });
+    const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
+    const pageHeight = pdf.internal.pageSize.getHeight(); // 297mm
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    let heightLeft = pdfHeight;
+    let position = 0;
 
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        
-        const pdfBlob = pdf.output('blob');
-        element.classList.remove('rendering-active');
-        
-        return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
-      }
+    // إضافة الصفحة الأولى
+    pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
+    heightLeft -= pageHeight;
+
+    // إضافة صفحات إضافية تلقائياً إذا كان كشف الحساب طويلاً
+    while (heightLeft > 0) {
+      position = heightLeft - pdfHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
     }
 
-    element.classList.remove('rendering-active');
-    window.print();
-    return true;
+    const pdfBlob = pdf.output('blob');
+    return await saveOrShareFile(pdfBlob, fileName, 'application/pdf', shareTitle);
+
   } catch (err) {
     console.error("PDF Export Error:", err);
-    element.classList.remove('rendering-active');
-    window.print();
+    alert("❌ حدث خطأ أثناء إنشاء ملف الـ PDF.");
     return false;
   } finally {
     element.classList.remove('rendering-active');
@@ -2173,17 +2183,8 @@ if (ledgerDownloadBtn) {
 const ledgerPrintBtn = document.getElementById('ledger-print-btn');
 if (ledgerPrintBtn) {
   ledgerPrintBtn.addEventListener('click', async () => {
-    const ledgerCard = document.getElementById('ledger-printable-card');
-    if (!activeLedgerClientName || !ledgerCard) return;
-
-    try {
-      ledgerCard.classList.add('rendering-active');
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      await generateAndExportPdf('ledger-printable-card', `Statement_${activeLedgerClientName}.pdf`, `كشف حساب العميل: ${activeLedgerClientName}`);
-    } finally {
-      ledgerCard.classList.remove('rendering-active');
-    }
+    if (!activeLedgerClientName) return;
+    await generateAndExportPdf('ledger-printable-card', `Statement_${activeLedgerClientName}.pdf`, `كشف حساب العميل: ${activeLedgerClientName}`);
   });
 }
 
@@ -2676,17 +2677,8 @@ if (ledgerSupplierDownloadBtn) {
 const ledgerSupplierPrintBtn = document.getElementById('ledger-supplier-print-btn');
 if (ledgerSupplierPrintBtn) {
   ledgerSupplierPrintBtn.addEventListener('click', async () => {
-    const ledgerCard = document.getElementById('supplier-ledger-printable-card');
-    if (!activeLedgerSupplierName || !ledgerCard) return;
-
-    try {
-      ledgerCard.classList.add('rendering-active');
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      await generateAndExportPdf('supplier-ledger-printable-card', `Supplier_Statement_${activeLedgerSupplierName}.pdf`, `كشف حساب المورد: ${activeLedgerSupplierName}`);
-    } finally {
-      ledgerCard.classList.remove('rendering-active');
-    }
+    if (!activeLedgerSupplierName) return;
+    await generateAndExportPdf('supplier-ledger-printable-card', `Supplier_Statement_${activeLedgerSupplierName}.pdf`, `كشف حساب المورد: ${activeLedgerSupplierName}`);
   });
 }
 
