@@ -1039,3 +1039,57 @@ li:hover {
     display: none !important;
   }
 }
+/* ==========================================================
+   تحديثات التوافق الموحد للهواتف الذكية (iOS & Android Fixes)
+   ========================================================== */
+
+/* 1. منع الزوم التلقائي على أجهزة iOS عند النقر على حقول الإدخال */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important; /* يمنع متصفح Safari من عمل Auto-Zoom */
+    min-height: 44px; /* تحسين مساحة اللمس */
+  }
+  
+  .modern-items-table input {
+    font-size: 15px !important;
+    min-height: 40px;
+  }
+}
+
+/* 2. دعم مناطق الأمان للهواتف الحديثة (Notches & Navigation Bars) */
+body {
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+}
+
+.app-header {
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+
+/* 3. تحسين استجابة الجداول على الشاشات شديدة الصغر (< 400px) */
+@media (max-width: 400px) {
+  .modern-items-table td:nth-child(2), 
+  .modern-items-table td:nth-child(3) {
+    width: 100% !important;
+    display: block !important;
+    margin-bottom: 6px;
+  }
+  
+  .stat-card {
+    padding: 10px 12px;
+  }
+  
+  .stat-value {
+    font-size: 1rem;
+  }
+  
+  .header-actions {
+    gap: 4px;
+  }
+  
+  .btn-icon {
+    padding: 6px 8px;
+  }
+}
