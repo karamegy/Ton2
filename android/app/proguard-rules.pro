@@ -1,18 +1,37 @@
-# قواعد عامة لـ Capacitor والمكتبات التابعة
+# 1. الحفاظ على الجسر بين JavaScript و Android Native في Capacitor
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keepattributes JavascriptInterface
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# 2. إعدادات WebView القياسية
 -keep public class * extends android.webkit.WebViewClient
 -keep public class * extends android.webkit.WebChromeClient
 
-# الحفاظ على إعدادات Google Play Services و Firebase
--keep class com.google.android.gms.** { *; }
--include proguard-google-play-services.pro
-
-# الحفاظ على موديولات Capacitor الأساسية
+# 3. الحفاظ على موديولات Capacitor الأساسية وجميع الإضافات
 -keep class com.getcapacitor.** { *; }
 -dontwarn com.getcapacitor.**
 
-# الحفاظ على إعدادات تسجيل الدخول بـ Google
+# 4. الحفاظ على إعدادات تسجيل الدخول بـ Google
 -keep class com.codetrixstudio.capacitor.googleauth.** { *; }
 -dontwarn com.codetrixstudio.capacitor.googleauth.**
 
-# الحفاظ على النماذج والكلاسات الخاصة بتطبيقك (إذا لزم الأمر)
+# 5. الحفاظ على خدمات Google Play و Firebase (بدون استخدام -include لتفادي أخطاء الملفات المفقودة)
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.android.gms.**
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# 6. الحفاظ على كلاسات التطبيق الخاصة بك
 -keep class io.github.karamegy.Ton2.** { *; }
+-dontwarn io.github.karamegy.Ton2.**
+
+# 7. الحفاظ على الدوال النيتف والـ Enums لتجنب انهيار التطبيق أثناء التشغيل
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
