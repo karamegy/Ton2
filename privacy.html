@@ -64,7 +64,7 @@
         },
         "contactPoint": {
           "@type": "ContactPoint",
-          "email": "eelkady188@gmail.com",
+          "email": ["eelkady188@gmail.com", "Haretg@gmail.com"],
           "telephone": "+201114099799",
           "contactType": "customer support",
           "availableLanguage": ["Arabic", "English"]
@@ -134,7 +134,7 @@
             "name": "كيف يمكنني تقديم طلب حذف الحساب والبيانات التجارية؟",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "يمكنك طلب حذف الحساب والبيانات نهائياً عبر مراسلة إدارة النظام على البريد الإلكتروني eelkady188@gmail.com ويتم التنفيذ فوراً."
+              "text": "يمكنك طلب حذف الحساب والبيانات نهائياً عبر مراسلة إدارة النظام على البريد الإلكتروني eelkady188@gmail.com أو Haretg@gmail.com ويتم التنفيذ فوراً."
             }
           }
         ]
@@ -588,34 +588,126 @@
       text-decoration: underline;
     }
 
-    /* صندوق البريد والنسخ السريع */
-    .copy-box {
-      display: inline-flex;
+    /* ------------------------------------------------------------- */
+    /* بطاقات الإيميلات الجذابة والملونة (Colorful Interactive Email Cards) */
+    /* ------------------------------------------------------------- */
+    .email-cards-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .email-card {
+      display: flex;
       align-items: center;
-      gap: 8px;
-      background: var(--chip-bg);
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: var(--card-bg);
       border: 1px solid var(--border);
-      padding: 5px 12px;
-      border-radius: 10px;
-      margin-top: 6px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .email-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 5px;
+      height: 100%;
+      border-radius: 4px;
+    }
+
+    html[dir="ltr"] .email-card::before {
+      right: auto;
+      left: 0;
+    }
+
+    .email-card-primary::before {
+      background: linear-gradient(180deg, #0284c7, #3b82f6);
+    }
+
+    .email-card-secondary::before {
+      background: linear-gradient(180deg, #8b5cf6, #ec4899);
+    }
+
+    .email-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(2, 132, 199, 0.12);
+    }
+
+    .email-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .email-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    .email-badge-primary {
+      background: rgba(2, 132, 199, 0.12);
+      color: #0284c7;
+      border: 1px solid rgba(2, 132, 199, 0.25);
+    }
+
+    body.dark-theme .email-badge-primary {
+      color: #38bdf8;
+    }
+
+    .email-badge-secondary {
+      background: rgba(139, 92, 246, 0.12);
+      color: #8b5cf6;
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
+
+    body.dark-theme .email-badge-secondary {
+      color: #c084fc;
+    }
+
+    .email-text-address {
+      font-weight: 700;
+      font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+      color: var(--text-main);
+      direction: ltr;
+      unicode-bidi: isolate;
     }
 
     .copy-btn {
       background: var(--accent);
       color: #fff;
       border: none;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.75rem;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
       cursor: pointer;
       font-family: inherit;
       transition: all 0.2s ease;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
     }
 
     .copy-btn:hover {
-      opacity: 0.9;
-      transform: scale(1.03);
+      opacity: 0.92;
+      transform: scale(1.04);
     }
+
+    .copy-btn:active {
+      transform: scale(0.96);
+    }
+    /* ------------------------------------------------------------- */
 
     .bottom-download-wrapper {
       margin-top: 28px;
@@ -689,6 +781,16 @@
       .back-btn {
         flex: 1 1 auto;
         text-align: center;
+      }
+
+      .email-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .copy-btn {
+        align-self: flex-end;
       }
 
       .cookie-banner {
@@ -809,16 +911,30 @@
 
         <section id="sec4">
           <h2 id="h2-sec4">4. طلب حذف الحساب والبيانات (Data Deletion)</h2>
-          <p id="p-sec4">يحق لك طلب حذف حسابك وكافة البيانات الخاصة بنشاطك التجاري المخزنة على خوادمنا في أي وقت. للقيام بذلك، يرجى التواصل المباشر مع مدير النظام عبر البريد الإلكتروني:</p>
-          <div class="copy-box">
-            <strong id="email-text">eelkady188@gmail.com</strong>
-            <button class="copy-btn" onclick="copyEmail('eelkady188@gmail.com', this)" id="copy-btn">📋 نسخ</button>
+          <p id="p-sec4">يحق لك طلب حذف حسابك وكافة البيانات الخاصة بنشاطك التجاري المخزنة على خوادمنا في أي وقت. للقيام بذلك، يرجى التواصل المباشر مع مدير النظام عبر أحد البريدين التاليين:</p>
+          
+          <div class="email-cards-container">
+            <div class="email-card email-card-primary">
+              <div class="email-info">
+                <span class="email-badge email-badge-primary" id="email-label-1">البريد الرئيسي</span>
+                <strong class="email-text-address">eelkady188@gmail.com</strong>
+              </div>
+              <button class="copy-btn" onclick="copyEmail('eelkady188@gmail.com', this)" id="copy-btn-1">📋 نسخ</button>
+            </div>
+
+            <div class="email-card email-card-secondary">
+              <div class="email-info">
+                <span class="email-badge email-badge-secondary" id="email-label-2">البريد الإضافي</span>
+                <strong class="email-text-address">Haretg@gmail.com</strong>
+              </div>
+              <button class="copy-btn" onclick="copyEmail('Haretg@gmail.com', this)" id="copy-btn-2">📋 نسخ</button>
+            </div>
           </div>
         </section>
 
         <section id="sec5">
           <h2 id="h2-sec5">5. التواصل والدعم الفني</h2>
-          <p id="p-sec5">لأي استفسارات أو ملاحظات بخصوص سياسة الخصوصية أو حماية البيانات، يمكنك التواصل معنا مباشرة عبر البريد الإلكتروني: <strong>eelkady188@gmail.com</strong> أو عبر الهاتف/واتساب: <a href="tel:+201114099799"><strong>+201114099799</strong></a></p>
+          <p id="p-sec5">لأي استفسارات أو ملاحظات بخصوص سياسة الخصوصية أو حماية البيانات، يمكنك التواصل معنا مباشرة عبر البريد الإلكتروني: <a href="mailto:eelkady188@gmail.com"><strong>eelkady188@gmail.com</strong></a> أو <a href="mailto:Haretg@gmail.com"><strong>Haretg@gmail.com</strong></a> أو عبر الهاتف/واتساب: <a href="tel:+201114099799"><strong>+201114099799</strong></a></p>
         </section>
 
         <div class="bottom-download-wrapper">
@@ -839,7 +955,7 @@
   </div>
 
   <script>
-    // 1. القاموس للتحويل التلقائي بين اللغتين (مع إضافة نص زر المدونة)
+    // 1. القاموس للتحويل التلقائي بين اللغتين
     let currentLang = 'ar';
     const translations = {
       ar: {
@@ -868,11 +984,14 @@
         h2Sec3: "3. الأذونات المطلوبة والتخزين المحلي",
         pSec3: "يستخدم التطبيق التخزين المحلي (IndexedDB & LocalStorage) للعمل بكفاءة في حالة عدم توفر الاتصال بالإنترنت (Offline Mode)، بالإضافة إلى إذن حفظ الصور لتمكينك من تحميل وتنزيل الفواتير وكشوف الحسابات كصور على جهازك.",
         h2Sec4: "4. طلب حذف الحساب والبيانات (Data Deletion)",
-        pSec4: "يحق لك طلب حذف حسابك وكافة البيانات الخاصة بنشاطك التجاري المخزنة على خوادمنا في أي وقت. للقيام بذلك، يرجى التواصل المباشر مع مدير النظام عبر البريد الإلكتروني:",
-        copyBtn: "📋 نسخ",
+        pSec4: "يحق لك طلب حذف حسابك وكافة البيانات الخاصة بنشاطك التجاري المخزنة على خوادمنا في أي وقت. للقيام بذلك، يرجى التواصل المباشر مع مدير النظام عبر أحد البريدين التاليين:",
+        emailLabel1: "البريد الرئيسي",
+        emailLabel2: "البريد الإضافي",
+        copyBtn1: "📋 نسخ",
+        copyBtn2: "📋 نسخ",
         copied: "✅ تم النسخ",
         h2Sec5: "5. التواصل والدعم الفني",
-        pSec5: "لأي استفسارات أو ملاحظات بخصوص سياسة الخصوصية أو حماية البيانات، يمكنك التواصل معنا مباشرة عبر البريد الإلكتروني: <strong>eelkady188@gmail.com</strong> أو عبر الهاتف/واتساب: <a href='tel:+201114099799'><strong>+201114099799</strong></a>",
+        pSec5: "لأي استفسارات أو ملاحظات بخصوص سياسة الخصوصية أو حماية البيانات، يمكنك التواصل معنا مباشرة عبر البريد الإلكتروني: <a href='mailto:eelkady188@gmail.com'><strong>eelkady188@gmail.com</strong></a> أو <a href='mailto:Haretg@gmail.com'><strong>Haretg@gmail.com</strong></a> أو عبر الهاتف/واتساب: <a href='tel:+201114099799'><strong>+201114099799</strong></a>",
         playBottom: "📲 تحميل التطبيق من Google Play",
         footerRights: "جميع الحقوق محفوظة.",
         cookieText: "نحن نستخدم ملفات تعريف الارتباط (Cookies) لتحسين تجربتك وتقديم إعلانات مخصصة وفقاً لسياسات Google.",
@@ -904,11 +1023,14 @@
         h2Sec3: "3. Permissions & Local Storage",
         pSec3: "The app uses local storage (IndexedDB & LocalStorage) for full offline functionality, along with storage permissions to enable downloading invoices and account statements as images.",
         h2Sec4: "4. Account & Data Deletion Request",
-        pSec4: "You have the right to request deletion of your account and stored business data at any time by directly contacting our system administrator via email:",
-        copyBtn: "📋 Copy",
+        pSec4: "You have the right to request deletion of your account and stored business data at any time by directly contacting our system administrator via either of the following emails:",
+        emailLabel1: "Primary Email",
+        emailLabel2: "Secondary Email",
+        copyBtn1: "📋 Copy",
+        copyBtn2: "📋 Copy",
         copied: "✅ Copied",
         h2Sec5: "5. Contact & Support",
-        pSec5: "For any privacy inquiries or support, reach out via Email: <strong>eelkady188@gmail.com</strong> or Phone/WhatsApp: <a href='tel:+201114099799'><strong>+201114099799</strong></a>",
+        pSec5: "For any privacy inquiries or support, reach out via Email: <a href='mailto:eelkady188@gmail.com'><strong>eelkady188@gmail.com</strong></a> or <a href='mailto:Haretg@gmail.com'><strong>Haretg@gmail.com</strong></a> or Phone/WhatsApp: <a href='tel:+201114099799'><strong>+201114099799</strong></a>",
         playBottom: "📲 Download App on Google Play",
         footerRights: "All rights reserved.",
         cookieText: "We use cookies to improve your experience and show personalized ads per Google policies.",
@@ -949,7 +1071,10 @@
       document.getElementById('p-sec3').innerText = langData.pSec3;
       document.getElementById('h2-sec4').innerText = langData.h2Sec4;
       document.getElementById('p-sec4').innerText = langData.pSec4;
-      document.getElementById('copy-btn').innerText = langData.copyBtn;
+      document.getElementById('email-label-1').innerText = langData.emailLabel1;
+      document.getElementById('email-label-2').innerText = langData.emailLabel2;
+      document.getElementById('copy-btn-1').innerText = langData.copyBtn1;
+      document.getElementById('copy-btn-2').innerText = langData.copyBtn2;
       document.getElementById('h2-sec5').innerText = langData.h2Sec5;
       document.getElementById('p-sec5').innerHTML = langData.pSec5;
       document.getElementById('btn-play-bottom').innerText = langData.playBottom;
