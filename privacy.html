@@ -332,6 +332,18 @@
       text-decoration: none;
     }
 
+    /* تنسيق زر المدونة التقنية */
+    .blog-btn {
+      color: #8b5cf6;
+      border-color: rgba(139, 92, 246, 0.35);
+    }
+
+    .blog-btn:hover, .blog-btn:active {
+      background: rgba(139, 92, 246, 0.12);
+      color: #7c3aed;
+      border-color: #8b5cf6;
+    }
+
     .play-btn {
       color: #10b981;
       border-color: rgba(16, 185, 129, 0.4);
@@ -711,6 +723,7 @@
       <nav class="nav-buttons-group" aria-label="تنقل سريع">
         <button class="back-btn lang-btn" onclick="toggleLanguage()" id="lang-toggle-btn">English 🌐</button>
         <button class="back-btn" onclick="goToApp()" id="btn-back-app">➔ العودة للتطبيق</button>
+        <a href="https://karamegy.github.io/" class="back-btn blog-btn" target="_blank" rel="noopener" id="btn-blog">🌐 المدونة التقنية</a>
         <a href="https://play.google.com/store/apps/details?id=io.github.karamegy.Ton2" class="back-btn play-btn" target="_blank" rel="noopener" id="btn-play">📲 Google Play</a>
       </nav>
     </header>
@@ -826,13 +839,14 @@
   </div>
 
   <script>
-    // 1. القاموس للتحويل التلقائي بين اللغتين
+    // 1. القاموس للتحويل التلقائي بين اللغتين (مع إضافة نص زر المدونة)
     let currentLang = 'ar';
     const translations = {
       ar: {
         metaTitle: "سياسة الخصوصية وحماية البيانات - GITI Enterprise ERP & Tech",
         langBtn: "English 🌐",
         backApp: "➔ العودة للتطبيق",
+        blogBtn: "🌐 المدونة التقنية",
         playBtn: "📲 Google Play",
         tocHeader: "📍 الوصول السريع للأقسام:",
         toc1: "1. البيانات المجمعة",
@@ -868,6 +882,7 @@
         metaTitle: "Privacy Policy & Data Security - GITI Enterprise ERP & Tech",
         langBtn: "عربي 🌐",
         backApp: "➔ Back to App",
+        blogBtn: "🌐 Tech Blog",
         playBtn: "📲 Google Play",
         tocHeader: "📍 Quick Navigation:",
         toc1: "1. Collected Data",
@@ -911,6 +926,7 @@
       document.getElementById('meta-title').innerText = langData.metaTitle;
       document.getElementById('lang-toggle-btn').innerText = langData.langBtn;
       document.getElementById('btn-back-app').innerText = langData.backApp;
+      document.getElementById('btn-blog').innerText = langData.blogBtn;
       document.getElementById('btn-play').innerText = langData.playBtn;
       document.getElementById('toc-header').innerText = langData.tocHeader;
       document.getElementById('toc-1').innerText = langData.toc1;
