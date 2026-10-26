@@ -8,6 +8,36 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- SEO & Open Graph Meta Tags -->
+  <meta name="description" content="تطبيق GITI ERP - محفظة الفواتير والحسابات الذكية والمخازن تعمل بدون إنترنت وعلى جميع الأجهزة. متوفر على متجر Google Play.">
+  <meta property="og:title" content="GITI Enterprise ERP 2027 - منظومة الفواتير والحسابات">
+  <meta property="og:description" content="إدارة فواتير المبيعات والمشتريات، كشوف حسابات العملاء والموردين، الخزينة، والمخازن مع دعم طباعة A4 ورموز QR والتصدير لـ PDF.">
+  <meta property="og:image" content="https://karamegy.github.io/Ton2/logo.png">
+  <meta property="og:url" content="https://karamegy.github.io/Ton2/privacy.html">
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "GITI ERP - محفظة الفواتير والحسابات",
+    "operatingSystem": "ANDROID, WEB",
+    "applicationCategory": "BusinessApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EGP"
+    },
+    "installUrl": "https://play.google.com/store/apps/details?id=io.github.karamegy.Ton2",
+    "publishingPrinciples": "https://karamegy.github.io/Ton2/privacy.html",
+    "sameAs": [
+      "https://play.google.com/store/apps/details?id=io.github.karamegy.Ton2"
+    ],
+    "description": "برنامج GITI ERP هو محفظة إلكترونية متكاملة لإدارة فواتير المبيعات والمشتريات، كشوفات الحساب المجمعة، والمخازن مع دعم العمل بدون إنترنت وتصدير التقارير بصيغ PDF و Excel."
+  }
+  </script>
+
   <style>
     /* الثيم الافتراضي (فاتح / أبيض) */
     :root {
@@ -82,6 +112,17 @@
       text-decoration: none;
     }
 
+    .play-btn {
+      color: #10b981;
+      border-color: #10b981;
+      font-weight: 700;
+    }
+
+    .play-btn:hover {
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+    }
+
     .container {
       max-width: 800px;
       margin: 15px auto 40px;
@@ -142,6 +183,8 @@
     <button class="back-btn" onclick="goToApp()">➔ العودة للتطبيق</button>
     
     <div class="nav-buttons-group">
+      <!-- زر التنزيل المباشر من Google Play -->
+      <a href="https://play.google.com/store/apps/details?id=io.github.karamegy.Ton2" class="back-btn play-btn" target="_blank">📲 تحميل من Google Play</a>
       <!-- زر الانتقال إلى مشروع المدونة الرئيسي -->
       <a href="https://karamegy.github.io/" class="back-btn" target="_blank">🌐 زيارة المدونة التقنية</a>
     </div>
@@ -175,6 +218,10 @@
 
     <h2>5. التواصل والدعم الفني</h2>
     <p>لأي استفسارات أو ملاحظات بخصوص سياسة الخصوصية أو حماية البيانات، يمكنك التواصل معنا مباشرة عبر البريد الإلكتروني: <strong>eelkady188@gmail.com</strong> أو عبر الهاتف/واتساب: <strong>+201114099799</strong></p>
+
+    <div style="margin-top: 25px; text-align: center;">
+      <a href="https://play.google.com/store/apps/details?id=io.github.karamegy.Ton2" target="_blank" style="font-size: 0.9rem; font-weight: bold; color: #10b981; text-decoration: none; display: inline-block;">📲 تحميل تطبيق GITI ERP من متجر Google Play</a>
+    </div>
 
     <div class="footer">
       &copy; 2026 GITI Enterprise ERP & Tech. جميع الحقوق محفوظة.
