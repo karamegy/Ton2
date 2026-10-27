@@ -56,7 +56,7 @@
   <meta name="twitter:description" content="منظومة إدارة الفواتير والحسابات الهجينة وتوليد فواتير A5 عالية الدقة Full HD بأقل حجم.">
   <meta name="twitter:image" content="https://karamegy.github.io/Ton2/logo.png">
 
-  <!-- Advanced JSON-LD Multi-Schema Graph (Fully Compliant & Honest) -->
+  <!-- Advanced JSON-LD Multi-Schema Graph -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -380,7 +380,7 @@
     }
 
     /* ------------------------------------------------------------- */
-    /* بطاقة Google Play المصممة حديثاً (Google Play App Preview Card) */
+    /* بطاقة Google Play المصممة حديثاً */
     /* ------------------------------------------------------------- */
     .gp-card-container {
       margin: 25px 0;
@@ -607,7 +607,7 @@
     }
 
     /* ------------------------------------------------------------- */
-    /* بطاقات الإيميلات الجذابة والملونة (Colorful Interactive Email Cards) */
+    /* بطاقات الإيميلات الجذابة والملونة */
     /* ------------------------------------------------------------- */
     .email-cards-container {
       display: flex;
@@ -867,9 +867,7 @@
 
         <p id="intro-text">مرحباً بك في تطبيق <strong>GITI الفواتير & ERP</strong>. منظومة هجينة متكاملة (نسخة موقع ويب وتطبيق متجر Google Play) تتيح إدارة الحسابات والمخازن وتوليد فواتير A5 بجودة Full HD وبأقل حجم تخزيني، مع الالتزام التام بحماية خصوصية بياناتك التجارية والشخصية وفقاً لأعلى معايير الأمان الرقمي.</p>
 
-        <!-- ======================================================= -->
-        <!-- بطاقة Google Play المصممة بدون أيقونة الميكروفون/الصوت -->
-        <!-- ======================================================= -->
+        <!-- بطاقة Google Play -->
         <div class="gp-card-container">
           <a href="https://play.google.com/store/apps/details?id=io.github.karamegy.Ton2" target="_blank" rel="noopener" class="gp-card">
             <div class="gp-card-header">
@@ -903,7 +901,6 @@
             </div>
           </a>
         </div>
-        <!-- ======================================================= -->
 
         <section id="sec1">
           <h2 id="h2-sec1">1. البيانات التي نجمعها وكيفية استخدامها</h2>
@@ -1063,6 +1060,7 @@
       document.documentElement.lang = currentLang;
       document.documentElement.dir = (currentLang === 'ar') ? 'rtl' : 'ltr';
 
+      document.title = langData.metaTitle;
       document.getElementById('meta-title').innerText = langData.metaTitle;
       document.getElementById('lang-toggle-btn').innerText = langData.langBtn;
       document.getElementById('btn-back-app').innerText = langData.backApp;
@@ -1119,24 +1117,55 @@
     }
     syncTheme();
 
-    // 3. معالجة الرجوع بالتطبيق
+    // 3. معالجة الرجوع بالتطبيق (Capacitor & Web)
     function goToApp() {
-      if (document.referrer && document.referrer.includes(window.location.host)) {
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = 'index.html';
+        }
+      } else if (window.location.host && document.referrer && document.referrer.includes(window.location.host)) {
         window.history.back();
       } else {
         window.location.href = 'index.html'; 
       }
     }
 
-    // 4. نسخ البريد الإلكتروني بنقرة واحدة
+    // 4. نسخ البريد الإلكتروني (متوافق مع Capacitor & WebView Fallback)
     function copyEmail(text, btnElement) {
-      navigator.clipboard.writeText(text).then(() => {
+      const showCopiedStatus = () => {
         const originalText = btnElement.innerText;
         btnElement.innerText = translations[currentLang].copied;
         setTimeout(() => {
           btnElement.innerText = originalText;
         }, 2000);
-      });
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+          .then(showCopiedStatus)
+          .catch(() => fallbackCopy(text, showCopiedStatus));
+      } else {
+        fallbackCopy(text, showCopiedStatus);
+      }
+    }
+
+    function fallbackCopy(text, callback) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        callback();
+      } catch (err) {
+        console.error('Copy fallback failed', err);
+      }
+      document.body.removeChild(textArea);
     }
 
     // 5. إدارة شريط الكوكيز
