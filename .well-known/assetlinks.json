@@ -1,13 +1,16 @@
 [
   {
     "relation": [
-      "delegate_permission/common.handle_all_urls"
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
     ],
     "target": {
       "namespace": "android_app",
       "package_name": "io.github.karamegy.Ton2",
       "sha256_cert_fingerprints": [
-        "0F:EE:E6:AB:83:2A:1A:51:E8:C1:D1:FF:65:C6:23:75:FD:71:BF:16:14:A8:E3:1B:B3:2D:54:74:7B:0D:CB:DE"
+        "0F:EE:E6:AB:83:2A:1A:51:E8:C1:D1:FF:65:C6:23:75:FD:71:BF:16:14:A8:E3:1B:B3:2D:54:74:7B:0D:CB:DE",
+        "83:27:22:A4:67:F8:11:A0:B5:86:BA:09:45:30:01:7B:09:7D:F0:F4:02:43:5B:7A:F1:2F:DB:B3:2A:ED:0B:B8",
+        "E8:87:EC:0B:80:32:E5:03:65:F3:1C:40:73:0F:D1:93:9A:56:3E:7A:63:41:8E:38:47:97:37:DB:DD:FD:E3:FF"
       ]
     }
   }
