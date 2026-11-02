@@ -54,14 +54,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- روابط App Links -->
+            <!-- روابط App Links المقبولة والمثبتة فقط -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 
                 <data android:scheme="https" android:host="karamegy.github.io" android:pathPrefix="/Ton2" />
-                <data android:scheme="https" android:host="giti-68750.firebaseapp.com" />
             </intent-filter>
         </activity>
 
