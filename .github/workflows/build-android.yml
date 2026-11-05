@@ -26,6 +26,7 @@ jobs:
 
       - name: Build Android App
         env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 || secrets.KEYSTORE_FILE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -147,7 +148,7 @@ jobs:
                       <meta-data
                           android:name="android.support.FILE_PROVIDER_PATHS"
                           android:resource="@xml/file_paths" />
-                  </provider>
+                      </provider>
 
               </application>
 
@@ -169,8 +170,10 @@ jobs:
           </resources>
           EOF
 
-          # 8. نسخ ملف التوقيع
-          if [ -f "signing.keystore" ]; then
+          # 8. إنشاء ملف التوقيع آلياً من الـ Secrets أو النسخ المباشر إن وجد
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/signing.keystore
+          elif [ -f "signing.keystore" ]; then
             cp signing.keystore android/app/
           fi
 
