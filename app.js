@@ -423,6 +423,16 @@ let editingInvoiceId = null;
 let editingProductId = null;
 let editingSupplierId = null;
 
+function formatPaymentStatusText(docObj) {
+  if (!docObj) return '';
+  if (docObj.status === 'مدفوعة جزئياً') {
+    const paid = (parseFloat(docObj.paidAmount) || 0).toFixed(2);
+    const due = (parseFloat(docObj.dueAmount) || 0).toFixed(2);
+    return `مدفوعة جزئياً (مدفوع: ${paid} | متبقي: ${due} ${storeProfile.currency})`;
+  }
+  return docObj.status || '';
+}
+
 function saveLocalData(uid, key, data) {
   try {
     localStorage.setItem(`giti_${uid}_${key}`, JSON.stringify(data));
@@ -853,14 +863,16 @@ const invNumberDisplay = document.getElementById('inv-number-display');
 
 let nextInvNum = 1001;
 
+function getMaxInvoiceId() {
+  const activeIds = (invoicesDB || []).map(i => parseInt(i.id)).filter(id => !isNaN(id));
+  const archivedIds = (archivedInvoicesDB || []).map(i => parseInt(i.id)).filter(id => !isNaN(id));
+  const allIds = [...activeIds, ...archivedIds];
+  return allIds.length > 0 ? Math.max(...allIds) : 1000;
+}
+
 function updateNextInvoiceNumber() {
-  if (invoicesDB && invoicesDB.length > 0) {
-    const validIds = invoicesDB.map(i => parseInt(i.id)).filter(id => !isNaN(id));
-    const maxId = validIds.length > 0 ? Math.max(...validIds) : 1000;
-    nextInvNum = maxId >= 1001 ? maxId + 1 : 1001;
-  } else {
-    nextInvNum = 1001;
-  }
+  const maxId = getMaxInvoiceId();
+  nextInvNum = maxId >= 1001 ? maxId + 1 : 1001;
   localStorage.setItem('last_inv_num', nextInvNum.toString());
   if (invNumberDisplay && !editingInvoiceId) {
     invNumberDisplay.textContent = `#${nextInvNum}`;
@@ -1169,10 +1181,12 @@ async function saveInvoiceData() {
     paidVal = paidInput ? (parseFloat(paidInput.value) ? parseFloat(paidInput.value) : 0) : 0;
   }
 
-  const validIds = invoicesDB.map(i => parseInt(i.id)).filter(id => !isNaN(id));
-  const maxId = validIds.length > 0 ? Math.max(...validIds) : 1000;
+  const existingInvoice = editingInvoiceId ? invoicesDB.find(i => i.id === editingInvoiceId) : null;
+  const maxId = getMaxInvoiceId();
   const currentInvId = editingInvoiceId ? editingInvoiceId : (maxId >= 1001 ? maxId + 1 : 1001);
-  const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, isoTime, totals.grandTotal, totals.taxAmount);
+  const invDate = existingInvoice && existingInvoice.date ? existingInvoice.date : new Date().toLocaleDateString('ar-EG');
+  const invIsoTime = existingInvoice && existingInvoice.isoTime ? existingInvoice.isoTime : isoTime;
+  const zatcaBase64 = generateZatcaTlvBase64(storeProfile.name, storeProfile.vatNo, invIsoTime, totals.grandTotal, totals.taxAmount);
 
   const invoice = Object.assign({
     id: currentInvId,
@@ -1181,18 +1195,32 @@ async function saveInvoiceData() {
     phone: clientPhone ? clientPhone : '',
     status: status,
     paidAmount: paidVal,
-    dueAmount: totals.grandTotal - paidVal,
+    dueAmount: Math.max(0, totals.grandTotal - paidVal),
     items: validItems,
-    date: new Date().toLocaleDateString('ar-EG'),
-    isoTime: isoTime,
+    date: invDate,
+    isoTime: invIsoTime,
     zatcaQr: zatcaBase64
   }, totals);
+
+  const affectedProducts = new Map();
+
+  if (existingInvoice && Array.isArray(existingInvoice.items)) {
+    existingInvoice.items.forEach(oldItem => {
+      const cleanOldName = (oldItem.name || '').trim().toLowerCase();
+      const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanOldName);
+      if (prod) {
+        prod.stock = (parseFloat(prod.stock) || 0) + (parseFloat(oldItem.qty) || 0);
+        affectedProducts.set(prod.id, prod);
+      }
+    });
+  }
 
   validItems.forEach(soldItem => {
     const cleanSoldName = (soldItem.name || '').trim().toLowerCase();
     const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanSoldName);
     if (prod) {
       prod.stock = Math.max(0, (parseFloat(prod.stock) || 0) - (parseFloat(soldItem.qty) || 0));
+      affectedProducts.set(prod.id, prod);
     }
   });
 
@@ -1214,12 +1242,8 @@ async function saveInvoiceData() {
     try {
       setDoc(doc(db, "users", uid, "invoices", String(invoice.id)), invoice).catch(() => {});
       setDoc(doc(db, "users", uid, "clients", String(clientObj.id)), clientObj).catch(() => {});
-      validItems.forEach(soldItem => {
-        const cleanSoldName = (soldItem.name || '').trim().toLowerCase();
-        const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanSoldName);
-        if (prod) {
-          setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
-        }
+      affectedProducts.forEach(prod => {
+        setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
       });
     } catch (err) {}
   }
@@ -1251,7 +1275,7 @@ function sendWhatsApp(inv) {
   msg += `-----------------------------------\n`;
   if (inv.discount > 0) msg += `🏷 *الخصم:* -${inv.discount.toFixed(2)} ${storeProfile.currency}\n`;
   msg += `💰 *الإجمالي النهائي:* ${inv.grandTotal.toFixed(2)} ${storeProfile.currency}\n`;
-  msg += `📌 *حالة الدفع:* ${inv.status}\n\n`;
+  msg += `📌 *حالة الدفع:* ${formatPaymentStatusText(inv)}\n\n`;
   msg += `شكراً لتعاملكم معنا!`;
 
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -1296,7 +1320,7 @@ function populatePrintableInvoice(inv) {
   const prClientPhone = document.getElementById('pr-v-client-phone');
   if (prClientPhone) prClientPhone.textContent = inv.phone ? inv.phone : '-';
   const prPaymentStatus = document.getElementById('pr-v-payment-status');
-  if (prPaymentStatus) prPaymentStatus.textContent = inv.status;
+  if (prPaymentStatus) prPaymentStatus.textContent = formatPaymentStatusText(inv);
 
   const prSubtotal = document.getElementById('pr-v-subtotal');
   if (prSubtotal) prSubtotal.textContent = `${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}`;
@@ -1350,7 +1374,7 @@ function openInvoicePreview(inv) {
   const vClientPhone = document.getElementById('v-client-phone');
   if (vClientPhone) vClientPhone.textContent = inv.phone ? inv.phone : '-';
   const vPaymentStatus = document.getElementById('v-payment-status');
-  if (vPaymentStatus) vPaymentStatus.textContent = inv.status;
+  if (vPaymentStatus) vPaymentStatus.textContent = formatPaymentStatusText(inv);
   const vSubtotal = document.getElementById('v-subtotal');
   if (vSubtotal) vSubtotal.textContent = `${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}`;
   const vDiscount = document.getElementById('v-discount');
@@ -1464,8 +1488,17 @@ window.editInvoiceById = (id) => {
   if (clientInput) clientInput.value = inv.client ? inv.client : '';
   if (clientPhoneInput) clientPhoneInput.value = inv.phone ? inv.phone : '';
   if (discountInput) discountInput.value = inv.discount ? inv.discount : 0;
-  if (taxInput) taxInput.value = inv.taxPercent ? inv.taxPercent : 0;
+  if (taxInput) taxInput.value = inv.taxPercent !== undefined ? inv.taxPercent : 14;
   if (payStatusSelect) payStatusSelect.value = inv.status ? inv.status : 'مدفوعة';
+
+  const paidInput = document.getElementById('paid-amount-input');
+  if (inv.status === 'مدفوعة جزئياً') {
+    if (paidAmountWrapper) paidAmountWrapper.classList.remove('hidden');
+    if (paidInput) paidInput.value = inv.paidAmount || 0;
+  } else {
+    if (paidAmountWrapper) paidAmountWrapper.classList.add('hidden');
+    if (paidInput) paidInput.value = 0;
+  }
 
   activeItems = (inv.items ? inv.items : []).map(i => Object.assign({}, i));
   renderItemsTable();
@@ -1866,8 +1899,10 @@ function getClientCalculatedLedger(clientParam) {
     totalPaid += (p.amount ? p.amount : 0);
   });
 
-  const balance = Math.max(0, totalPurchases - totalPaid);
-  return { totalPurchases, totalPaid, totalReturns, balance, clientInvoices, clientReturns, payments: clientObj.payments ? clientObj.payments : [] };
+  const rawBalance = totalPurchases - totalPaid;
+  const balance = Math.max(0, rawBalance);
+  const creditBalance = rawBalance < 0 ? Math.abs(rawBalance) : 0;
+  return { totalPurchases, totalPaid, totalReturns, balance, creditBalance, clientInvoices, clientReturns, payments: clientObj.payments ? clientObj.payments : [] };
 }
 
 function renderClients() {
@@ -1887,8 +1922,8 @@ function renderClients() {
           <br><small style="color:var(--text-muted)">صافي التعاملات: ${stats.totalPurchases.toFixed(2)} | المدفوع: ${stats.totalPaid.toFixed(2)}${stats.totalReturns > 0 ? ` | مرتجعات: ${stats.totalReturns.toFixed(2)}` : ''}</small>
         </div>
         <div style="text-align:left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-          <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
-            ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
+          <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : (stats.creditBalance > 0 ? 'badge-partial' : 'badge-paid')}">
+            ${stats.balance > 0 ? `مستحق: ${stats.balance.toFixed(2)}` : (stats.creditBalance > 0 ? `له رصيد: ${stats.creditBalance.toFixed(2)}` : 'خالي المديونية')}
           </span>
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openClientLedger('${safeName}')">كشف 📄</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editClient(${index})" title="تعديل العميل">✏️</button>
@@ -1990,7 +2025,11 @@ window.openClientLedger = (clientName) => {
     if (ledgerTotalPaid) ledgerTotalPaid.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
     
     const ledgerBalance = document.getElementById('ledger-balance');
-    if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    if (ledgerBalance) {
+      ledgerBalance.textContent = stats.creditBalance > 0
+        ? `رصيد دائن للعميل: ${stats.creditBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`
+        : `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    }
 
     const cardsList = document.getElementById('client-ledger-cards-list');
     if (cardsList) {
@@ -2055,7 +2094,11 @@ window.openClientLedger = (clientName) => {
     const clPrintPaid = document.getElementById('cl-print-total-paid');
     if (clPrintPaid) clPrintPaid.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
     const clPrintBal = document.getElementById('cl-print-balance');
-    if (clPrintBal) clPrintBal.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    if (clPrintBal) {
+      clPrintBal.textContent = stats.creditBalance > 0
+        ? `رصيد دائن للعميل: ${stats.creditBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`
+        : `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    }
 
     const clLogo = document.getElementById('cl-logo');
     if (clLogo) {
@@ -2202,7 +2245,9 @@ if (ledgerWhatsappBtn) {
     msg += `-----------------------------------\n`;
     msg += `🛍 *إجمالي التعاملات:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `✅ *إجمالي المدفوعات:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
-    msg += `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += stats.creditBalance > 0
+      ? `📌 *رصيد دائن للعميل:* ${stats.creditBalance.toFixed(2)} ${storeProfile.currency}\n`
+      : `📌 *الصافي / المديونية:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `-----------------------------------\n`;
     msg += `شكراً لتعاملكم معنا!`;
 
@@ -2375,8 +2420,10 @@ function getSupplierCalculatedLedger(supplierParam) {
     totalPaid += (parseFloat(pay.amount) || 0);
   });
 
-  const balance = Math.max(0, totalPurchases - totalPaid);
-  return { totalPurchases, totalPaid, totalReturns, balance, supplierPurchases, supplierReturns, payments: supplierObj.payments || [] };
+  const rawBalance = totalPurchases - totalPaid;
+  const balance = Math.max(0, rawBalance);
+  const creditBalance = rawBalance < 0 ? Math.abs(rawBalance) : 0;
+  return { totalPurchases, totalPaid, totalReturns, balance, creditBalance, supplierPurchases, supplierReturns, payments: supplierObj.payments || [] };
 }
 
 function renderSuppliers() {
@@ -2396,8 +2443,8 @@ function renderSuppliers() {
           <br><small style="color:var(--text-muted)">صافي التوريدات: ${stats.totalPurchases.toFixed(2)} | المسدد: ${stats.totalPaid.toFixed(2)}${stats.totalReturns > 0 ? ` | مرتجعات: ${stats.totalReturns.toFixed(2)}` : ''}</small>
         </div>
         <div style="text-align:left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-          <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
-            ${stats.balance > 0 ? `مستحق للمورد: ${stats.balance.toFixed(2)}` : 'خالي المديونية'}
+          <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : (stats.creditBalance > 0 ? 'badge-partial' : 'badge-paid')}">
+            ${stats.balance > 0 ? `مستحق للمورد: ${stats.balance.toFixed(2)}` : (stats.creditBalance > 0 ? `رصيد لنا: ${stats.creditBalance.toFixed(2)}` : 'خالي المديونية')}
           </span>
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.openSupplierLedger('${safeName}')">كشف 📄</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editSupplier(${index})" title="تعديل المورد">✏️</button>
@@ -2488,7 +2535,11 @@ window.openSupplierLedger = (supplierName) => {
     if (ledgerTotalPaid) ledgerTotalPaid.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
     
     const ledgerBalance = document.getElementById('ledger-supplier-balance');
-    if (ledgerBalance) ledgerBalance.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    if (ledgerBalance) {
+      ledgerBalance.textContent = stats.creditBalance > 0
+        ? `رصيد دائن لنا: ${stats.creditBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`
+        : `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    }
 
     const cardsList = document.getElementById('supplier-ledger-cards-list');
     if (cardsList) {
@@ -2553,7 +2604,11 @@ window.openSupplierLedger = (supplierName) => {
     const slPrintPaid = document.getElementById('sl-print-total-paid');
     if (slPrintPaid) slPrintPaid.textContent = `${stats.totalPaid.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
     const slPrintBal = document.getElementById('sl-print-balance');
-    if (slPrintBal) slPrintBal.textContent = `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    if (slPrintBal) {
+      slPrintBal.textContent = stats.creditBalance > 0
+        ? `رصيد دائن لنا: ${stats.creditBalance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`
+        : `${stats.balance.toFixed(2)} ${storeProfile.currency || 'ج.م'}`;
+    }
 
     const slLogo = document.getElementById('sl-logo');
     if (slLogo) {
@@ -2730,7 +2785,9 @@ if (ledgerSupplierWhatsappBtn) {
     msg += `-----------------------------------\n`;
     msg += `📦 *إجمالي المشتريات والتوريد:* ${stats.totalPurchases.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `✅ *إجمالي الدفعات المسددة:* ${stats.totalPaid.toFixed(2)} ${storeProfile.currency}\n`;
-    msg += `📌 *الصافي / المتبقي للمورد:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
+    msg += stats.creditBalance > 0
+      ? `📌 *رصيد دائن لنا عند المورد:* ${stats.creditBalance.toFixed(2)} ${storeProfile.currency}\n`
+      : `📌 *الصافي / المتبقي للمورد:* ${stats.balance.toFixed(2)} ${storeProfile.currency}\n`;
     msg += `-----------------------------------\n`;
     msg += `تحياتنا لكم!`;
 
@@ -2999,7 +3056,7 @@ if (purchaseForm) {
       items: validItems,
       grandTotal: total,
       paidAmount: paidVal,
-      dueAmount: total - paidVal,
+      dueAmount: Math.max(0, total - paidVal),
       status: status,
       date: new Date().toLocaleDateString('ar-EG'),
       isoTime: isoTime,
@@ -3113,7 +3170,7 @@ function populatePrintableSupplierInvoice(pur) {
   const prSupplierPhone = document.getElementById('pr-sv-supplier-phone');
   if (prSupplierPhone) prSupplierPhone.textContent = pur.phone ? pur.phone : '-';
   const prPaymentStatus = document.getElementById('pr-sv-payment-status');
-  if (prPaymentStatus) prPaymentStatus.textContent = pur.status;
+  if (prPaymentStatus) prPaymentStatus.textContent = formatPaymentStatusText(pur);
 
   const prTotal = document.getElementById('pr-sv-total');
   if (prTotal) prTotal.textContent = `${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
@@ -3162,7 +3219,7 @@ function openSupplierInvoicePreview(pur) {
   const vSupplierPhone = document.getElementById('sv-supplier-phone');
   if (vSupplierPhone) vSupplierPhone.textContent = pur.phone ? pur.phone : '-';
   const vPaymentStatus = document.getElementById('sv-payment-status');
-  if (vPaymentStatus) vPaymentStatus.textContent = pur.status;
+  if (vPaymentStatus) vPaymentStatus.textContent = formatPaymentStatusText(pur);
   
   const vTotal = document.getElementById('sv-total');
   if (vTotal) vTotal.textContent = `${(pur.grandTotal ? pur.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
@@ -3256,7 +3313,7 @@ function sendSupplierWhatsApp(pur) {
   });
   msg += `-----------------------------------\n`;
   msg += `💰 *الإجمالي الكلي:* ${pur.grandTotal.toFixed(2)} ${storeProfile.currency}\n`;
-  msg += `📌 *حالة الدفع:* ${pur.status}\n\n`;
+  msg += `📌 *حالة الدفع:* ${formatPaymentStatusText(pur)}\n\n`;
   msg += `شكراً لكم!`;
 
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -3843,7 +3900,7 @@ function updateDashboardStats() {
   const totalClientReturns = (clientReturnsDB || []).reduce((acc, r) => acc + (parseFloat(r.grandTotal) || 0), 0);
   const totalSales = Math.max(0, grossSales - totalClientReturns);
 
-  // دالة مساعدة لحساب تكلفة الأصناف في أي فاتورة أو مرتجع
+  // دالة حساب تكلفة البضاعة في أي فاتورة أو مرتجع
   const calcItemsCost = (itemsList = []) => {
     return itemsList.reduce((sum, item) => {
       const qty = parseFloat(item.qty) || 0;
@@ -3857,14 +3914,14 @@ function updateDashboardStats() {
     }, 0);
   };
 
-  // إجمالي تكلفة البضاعة المباعة مطروحاً منها تكلفة البضاعة المرتجعة للمخزن
+  // صافي تكلفة البضاعة المباعة بعد خصم المرتجعات
   const soldCOGS = invoicesDB.reduce((acc, inv) => acc + calcItemsCost(inv.items), 0);
   const returnedCOGS = (clientReturnsDB || []).reduce((acc, ret) => acc + calcItemsCost(ret.items), 0);
   const netCOGS = Math.max(0, soldCOGS - returnedCOGS);
 
   const totalExpensesAmount = expensesDB.reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
 
-  // صافي الربح = (صافي المبيعات بدون ضريبة) - تكلفة البضاعة المباعة - المصروفات
+  // صافي الربح الحقيقي = (صافي المبيعات بدون ضريبة) - تكلفة البضاعة المباعة - المصروفات
   const netRevenue = Math.max(0, totalSales - totalTax);
   const netProfit = netRevenue - netCOGS - totalExpensesAmount;
 
