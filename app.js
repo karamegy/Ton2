@@ -256,7 +256,7 @@ const translations = {
     storeName: "اسم النشاط / الشركة", registerBtn: "إنشاء حساب مجاني", logout: "تسجيل الخروج",
     accountDisabled: "⚠️ الحساب معطل من قبل الإدارة",
     accountDisabledDesc: "تم تعطيل رخصة هذا الحساب. يرجى التواصل مع Admin Master (haretg@gmail.com).",
-    tabInvoices: "🧾 الفواتير الحية", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabSuppliers: "🏭 الموردين والشركات", tabExpenses: "💸 الخزينة",
+    tabInvoices: "🧾 الفواتير الحية", tabProducts: "📦 المخزن", tabClients: "👥 العملاء والدفاتر", tabSuppliers: "🏭 الموردين والشركات", tabReturns: "🔄 المرتجعات", tabExpenses: "💸 الخزينة",
     totalSales: "إجمالي المبيعات", netProfit: "صافي الأرباح", expenses: "المصروفات", invoiceCount: "عدد الفواتير",
     newInvoice: "فاتورة مبيعات جديدة", invNo: "رقم الفاتورة:", clientName: "اسم العميل / الشركة",
     clientPhone: "رقم الهاتف (للواتساب)", itemTitle: "الصنف / الخدمة", qtyTitle: "الكمية", priceTitle: "السعر",
@@ -275,7 +275,7 @@ const translations = {
     storeName: "Business Name", registerBtn: "Create Free Instant Account", logout: "Sign Out",
     accountDisabled: "⚠️ Account Disabled by Admin",
     accountDisabledDesc: "This license has been suspended. Contact Admin Master (haretg@gmail.com).",
-    tabInvoices: "🧾 Live Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients & Ledger", tabSuppliers: "🏭 Suppliers", tabExpenses: "💸 Expenses",
+    tabInvoices: "🧾 Live Invoices", tabProducts: "📦 Inventory", tabClients: "👥 Clients & Ledger", tabSuppliers: "🏭 Suppliers", tabReturns: "🔄 Returns", tabExpenses: "💸 Expenses",
     totalSales: "Total Sales", netProfit: "Net Profit", expenses: "Expenses", invoiceCount: "Total Invoices",
     newInvoice: "New Sales Invoice", invNo: "Invoice #:", clientName: "Client / Company Name",
     clientPhone: "Client Phone (WhatsApp)", itemTitle: "Item / Service", qtyTitle: "Qty", priceTitle: "Price",
@@ -408,11 +408,15 @@ let suppliersDB = [];
 let purchasesDB = [];
 let productsDB = [];
 let expensesDB = [];
+let clientReturnsDB = [];
+let supplierReturnsDB = [];
 let storeProfile = { name: "GITI Enterprise ERP", phone: "01000000000", address: "", currency: "ج.م", vatNo: "", logo: "" };
 let activeUnsubscribers = [];
 let licenseUnsubscriber = null;
 let activeItems = [];
 let activePurchaseItems = [];
+let activeClientReturnItems = [];
+let activeSupplierReturnItems = [];
 let activeLedgerClientName = null;
 let activeLedgerSupplierName = null;
 let editingInvoiceId = null;
@@ -593,6 +597,8 @@ function loadDataLocallyAndSync(uid) {
   purchasesDB = getLocalData(uid, 'purchases', []);
   productsDB = getLocalData(uid, 'products', []);
   expensesDB = getLocalData(uid, 'expenses', []);
+  clientReturnsDB = getLocalData(uid, 'client_returns', []);
+  supplierReturnsDB = getLocalData(uid, 'supplier_returns', []);
   
   const localProfile = getLocalData(uid, 'profile', null);
   if (localProfile) {
@@ -602,6 +608,8 @@ function loadDataLocallyAndSync(uid) {
   invoicesDB.sort((a, b) => b.id - a.id);
   archivedInvoicesDB.sort((a, b) => b.id - a.id);
   purchasesDB.sort((a, b) => b.id - a.id);
+  clientReturnsDB.sort((a, b) => b.id - a.id);
+  supplierReturnsDB.sort((a, b) => b.id - a.id);
   updateNextInvoiceNumber();
   renderAllModules();
 }
@@ -662,6 +670,18 @@ async function fetchAllDataFromCloud() {
     expensesDB = [];
     expSnap.forEach(d => expensesDB.push(d.data()));
     saveLocalData(uid, 'expenses', expensesDB);
+
+    const clientRetSnap = await getDocs(collection(db, "users", uid, "client_returns"));
+    clientReturnsDB = [];
+    clientRetSnap.forEach(d => clientReturnsDB.push(d.data()));
+    clientReturnsDB.sort((a, b) => b.id - a.id);
+    saveLocalData(uid, 'client_returns', clientReturnsDB);
+
+    const supplierRetSnap = await getDocs(collection(db, "users", uid, "supplier_returns"));
+    supplierReturnsDB = [];
+    supplierRetSnap.forEach(d => supplierReturnsDB.push(d.data()));
+    supplierReturnsDB.sort((a, b) => b.id - a.id);
+    saveLocalData(uid, 'supplier_returns', supplierReturnsDB);
 
     const profSnap = await getDoc(doc(db, "users", uid, "data", "profile"));
     if (profSnap && profSnap.exists()) {
@@ -1654,7 +1674,8 @@ if (productForm) {
     }
 
     let prodToSave;
-    if (editingProductId !== null) {
+    const wasEditing = editingProductId !== null;
+    if (wasEditing) {
       const idx = productsDB.findIndex(p => p.id === editingProductId);
       if (idx !== -1) {
         productsDB[idx] = Object.assign({}, productsDB[idx], { name, price, cost, stock });
@@ -1680,7 +1701,7 @@ if (productForm) {
     }
     e.target.reset();
     renderAllModules();
-    alert(editingProductId !== null ? '✅ تم تحديث بيانات المنتج بنجاح!' : '✅ تم حفظ المنتج في المخزن بنجاح!');
+    alert(wasEditing ? '✅ تم تحديث بيانات المنتج بنجاح!' : '✅ تم حفظ المنتج في المخزن بنجاح!');
   });
 }
 
@@ -1809,8 +1830,18 @@ function getClientCalculatedLedger(clientParam) {
     (i.client && clientObj.name && i.client.toLowerCase() === clientObj.name.toLowerCase())
   );
 
-  let totalPurchases = clientObj.openingBalance ? clientObj.openingBalance : 0;
-  let totalPaid = 0;
+  const clientReturns = (clientReturnsDB || []).filter(r =>
+    (clientObj.id && r.clientId === clientObj.id) ||
+    (r.client && clientObj.name && r.client.toLowerCase() === clientObj.name.toLowerCase())
+  );
+
+  const totalReturns = clientReturns.reduce((sum, r) => sum + (parseFloat(r.grandTotal) || 0), 0);
+  const cashRefunded = clientReturns
+    .filter(r => r.settlement === 'نقدي')
+    .reduce((sum, r) => sum + (parseFloat(r.grandTotal) || 0), 0);
+
+  let totalPurchases = (parseFloat(clientObj.openingBalance) || 0) - totalReturns;
+  let totalPaid = -cashRefunded;
 
   clientInvoices.forEach(inv => {
     totalPurchases += (inv.grandTotal ? inv.grandTotal : 0);
@@ -1822,7 +1853,7 @@ function getClientCalculatedLedger(clientParam) {
   });
 
   const balance = Math.max(0, totalPurchases - totalPaid);
-  return { totalPurchases, totalPaid, balance, clientInvoices, payments: clientObj.payments ? clientObj.payments : [] };
+  return { totalPurchases, totalPaid, totalReturns, balance, clientInvoices, clientReturns, payments: clientObj.payments ? clientObj.payments : [] };
 }
 
 function renderClients() {
@@ -1839,7 +1870,7 @@ function renderClients() {
       <li>
         <div style="flex: 1;">
           <strong>👤 ${c.name}</strong> <small style="color:var(--text-muted)">(${c.phone ? c.phone : 'بدون رقم'})</small>
-          <br><small style="color:var(--text-muted)">إجمالي التعاملات: ${stats.totalPurchases.toFixed(2)} | المدفوع: ${stats.totalPaid.toFixed(2)}</small>
+          <br><small style="color:var(--text-muted)">صافي التعاملات: ${stats.totalPurchases.toFixed(2)} | المدفوع: ${stats.totalPaid.toFixed(2)}${stats.totalReturns > 0 ? ` | مرتجعات: ${stats.totalReturns.toFixed(2)}` : ''}</small>
         </div>
         <div style="text-align:left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
           <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
@@ -1974,6 +2005,18 @@ window.openClientLedger = (clientName) => {
         `;
       });
 
+      (stats.clientReturns || []).forEach(ret => {
+        cardsHtml += `
+          <div class="ledger-item-card pay-card">
+            <div class="lic-main">
+              <div class="lic-title" style="color:#d97706;">مرتجع مبيعات 🔄 <small style="color:#64748b;">(${ret.date || ''})</small></div>
+              <div class="lic-sub">${(ret.items ? ret.items.length : 0)} أصناف - تسوية: <strong>${ret.settlement}</strong></div>
+            </div>
+            <strong class="lic-price" style="color:#d97706;">-${(ret.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+          </div>
+        `;
+      });
+
       stats.payments.forEach((p, pIndex) => {
         const safeClientName = (clientObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
         cardsHtml += `
@@ -2048,6 +2091,16 @@ window.openClientLedger = (clientName) => {
             <td>فاتورة مبيعات #${inv.id} (${(inv.items ? inv.items.length : 0)} أصناف - ${inv.status})</td>
             <td>${inv.date || '-'}</td>
             <td>${(inv.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
+          </tr>
+        `;
+      });
+
+      (stats.clientReturns || []).forEach(ret => {
+        rowsHtml += `
+          <tr style="background-color: #fffbeb !important;">
+            <td>مرتجع مبيعات 🔄 (${(ret.items ? ret.items.length : 0)} أصناف - ${ret.settlement})</td>
+            <td>${ret.date || '-'}</td>
+            <td style="color:#d97706; font-weight:bold;">-${(ret.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
           </tr>
         `;
       });
@@ -2232,8 +2285,9 @@ if (supplierForm) {
     if (!name) { alert('يرجى إدخال اسم المورد'); return; }
 
     let supplierToSave;
+    const wasEditing = editingSupplierId !== null;
 
-    if (editingSupplierId !== null) {
+    if (wasEditing) {
       const idx = suppliersDB.findIndex(s => s.id === editingSupplierId);
       if (idx !== -1) {
         const exists = suppliersDB.some((s, i) => i !== idx && s.name.toLowerCase() === name.toLowerCase());
@@ -2264,7 +2318,7 @@ if (supplierForm) {
     }
     e.target.reset();
     renderAllModules();
-    alert(editingSupplierId !== null ? '✅ تم تحديث بيانات المورد بنجاح!' : '✅ تم إضافة المورد بنجاح');
+    alert(wasEditing ? '✅ تم تحديث بيانات المورد بنجاح!' : '✅ تم إضافة المورد بنجاح');
   });
 }
 
@@ -2285,8 +2339,18 @@ function getSupplierCalculatedLedger(supplierParam) {
     (p.supplier && supplierObj.name && p.supplier.toLowerCase() === supplierObj.name.toLowerCase())
   );
 
-  let totalPurchases = parseFloat(supplierObj.openingBalance) || 0;
-  let totalPaid = 0;
+  const supplierReturns = (supplierReturnsDB || []).filter(r =>
+    (supplierObj.id && r.supplierId === supplierObj.id) ||
+    (r.supplier && supplierObj.name && r.supplier.toLowerCase() === supplierObj.name.toLowerCase())
+  );
+
+  const totalReturns = supplierReturns.reduce((sum, r) => sum + (parseFloat(r.grandTotal) || 0), 0);
+  const cashRefunded = supplierReturns
+    .filter(r => r.settlement === 'نقدي')
+    .reduce((sum, r) => sum + (parseFloat(r.grandTotal) || 0), 0);
+
+  let totalPurchases = (parseFloat(supplierObj.openingBalance) || 0) - totalReturns;
+  let totalPaid = -cashRefunded;
 
   supplierPurchases.forEach(p => {
     totalPurchases += (parseFloat(p.grandTotal) || 0);
@@ -2298,7 +2362,7 @@ function getSupplierCalculatedLedger(supplierParam) {
   });
 
   const balance = Math.max(0, totalPurchases - totalPaid);
-  return { totalPurchases, totalPaid, balance, supplierPurchases, payments: supplierObj.payments || [] };
+  return { totalPurchases, totalPaid, totalReturns, balance, supplierPurchases, supplierReturns, payments: supplierObj.payments || [] };
 }
 
 function renderSuppliers() {
@@ -2315,7 +2379,7 @@ function renderSuppliers() {
       <li>
         <div style="flex: 1;">
           <strong>🏭 ${s.name}</strong> <small style="color:var(--text-muted)">(${s.phone ? s.phone : 'بدون رقم'})</small>
-          <br><small style="color:var(--text-muted)">إجمالي التوريدات: ${stats.totalPurchases.toFixed(2)} | المسدد: ${stats.totalPaid.toFixed(2)}</small>
+          <br><small style="color:var(--text-muted)">صافي التوريدات: ${stats.totalPurchases.toFixed(2)} | المسدد: ${stats.totalPaid.toFixed(2)}${stats.totalReturns > 0 ? ` | مرتجعات: ${stats.totalReturns.toFixed(2)}` : ''}</small>
         </div>
         <div style="text-align:left; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
           <span class="badge ${stats.balance > 0 ? 'badge-unpaid' : 'badge-paid'}">
@@ -2439,6 +2503,18 @@ window.openSupplierLedger = (supplierName) => {
         `;
       });
 
+      (stats.supplierReturns || []).forEach(ret => {
+        cardsHtml += `
+          <div class="ledger-item-card pay-card">
+            <div class="lic-main">
+              <div class="lic-title" style="color:#d97706;">مرتجع مشتريات للمورد 🔄 <small style="color:#64748b;">(${ret.date || ''})</small></div>
+              <div class="lic-sub">${(ret.items ? ret.items.length : 0)} أصناف - تسوية: <strong>${ret.settlement}</strong></div>
+            </div>
+            <strong class="lic-price" style="color:#d97706;">-${(ret.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</strong>
+          </div>
+        `;
+      });
+
       (stats.payments || []).forEach((p, pIndex) => {
         const safeSupplierName = (supplierObj.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
         cardsHtml += `
@@ -2515,6 +2591,17 @@ window.openSupplierLedger = (supplierName) => {
             <td>فاتورة توريد / مشتريات #${pur.id} (${(pur.items ? pur.items.length : 0)} أصناف)</td>
             <td>${(pur.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
             <td><span style="font-weight:bold; color:${pur.status === 'مدفوعة' ? '#059669' : (pur.status === 'مدفوعة جزئياً' ? '#d97706' : '#dc2626')};">${pur.status}</span></td>
+          </tr>
+        `;
+      });
+
+      (stats.supplierReturns || []).forEach(ret => {
+        rowsHtml += `
+          <tr style="background-color: #fffbeb !important;">
+            <td>${ret.date || '-'}</td>
+            <td>مرتجع مشتريات للمورد 🔄 (${(ret.items ? ret.items.length : 0)} أصناف)</td>
+            <td style="color:#d97706; font-weight:bold;">-${(ret.grandTotal || 0).toFixed(2)} ${storeProfile.currency || 'ج.م'}</td>
+            <td><span style="color:#d97706; font-weight:bold;">${ret.settlement}</span></td>
           </tr>
         `;
       });
@@ -3193,6 +3280,467 @@ window.deletePurchase = async (id) => {
 };
 
 // ==========================================
+// Returns Engine (Clients & Suppliers)
+// ==========================================
+const retClientInput = document.getElementById('ret-client-name');
+const retClientPhoneInput = document.getElementById('ret-client-phone');
+const retClientSuggestions = document.getElementById('ret-client-suggestions');
+const retClientItemsBody = document.getElementById('ret-client-items-body');
+
+function showRetClientDropdown(filter = '') {
+  if (!retClientSuggestions) return;
+  const val = filter.trim().toLowerCase();
+  const filtered = val === '' ? clientsDB : clientsDB.filter(c => c.name.toLowerCase().includes(val) || (c.phone && c.phone.includes(val)));
+  if (filtered.length === 0) {
+    retClientSuggestions.classList.add('hidden');
+    return;
+  }
+  retClientSuggestions.innerHTML = filtered.map(c => `
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectRetClient('${c.name.replace(/'/g, "\\'")}', '${c.phone || ''}')">
+      <strong>👤 ${c.name}</strong>
+      <small style="color:var(--text-muted); display:block;">${c.phone || 'بدون رقم'}</small>
+    </div>
+  `).join('');
+  retClientSuggestions.classList.remove('hidden');
+}
+
+if (retClientInput) {
+  retClientInput.addEventListener('input', (e) => {
+    const matched = clientsDB.find(c => c.name.toLowerCase() === e.target.value.trim().toLowerCase());
+    if (matched && matched.phone && retClientPhoneInput) retClientPhoneInput.value = matched.phone;
+    showRetClientDropdown(e.target.value);
+  });
+  retClientInput.addEventListener('focus', () => showRetClientDropdown(retClientInput.value));
+}
+
+window.selectRetClient = (name, phone) => {
+  if (retClientInput) retClientInput.value = name;
+  if (phone && retClientPhoneInput) retClientPhoneInput.value = phone;
+  if (retClientSuggestions) retClientSuggestions.classList.add('hidden');
+};
+
+function renderClientReturnItemsTable() {
+  if (!retClientItemsBody) return;
+  if (activeClientReturnItems.length === 0) {
+    activeClientReturnItems.push({ name: '', qty: 1, price: 0 });
+  }
+  retClientItemsBody.innerHTML = activeClientReturnItems.map((item, idx) => `
+    <tr>
+      <td>
+        <div class="autocomplete-wrapper">
+          <input type="text" autocomplete="off" value="${(item.name || '').replace(/"/g, '&quot;')}" placeholder="اسم الصنف"
+                 oninput="window.handleRetClientItemInput(${idx}, this.value)"
+                 onfocus="window.showRetClientProdDropdown(${idx}, this.value)">
+          <div class="autocomplete-dropdown hidden" id="ret-client-prod-sug-${idx}"></div>
+        </div>
+      </td>
+      <td><input type="number" value="${item.qty || 1}" min="1" oninput="window.updateRetClientItem(${idx}, 'qty', this.value)"></td>
+      <td><input type="number" value="${item.price || 0}" min="0" step="0.5" oninput="window.updateRetClientItem(${idx}, 'price', this.value)"></td>
+      <td><span class="item-total-text">${((item.qty || 0) * (item.price || 0)).toFixed(2)}</span></td>
+      <td><button type="button" class="btn-remove" onclick="window.removeRetClientItem(${idx})">✕</button></td>
+    </tr>
+  `).join('');
+  calculateClientReturnTotal();
+}
+
+window.showRetClientProdDropdown = (idx, val) => {
+  const box = document.getElementById(`ret-client-prod-sug-${idx}`);
+  if (!box) return;
+  const q = (val || '').trim().toLowerCase();
+  const list = q === '' ? productsDB : productsDB.filter(p => p.name.toLowerCase().includes(q));
+  if (list.length === 0) { box.classList.add('hidden'); return; }
+  box.innerHTML = list.map(p => `
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectRetClientProd(${idx}, '${p.name.replace(/'/g, "\\'")}', ${p.price || 0})">
+      <strong>📦 ${p.name}</strong>
+      <span style="color:var(--success); float:left;">${p.price} ${storeProfile.currency}</span>
+    </div>
+  `).join('');
+  box.classList.remove('hidden');
+};
+
+window.handleRetClientItemInput = (idx, val) => {
+  activeClientReturnItems[idx].name = val;
+  const matched = productsDB.find(p => p.name.trim().toLowerCase() === val.trim().toLowerCase());
+  if (matched) {
+    activeClientReturnItems[idx].price = matched.price || 0;
+    const row = retClientItemsBody.querySelectorAll('tr')[idx];
+    if (row) row.querySelectorAll('input')[2].value = matched.price || 0;
+  }
+  calculateClientReturnTotal();
+  window.showRetClientProdDropdown(idx, val);
+};
+
+window.selectRetClientProd = (idx, name, price) => {
+  activeClientReturnItems[idx].name = name;
+  activeClientReturnItems[idx].price = price;
+  renderClientReturnItemsTable();
+};
+
+window.updateRetClientItem = (idx, key, val) => {
+  activeClientReturnItems[idx][key] = parseFloat(val) || 0;
+  calculateClientReturnTotal();
+  const row = retClientItemsBody.querySelectorAll('tr')[idx];
+  if (row) {
+    const span = row.querySelector('.item-total-text');
+    if (span) span.textContent = ((activeClientReturnItems[idx].qty || 0) * (activeClientReturnItems[idx].price || 0)).toFixed(2);
+  }
+};
+
+window.removeRetClientItem = (idx) => {
+  activeClientReturnItems.splice(idx, 1);
+  renderClientReturnItemsTable();
+};
+
+const addRetClientItemBtn = document.getElementById('add-ret-client-item-btn');
+if (addRetClientItemBtn) {
+  addRetClientItemBtn.addEventListener('click', () => {
+    activeClientReturnItems.push({ name: '', qty: 1, price: 0 });
+    renderClientReturnItemsTable();
+  });
+}
+
+function calculateClientReturnTotal() {
+  const total = activeClientReturnItems.reduce((sum, i) => sum + ((i.qty || 0) * (i.price || 0)), 0);
+  const el = document.getElementById('ret-client-total');
+  if (el) el.textContent = `${total.toFixed(2)} ${storeProfile.currency}`;
+  return total;
+}
+
+const clientReturnForm = document.getElementById('client-return-form');
+if (clientReturnForm) {
+  clientReturnForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const clientName = retClientInput ? retClientInput.value.trim() : '';
+    const clientPhone = retClientPhoneInput ? retClientPhoneInput.value.trim() : '';
+    const settlement = document.getElementById('ret-client-settlement')?.value || 'آجل';
+    const validItems = activeClientReturnItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
+    const total = calculateClientReturnTotal();
+
+    if (!clientName) { alert('يرجى إدخال اسم العميل'); return; }
+    if (validItems.length === 0) { alert('يرجى إضافة صنف مرتجع واحد على الأقل'); return; }
+
+    const uid = currentUser ? currentUser.uid : 'local';
+    let clientObj = clientsDB.find(c => c.name.toLowerCase() === clientName.toLowerCase());
+    if (!clientObj) {
+      clientObj = { id: Date.now(), name: clientName, phone: clientPhone, openingBalance: 0, payments: [] };
+      clientsDB.push(clientObj);
+    } else if (clientPhone) {
+      clientObj.phone = clientPhone;
+    }
+
+    const modifiedProds = [];
+    validItems.forEach(item => {
+      const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === item.name.trim().toLowerCase());
+      if (prod) {
+        prod.stock = (parseFloat(prod.stock) || 0) + (parseFloat(item.qty) || 0);
+        modifiedProds.push(prod);
+      }
+    });
+
+    const retRecord = {
+      id: Date.now(),
+      clientId: clientObj.id,
+      client: clientName,
+      phone: clientPhone,
+      items: validItems,
+      grandTotal: total,
+      settlement: settlement,
+      date: new Date().toLocaleDateString('ar-EG'),
+      isoTime: new Date().toISOString()
+    };
+
+    clientReturnsDB.unshift(retRecord);
+    saveLocalData(uid, 'client_returns', clientReturnsDB);
+    saveLocalData(uid, 'clients', clientsDB);
+    saveLocalData(uid, 'products', productsDB);
+
+    if (currentUser) {
+      setDoc(doc(db, "users", uid, "client_returns", String(retRecord.id)), retRecord).catch(() => {});
+      setDoc(doc(db, "users", uid, "clients", String(clientObj.id)), clientObj).catch(() => {});
+      modifiedProds.forEach(p => setDoc(doc(db, "users", uid, "products", String(p.id)), p).catch(() => {}));
+    }
+
+    activeClientReturnItems = [];
+    if (retClientInput) retClientInput.value = '';
+    if (retClientPhoneInput) retClientPhoneInput.value = '';
+    renderClientReturnItemsTable();
+    renderAllModules();
+    alert('✅ تم حفظ مرتجع العميل وإعادة الكميات للمخزن وتحديث كشف الحساب!');
+  });
+}
+
+// --- مرتجع الموردين ---
+const retSupplierInput = document.getElementById('ret-supplier-name');
+const retSupplierPhoneInput = document.getElementById('ret-supplier-phone');
+const retSupplierSuggestions = document.getElementById('ret-supplier-suggestions');
+const retSupplierItemsBody = document.getElementById('ret-supplier-items-body');
+
+function showRetSupplierDropdown(filter = '') {
+  if (!retSupplierSuggestions) return;
+  const val = filter.trim().toLowerCase();
+  const filtered = val === '' ? suppliersDB : suppliersDB.filter(s => s.name.toLowerCase().includes(val) || (s.phone && s.phone.includes(val)));
+  if (filtered.length === 0) {
+    retSupplierSuggestions.classList.add('hidden');
+    return;
+  }
+  retSupplierSuggestions.innerHTML = filtered.map(s => `
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectRetSupplier('${s.name.replace(/'/g, "\\'")}', '${s.phone || ''}')">
+      <strong>🏭 ${s.name}</strong>
+      <small style="color:var(--text-muted); display:block;">${s.phone || 'بدون رقم'}</small>
+    </div>
+  `).join('');
+  retSupplierSuggestions.classList.remove('hidden');
+}
+
+if (retSupplierInput) {
+  retSupplierInput.addEventListener('input', (e) => {
+    const matched = suppliersDB.find(s => s.name.toLowerCase() === e.target.value.trim().toLowerCase());
+    if (matched && matched.phone && retSupplierPhoneInput) retSupplierPhoneInput.value = matched.phone;
+    showRetSupplierDropdown(e.target.value);
+  });
+  retSupplierInput.addEventListener('focus', () => showRetSupplierDropdown(retSupplierInput.value));
+}
+
+window.selectRetSupplier = (name, phone) => {
+  if (retSupplierInput) retSupplierInput.value = name;
+  if (phone && retSupplierPhoneInput) retSupplierPhoneInput.value = phone;
+  if (retSupplierSuggestions) retSupplierSuggestions.classList.add('hidden');
+};
+
+function renderSupplierReturnItemsTable() {
+  if (!retSupplierItemsBody) return;
+  if (activeSupplierReturnItems.length === 0) {
+    activeSupplierReturnItems.push({ name: '', qty: 1, cost: 0 });
+  }
+  retSupplierItemsBody.innerHTML = activeSupplierReturnItems.map((item, idx) => `
+    <tr>
+      <td>
+        <div class="autocomplete-wrapper">
+          <input type="text" autocomplete="off" value="${(item.name || '').replace(/"/g, '&quot;')}" placeholder="اسم الصنف"
+                 oninput="window.handleRetSupplierItemInput(${idx}, this.value)"
+                 onfocus="window.showRetSupplierProdDropdown(${idx}, this.value)">
+          <div class="autocomplete-dropdown hidden" id="ret-supplier-prod-sug-${idx}"></div>
+        </div>
+      </td>
+      <td><input type="number" value="${item.qty || 1}" min="1" oninput="window.updateRetSupplierItem(${idx}, 'qty', this.value)"></td>
+      <td><input type="number" value="${item.cost || 0}" min="0" step="0.5" oninput="window.updateRetSupplierItem(${idx}, 'cost', this.value)"></td>
+      <td><span class="p-item-total-text">${((item.qty || 0) * (item.cost || 0)).toFixed(2)}</span></td>
+      <td><button type="button" class="btn-remove" onclick="window.removeRetSupplierItem(${idx})">✕</button></td>
+    </tr>
+  `).join('');
+  calculateSupplierReturnTotal();
+}
+
+window.showRetSupplierProdDropdown = (idx, val) => {
+  const box = document.getElementById(`ret-supplier-prod-sug-${idx}`);
+  if (!box) return;
+  const q = (val || '').trim().toLowerCase();
+  const list = q === '' ? productsDB : productsDB.filter(p => p.name.toLowerCase().includes(q));
+  if (list.length === 0) { box.classList.add('hidden'); return; }
+  box.innerHTML = list.map(p => `
+    <div class="suggestion-item" onmousedown="event.preventDefault(); window.selectRetSupplierProd(${idx}, '${p.name.replace(/'/g, "\\'")}', ${p.cost || 0})">
+      <strong>📦 ${p.name}</strong>
+      <span style="color:var(--text-muted); float:left;">تكلفة: ${p.cost || 0} | متاح: ${p.stock || 0}</span>
+    </div>
+  `).join('');
+  box.classList.remove('hidden');
+};
+
+window.handleRetSupplierItemInput = (idx, val) => {
+  activeSupplierReturnItems[idx].name = val;
+  const matched = productsDB.find(p => p.name.trim().toLowerCase() === val.trim().toLowerCase());
+  if (matched) {
+    activeSupplierReturnItems[idx].cost = matched.cost || 0;
+    const row = retSupplierItemsBody.querySelectorAll('tr')[idx];
+    if (row) row.querySelectorAll('input')[2].value = matched.cost || 0;
+  }
+  calculateSupplierReturnTotal();
+  window.showRetSupplierProdDropdown(idx, val);
+};
+
+window.selectRetSupplierProd = (idx, name, cost) => {
+  activeSupplierReturnItems[idx].name = name;
+  activeSupplierReturnItems[idx].cost = cost;
+  renderSupplierReturnItemsTable();
+};
+
+window.updateRetSupplierItem = (idx, key, val) => {
+  activeSupplierReturnItems[idx][key] = parseFloat(val) || 0;
+  calculateSupplierReturnTotal();
+  const row = retSupplierItemsBody.querySelectorAll('tr')[idx];
+  if (row) {
+    const span = row.querySelector('.p-item-total-text');
+    if (span) span.textContent = ((activeSupplierReturnItems[idx].qty || 0) * (activeSupplierReturnItems[idx].cost || 0)).toFixed(2);
+  }
+};
+
+window.removeRetSupplierItem = (idx) => {
+  activeSupplierReturnItems.splice(idx, 1);
+  renderSupplierReturnItemsTable();
+};
+
+const addRetSupplierItemBtn = document.getElementById('add-ret-supplier-item-btn');
+if (addRetSupplierItemBtn) {
+  addRetSupplierItemBtn.addEventListener('click', () => {
+    activeSupplierReturnItems.push({ name: '', qty: 1, cost: 0 });
+    renderSupplierReturnItemsTable();
+  });
+}
+
+function calculateSupplierReturnTotal() {
+  const total = activeSupplierReturnItems.reduce((sum, i) => sum + ((i.qty || 0) * (i.cost || 0)), 0);
+  const el = document.getElementById('ret-supplier-total');
+  if (el) el.textContent = `${total.toFixed(2)} ${storeProfile.currency}`;
+  return total;
+}
+
+const supplierReturnForm = document.getElementById('supplier-return-form');
+if (supplierReturnForm) {
+  supplierReturnForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const supplierName = retSupplierInput ? retSupplierInput.value.trim() : '';
+    const supplierPhone = retSupplierPhoneInput ? retSupplierPhoneInput.value.trim() : '';
+    const settlement = document.getElementById('ret-supplier-settlement')?.value || 'آجل';
+    const validItems = activeSupplierReturnItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
+    const total = calculateSupplierReturnTotal();
+
+    if (!supplierName) { alert('يرجى إدخال اسم المورد'); return; }
+    if (validItems.length === 0) { alert('يرجى إضافة صنف مرتجع واحد على الأقل'); return; }
+
+    const uid = currentUser ? currentUser.uid : 'local';
+    let supplierObj = suppliersDB.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+    if (!supplierObj) {
+      supplierObj = { id: Date.now(), name: supplierName, phone: supplierPhone, openingBalance: 0, payments: [] };
+      suppliersDB.push(supplierObj);
+    } else if (supplierPhone) {
+      supplierObj.phone = supplierPhone;
+    }
+
+    const modifiedProds = [];
+    validItems.forEach(item => {
+      const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === item.name.trim().toLowerCase());
+      if (prod) {
+        prod.stock = Math.max(0, (parseFloat(prod.stock) || 0) - (parseFloat(item.qty) || 0));
+        modifiedProds.push(prod);
+      }
+    });
+
+    const retRecord = {
+      id: Date.now(),
+      supplierId: supplierObj.id,
+      supplier: supplierName,
+      phone: supplierPhone,
+      items: validItems,
+      grandTotal: total,
+      settlement: settlement,
+      date: new Date().toLocaleDateString('ar-EG'),
+      isoTime: new Date().toISOString()
+    };
+
+    supplierReturnsDB.unshift(retRecord);
+    saveLocalData(uid, 'supplier_returns', supplierReturnsDB);
+    saveLocalData(uid, 'suppliers', suppliersDB);
+    saveLocalData(uid, 'products', productsDB);
+
+    if (currentUser) {
+      setDoc(doc(db, "users", uid, "supplier_returns", String(retRecord.id)), retRecord).catch(() => {});
+      setDoc(doc(db, "users", uid, "suppliers", String(supplierObj.id)), supplierObj).catch(() => {});
+      modifiedProds.forEach(p => setDoc(doc(db, "users", uid, "products", String(p.id)), p).catch(() => {}));
+    }
+
+    activeSupplierReturnItems = [];
+    if (retSupplierInput) retSupplierInput.value = '';
+    if (retSupplierPhoneInput) retSupplierPhoneInput.value = '';
+    renderSupplierReturnItemsTable();
+    renderAllModules();
+    alert('✅ تم حفظ مرتجع المورد وخصمه من المخزن وتحديث كشف الحساب!');
+  });
+}
+
+function renderReturnsLists(filter = '') {
+  const f = (filter || '').toLowerCase();
+
+  const cContainer = document.getElementById('client-returns-list-container');
+  if (cContainer) {
+    const filteredC = (clientReturnsDB || []).filter(r => (r.client || '').toLowerCase().includes(f));
+    cContainer.innerHTML = filteredC.length ? filteredC.map(r => `
+      <li>
+        <div style="flex:1;">
+          <strong>🔄 ${r.client}</strong> <span class="badge badge-partial">${r.settlement}</span>
+          <br><small style="color:var(--text-muted)">📅 ${r.date} • ${(r.items || []).map(i => `${i.name} (×${i.qty})`).join('، ')}</small>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <strong style="color:var(--warning)">-${(r.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong>
+          <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteClientReturn(${r.id})">🗑️</button>
+        </div>
+      </li>
+    `).join('') : '<p style="text-align:center; color:var(--text-muted); padding:10px;">لا توجد مرتجعات عملاء</p>';
+  }
+
+  const sContainer = document.getElementById('supplier-returns-list-container');
+  if (sContainer) {
+    const filteredS = (supplierReturnsDB || []).filter(r => (r.supplier || '').toLowerCase().includes(f));
+    sContainer.innerHTML = filteredS.length ? filteredS.map(r => `
+      <li>
+        <div style="flex:1;">
+          <strong>🏭 ${r.supplier}</strong> <span class="badge badge-paid">${r.settlement}</span>
+          <br><small style="color:var(--text-muted)">📅 ${r.date} • ${(r.items || []).map(i => `${i.name} (×${i.qty})`).join('، ')}</small>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <strong style="color:var(--success)">+${(r.grandTotal || 0).toFixed(2)} ${storeProfile.currency}</strong>
+          <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteSupplierReturn(${r.id})">🗑️</button>
+        </div>
+      </li>
+    `).join('') : '<p style="text-align:center; color:var(--text-muted); padding:10px;">لا توجد مرتجعات موردين</p>';
+  }
+}
+
+const searchReturnsInput = document.getElementById('search-returns-input');
+if (searchReturnsInput) {
+  searchReturnsInput.addEventListener('input', (e) => renderReturnsLists(e.target.value));
+}
+
+window.deleteClientReturn = (id) => {
+  if (!confirm('حذف مرتجع العميل؟ سيتم خصم الكميات المرتجعة من المخزن مرة أخرى.')) return;
+  const ret = clientReturnsDB.find(r => r.id === id);
+  const uid = currentUser ? currentUser.uid : 'local';
+  if (ret && Array.isArray(ret.items)) {
+    ret.items.forEach(item => {
+      const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === (item.name || '').trim().toLowerCase());
+      if (prod) {
+        prod.stock = Math.max(0, (parseFloat(prod.stock) || 0) - (parseFloat(item.qty) || 0));
+        if (currentUser) setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
+      }
+    });
+  }
+  clientReturnsDB = clientReturnsDB.filter(r => r.id !== id);
+  saveLocalData(uid, 'client_returns', clientReturnsDB);
+  saveLocalData(uid, 'products', productsDB);
+  if (currentUser) deleteDoc(doc(db, "users", uid, "client_returns", String(id))).catch(() => {});
+  renderAllModules();
+};
+
+window.deleteSupplierReturn = (id) => {
+  if (!confirm('حذف مرتجع المورد؟ سيتم إعادة الكميات للمخزن مرة أخرى.')) return;
+  const ret = supplierReturnsDB.find(r => r.id === id);
+  const uid = currentUser ? currentUser.uid : 'local';
+  if (ret && Array.isArray(ret.items)) {
+    ret.items.forEach(item => {
+      const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === (item.name || '').trim().toLowerCase());
+      if (prod) {
+        prod.stock = (parseFloat(prod.stock) || 0) + (parseFloat(item.qty) || 0);
+        if (currentUser) setDoc(doc(db, "users", uid, "products", String(prod.id)), prod).catch(() => {});
+      }
+    });
+  }
+  supplierReturnsDB = supplierReturnsDB.filter(r => r.id !== id);
+  saveLocalData(uid, 'supplier_returns', supplierReturnsDB);
+  saveLocalData(uid, 'products', productsDB);
+  if (currentUser) deleteDoc(doc(db, "users", uid, "supplier_returns", String(id))).catch(() => {});
+  renderAllModules();
+};
+
+// ==========================================
 // Treasury & Expenses Engine
 // ==========================================
 const expenseForm = document.getElementById('expense-form');
@@ -3254,7 +3802,9 @@ window.deleteExpense = async (idx) => {
 };
 
 function updateDashboardStats() {
-  const totalSales = invoicesDB.reduce((acc, i) => acc + (i.grandTotal ? i.grandTotal : 0), 0);
+  const grossSales = invoicesDB.reduce((acc, i) => acc + (i.grandTotal ? i.grandTotal : 0), 0);
+  const totalClientReturns = (clientReturnsDB || []).reduce((acc, r) => acc + (r.grandTotal ? r.grandTotal : 0), 0);
+  const totalSales = Math.max(0, grossSales - totalClientReturns);
   const totalExpensesAmount = expensesDB.reduce((acc, e) => acc + (e.amount ? e.amount : 0), 0);
   const netProfit = totalSales - totalExpensesAmount;
 
@@ -3289,6 +3839,8 @@ if (exportJsonBtn) {
         purchases: purchasesDB, 
         products: productsDB, 
         expenses: expensesDB, 
+        client_returns: clientReturnsDB,
+        supplier_returns: supplierReturnsDB,
         storeProfile 
       };
       
@@ -3363,6 +3915,16 @@ if (importJsonInput) {
             expensesDB = importedData.expenses;
             saveLocalData(uid, 'expenses', expensesDB);
             if (currentUser) expensesDB.forEach(exp => setDoc(doc(db, "users", uid, "expenses", String(exp.id)), exp).catch(() => {}));
+          }
+          if (Array.isArray(importedData.client_returns)) {
+            clientReturnsDB = importedData.client_returns;
+            saveLocalData(uid, 'client_returns', clientReturnsDB);
+            if (currentUser) clientReturnsDB.forEach(ret => setDoc(doc(db, "users", uid, "client_returns", String(ret.id)), ret).catch(() => {}));
+          }
+          if (Array.isArray(importedData.supplier_returns)) {
+            supplierReturnsDB = importedData.supplier_returns;
+            saveLocalData(uid, 'supplier_returns', supplierReturnsDB);
+            if (currentUser) supplierReturnsDB.forEach(ret => setDoc(doc(db, "users", uid, "supplier_returns", String(ret.id)), ret).catch(() => {}));
           }
           if (importedData.storeProfile) {
             storeProfile = Object.assign({}, storeProfile, importedData.storeProfile);
@@ -3491,6 +4053,9 @@ function renderAllModules() {
   renderSuppliers();
   renderPurchaseItemsTable();
   renderPurchases();
+  renderClientReturnItemsTable();
+  renderSupplierReturnItemsTable();
+  renderReturnsLists();
   renderExpenses();
   updateDashboardStats();
 }
@@ -3512,3 +4077,5 @@ if ('serviceWorker' in navigator) {
 updateHeaderUI();
 if (addItemBtn) addItemBtn.click();
 renderPurchaseItemsTable();
+renderClientReturnItemsTable();
+renderSupplierReturnItemsTable();
