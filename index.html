@@ -83,9 +83,9 @@
   <link rel="manifest" href="manifest.json">
   
   <!-- مكتبات المعالجة وتوليد PDF والباركود -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6651309355082807" crossorigin="anonymous"></script>
 </head>
@@ -285,11 +285,11 @@
             <div class="summary-inputs-grid">
               <div class="input-pill">
                 <label>الخصم المباشر:</label>
-                <input type="number" id="discount-input" value="0" min="0" step="0.5" placeholder="0.00">
+                <input type="number" id="discount-input" value="0" min="0" step="any" placeholder="0.00">
               </div>
               <div class="input-pill">
                 <label>الضريبة (%):</label>
-                <input type="number" id="tax-input" value="14" min="0" placeholder="14">
+                <input type="number" id="tax-input" value="14" min="0" step="any" placeholder="14">
               </div>
             </div>
 
@@ -311,7 +311,7 @@
 
             <div class="input-pill hidden" id="paid-amount-wrapper" style="margin-top: 10px;">
               <label>المبلغ المدفوع كاش:</label>
-              <input type="number" id="paid-amount-input" value="0" min="0" placeholder="0.00">
+              <input type="number" id="paid-amount-input" value="0" min="0" step="any" placeholder="0.00">
             </div>
 
             <div class="grand-total-banner">
@@ -372,7 +372,7 @@
             </div>
             <div class="form-group">
               <label>الرصيد الافتتاحي (مديونية سابقة)</label>
-              <input type="number" id="c-balance" value="0" placeholder="0.00">
+              <input type="number" id="c-balance" value="0" step="any" placeholder="0.00">
             </div>
             <button type="submit" class="btn-primary" style="grid-column: 1 / -1;">حفظ بيانات العميل</button>
           </form>
@@ -408,7 +408,7 @@
             </div>
             <div class="form-group">
               <label>الرصيد الافتتاحي (مستحق للمورد)</label>
-              <input type="number" id="s-balance" value="0" placeholder="0.00">
+              <input type="number" id="s-balance" value="0" step="any" placeholder="0.00">
             </div>
             <button type="submit" class="btn-primary" style="grid-column: 1 / -1;">حفظ بيانات المورد</button>
           </form>
@@ -469,7 +469,7 @@
               </div>
               <div class="form-group hidden" id="purchase-paid-wrapper">
                 <label>المبلغ المدفوع كاش للمورد:</label>
-                <input type="number" id="purchase-paid-amount" value="0" min="0" placeholder="0.00">
+                <input type="number" id="purchase-paid-amount" value="0" min="0" step="any" placeholder="0.00">
               </div>
               <div class="form-group">
                 <label>إجمالي فاتورة المشتريات:</label>
@@ -505,11 +505,11 @@
             </div>
             <div class="form-group">
               <label data-i18n="pPrice">سعر البيع</label>
-              <input type="number" id="p-price" required step="0.5" placeholder="0.00">
+              <input type="number" id="p-price" required step="any" placeholder="0.00">
             </div>
             <div class="form-group">
               <label data-i18n="pCost">سعر التكلفة</label>
-              <input type="number" id="p-cost" step="0.5" placeholder="0.00">
+              <input type="number" id="p-cost" step="any" placeholder="0.00">
             </div>
             <div class="form-group">
               <label data-i18n="pStock">الكمية بالمخزن</label>
@@ -672,7 +672,7 @@
             </div>
             <div class="form-group" style="margin-top:10px;">
               <label data-i18n="expAmount">المبلغ</label>
-              <input type="number" id="exp-amount" required step="0.5" placeholder="0.00">
+              <input type="number" id="exp-amount" required step="any" placeholder="0.00">
             </div>
             <button type="submit" class="btn-primary" style="margin-top:15px; width:100%;" data-i18n="saveExpense">تسجيل المصروف</button>
           </form>
@@ -738,7 +738,7 @@
         <div class="pay-section-modal">
           <label>تسجيل دفعة سداد نقدي من العميل</label>
           <div class="pay-input-group">
-            <input type="number" id="pay-amount-input" placeholder="أدخل المبلغ...">
+            <input type="number" id="pay-amount-input" step="any" placeholder="أدخل المبلغ...">
             <button id="submit-payment-btn" class="btn-pay-submit">تسجيل السداد 💵</button>
           </div>
         </div>
@@ -829,7 +829,7 @@
         <div class="pay-section-modal">
           <label>تسجيل دفعة سداد نقدي للمورد</label>
           <div class="pay-input-group">
-            <input type="number" id="supplier-pay-amount-input" placeholder="أدخل المبلغ...">
+            <input type="number" id="supplier-pay-amount-input" step="any" placeholder="أدخل المبلغ...">
             <button id="submit-supplier-payment-btn" class="btn-success">سداد للمورد 💵</button>
           </div>
         </div>
