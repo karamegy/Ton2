@@ -8,7 +8,7 @@
   <title>Giti الفواتير - GITI Enterprise ERP | تطبيق حسابات ومخازن مجاني</title>
   <meta name="google-site-verification" content="googleeb8d677c7529419b" />
   
-<!-- وسوم تعزيز الظهور في محركات البحث العامة (Generic SEO Meta Tags) -->
+  <!-- وسوم تعزيز الظهور في محركات البحث العامة (Generic SEO Meta Tags) -->
   <meta name="description" content="منظومة GITI ERP - برنامج فواتير وإدارة حسابات ومخازن مجاني للمحلات والشركات. إصدار فواتير إلكترونية ومتابعة المبيعات والمشتريات والديون ويعمل اون لاين و اوف لاين.">
   <meta name="keywords" content="GITI ERP, GITI فواتير, برنامج فواتير مجاني, برنامج حسابات, إدارة مخازن, مبيعات ومشتريات, فواتير إلكترونية, برنامج مبيعات اون لاين اوف لاين, كشف حساب عملاء">
   <meta name="robots" content="index, follow">
@@ -29,7 +29,7 @@
   <meta name="twitter:description" content="برنامج فواتير وإدارة حسابات ومخازن مجاني للشركات والمحلات، يعمل اون لاين و اوف لاين مع دعم الفاتورة الإلكترونية وطباعة PDF.">
   <meta name="twitter:image" content="https://karamegy.github.io/Ton2/logo.png">
 
-<!-- البيانات المنظمة JSON-LD -->
+  <!-- البيانات المنظمة JSON-LD -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -82,7 +82,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   
-  <!-- مكتبات المعالجة وتوليد PDF والباركوود -->
+  <!-- مكتبات المعالجة وتوليد PDF والباركود -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -208,6 +208,7 @@
       <button class="nav-tab" data-tab="clients" data-i18n="tabClients">👥 العملاء والدفاتر</button>
       <button class="nav-tab" data-tab="suppliers" data-i18n="tabSuppliers">🏭 الموردين والشركات</button>
       <button class="nav-tab" data-tab="products" data-i18n="tabProducts">📦 المخزن</button>
+      <button class="nav-tab" data-tab="returns" data-i18n="tabReturns">🔄 المرتجعات</button>
       <button class="nav-tab" data-tab="expenses" data-i18n="tabExpenses">💸 الخزينة</button>
     </nav>
 
@@ -523,6 +524,139 @@
             <ul id="products-list-container"></ul>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- تبويب المرتجعات (العملاء والموردين) -->
+    <section id="tab-returns" class="tab-content">
+      <div class="dashboard-grid">
+
+        <!-- 1. مرتجع عميل (مبيعات مرتدة) -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🔄 تسجيل مرتجع عميل (مبيعات مرتدة)</h3>
+          </div>
+          <form id="client-return-form">
+            <div class="form-row">
+              <div class="form-group autocomplete-wrapper">
+                <label>اسم العميل</label>
+                <input type="text" id="ret-client-name" required autocomplete="off" placeholder="اختر أو اكتب اسم العميل...">
+                <div id="ret-client-suggestions" class="autocomplete-dropdown hidden"></div>
+              </div>
+              <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="tel" id="ret-client-phone" placeholder="01xxxxxxxxx">
+              </div>
+            </div>
+
+            <div class="modern-table-container" style="margin-top: 12px;">
+              <table class="modern-items-table">
+                <thead>
+                  <tr>
+                    <th style="width: 42%;">الصنف المرتجع</th>
+                    <th style="width: 18%;">الكمية</th>
+                    <th style="width: 20%;">سعر البيع</th>
+                    <th style="width: 20%;">الإجمالي</th>
+                    <th style="width: 40px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="ret-client-items-body"></tbody>
+              </table>
+              <button type="button" id="add-ret-client-item-btn" class="btn-add-row">+ إضافة صنف مرتجع من العميل</button>
+            </div>
+
+            <div class="form-row" style="margin-top: 12px; align-items: flex-end;">
+              <div class="form-group">
+                <label>طريقة تسوية المرتجع:</label>
+                <select id="ret-client-settlement">
+                  <option value="آجل">📉 خصم من رصيد/مديونية العميل (آجل)</option>
+                  <option value="نقدي">💵 رد المبلغ نقداً للعميل (كاش)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>إجمالي مرتجع العميل:</label>
+                <strong id="ret-client-total" style="font-size: 1.25rem; color: var(--warning); display: block; padding: 6px 0;">0.00</strong>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top: 14px; width: 100%;">💾 حفظ مرتجع العميل وتحديث المخزن والحساب</button>
+          </form>
+        </div>
+
+        <!-- 2. مرتجع لمورد (مشتريات مرتدة) -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🏭 تسجيل مرتجع لمورد (مشتريات مرتدة)</h3>
+          </div>
+          <form id="supplier-return-form">
+            <div class="form-row">
+              <div class="form-group autocomplete-wrapper">
+                <label>اسم المورد</label>
+                <input type="text" id="ret-supplier-name" required autocomplete="off" placeholder="اختر أو اكتب اسم المورد...">
+                <div id="ret-supplier-suggestions" class="autocomplete-dropdown hidden"></div>
+              </div>
+              <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="tel" id="ret-supplier-phone" placeholder="01xxxxxxxxx">
+              </div>
+            </div>
+
+            <div class="modern-table-container" style="margin-top: 12px;">
+              <table class="modern-items-table">
+                <thead>
+                  <tr>
+                    <th style="width: 42%;">الصنف المرتجع</th>
+                    <th style="width: 18%;">الكمية</th>
+                    <th style="width: 20%;">سعر التكلفة</th>
+                    <th style="width: 20%;">الإجمالي</th>
+                    <th style="width: 40px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="ret-supplier-items-body"></tbody>
+              </table>
+              <button type="button" id="add-ret-supplier-item-btn" class="btn-add-row">+ إضافة صنف مرتجع للمورد</button>
+            </div>
+
+            <div class="form-row" style="margin-top: 12px; align-items: flex-end;">
+              <div class="form-group">
+                <label>طريقة تسوية المرتجع:</label>
+                <select id="ret-supplier-settlement">
+                  <option value="آجل">📉 خصم من مستحقات المورد (آجل)</option>
+                  <option value="نقدي">💵 استرداد المبلغ نقداً من المورد (كاش)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>إجمالي مرتجع المورد:</label>
+                <strong id="ret-supplier-total" style="font-size: 1.25rem; color: var(--success); display: block; padding: 6px 0;">0.00</strong>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-success" style="margin-top: 14px; width: 100%;">💾 حفظ مرتجع المورد وخصمه من المخزن والحساب</button>
+          </form>
+        </div>
+
+        <!-- 3. سجل المرتجعات المجمع -->
+        <div class="card" style="grid-column: 1 / -1;">
+          <div class="card-header">
+            <h3>📋 سجل المرتجعات (العملاء والموردين)</h3>
+            <input type="text" id="search-returns-input" placeholder="بحث باسم العميل أو المورد..." style="max-width: 220px; padding: 6px 10px;">
+          </div>
+          <div class="form-row">
+            <div>
+              <h4 style="margin-bottom: 8px; color: var(--warning);">🔄 مرتجعات العملاء (تُضاف للمخزن)</h4>
+              <div class="list-container">
+                <ul id="client-returns-list-container"></ul>
+              </div>
+            </div>
+            <div>
+              <h4 style="margin-bottom: 8px; color: var(--accent);">🏭 مرتجعات الموردين (تُخصم من المخزن)</h4>
+              <div class="list-container">
+                <ul id="supplier-returns-list-container"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -1024,4 +1158,4 @@
   <script src="capacitor.js"></script>
   <script type="module" src="app.js"></script>
 </body>
-  </html>
+</html>
