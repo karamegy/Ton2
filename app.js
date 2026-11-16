@@ -981,6 +981,7 @@ window.handleItemInput = (index, val) => {
   const matchedProd = productsDB.find(p => p.name.trim().toLowerCase() === val.trim().toLowerCase());
   if (matchedProd && activeItems[index]) {
     activeItems[index].price = matchedProd.price;
+    activeItems[index].cost = parseFloat(matchedProd.cost) || 0;
     if (itemsBody) {
       const rows = itemsBody.querySelectorAll('tr');
       if (rows[index]) {
@@ -988,6 +989,8 @@ window.handleItemInput = (index, val) => {
         if (priceInput) priceInput.value = matchedProd.price;
       }
     }
+  } else if (activeItems[index]) {
+    activeItems[index].cost = 0;
   }
   calculateTotals();
   
@@ -1007,9 +1010,11 @@ window.handleItemInput = (index, val) => {
 window.handleItemFocus = (index, val) => showItemDropdown(index, val);
 
 window.selectProductItem = (index, name, price) => {
+  const matchedProd = productsDB.find(p => p.name.trim().toLowerCase() === (name || '').trim().toLowerCase());
   if (activeItems[index]) {
     activeItems[index].name = name;
     activeItems[index].price = price;
+    activeItems[index].cost = matchedProd ? (parseFloat(matchedProd.cost) || 0) : 0;
   }
   
   if (itemsBody) {
@@ -1058,7 +1063,7 @@ window.removeItem = (index) => {
 const addItemBtn = document.getElementById('add-item-btn');
 if (addItemBtn) {
   addItemBtn.addEventListener('click', () => {
-    activeItems.push({ name: '', qty: 1, price: 0 });
+    activeItems.push({ name: '', qty: 1, price: 0, cost: 0 });
     renderItemsTable();
   });
 }
@@ -1124,7 +1129,16 @@ async function saveInvoiceData() {
   const clientPhone = clientPhoneInput ? clientPhoneInput.value.trim() : '';
   
   calculateTotals();
-  const validItems = activeItems.filter(i => (i.name ? i.name : '').trim() !== '' && i.qty > 0);
+  const validItems = activeItems
+    .filter(i => (i.name ? i.name : '').trim() !== '' && i.qty > 0)
+    .map(i => {
+      const cleanName = (i.name || '').trim().toLowerCase();
+      const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanName);
+      const unitCost = (typeof i.cost === 'number' && !isNaN(i.cost) && i.cost > 0)
+        ? i.cost
+        : (prod ? (parseFloat(prod.cost) || 0) : 0);
+      return Object.assign({}, i, { cost: unitCost });
+    });
 
   if (!clientName) { alert('يرجى إدخال اسم العميل'); return null; }
   if (validItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل وتحديد الكمية والسعر'); return null; }
@@ -3322,7 +3336,7 @@ window.selectRetClient = (name, phone) => {
 function renderClientReturnItemsTable() {
   if (!retClientItemsBody) return;
   if (activeClientReturnItems.length === 0) {
-    activeClientReturnItems.push({ name: '', qty: 1, price: 0 });
+    activeClientReturnItems.push({ name: '', qty: 1, price: 0, cost: 0 });
   }
   retClientItemsBody.innerHTML = activeClientReturnItems.map((item, idx) => `
     <tr>
@@ -3363,16 +3377,21 @@ window.handleRetClientItemInput = (idx, val) => {
   const matched = productsDB.find(p => p.name.trim().toLowerCase() === val.trim().toLowerCase());
   if (matched) {
     activeClientReturnItems[idx].price = matched.price || 0;
+    activeClientReturnItems[idx].cost = parseFloat(matched.cost) || 0;
     const row = retClientItemsBody.querySelectorAll('tr')[idx];
     if (row) row.querySelectorAll('input')[2].value = matched.price || 0;
+  } else {
+    activeClientReturnItems[idx].cost = 0;
   }
   calculateClientReturnTotal();
   window.showRetClientProdDropdown(idx, val);
 };
 
 window.selectRetClientProd = (idx, name, price) => {
+  const matched = productsDB.find(p => p.name.trim().toLowerCase() === (name || '').trim().toLowerCase());
   activeClientReturnItems[idx].name = name;
   activeClientReturnItems[idx].price = price;
+  activeClientReturnItems[idx].cost = matched ? (parseFloat(matched.cost) || 0) : 0;
   renderClientReturnItemsTable();
 };
 
@@ -3394,7 +3413,7 @@ window.removeRetClientItem = (idx) => {
 const addRetClientItemBtn = document.getElementById('add-ret-client-item-btn');
 if (addRetClientItemBtn) {
   addRetClientItemBtn.addEventListener('click', () => {
-    activeClientReturnItems.push({ name: '', qty: 1, price: 0 });
+    activeClientReturnItems.push({ name: '', qty: 1, price: 0, cost: 0 });
     renderClientReturnItemsTable();
   });
 }
@@ -3413,7 +3432,16 @@ if (clientReturnForm) {
     const clientName = retClientInput ? retClientInput.value.trim() : '';
     const clientPhone = retClientPhoneInput ? retClientPhoneInput.value.trim() : '';
     const settlement = document.getElementById('ret-client-settlement')?.value || 'آجل';
-    const validItems = activeClientReturnItems.filter(i => (i.name || '').trim() !== '' && i.qty > 0);
+    const validItems = activeClientReturnItems
+      .filter(i => (i.name || '').trim() !== '' && i.qty > 0)
+      .map(i => {
+        const cleanName = (i.name || '').trim().toLowerCase();
+        const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanName);
+        const unitCost = (typeof i.cost === 'number' && !isNaN(i.cost) && i.cost > 0)
+          ? i.cost
+          : (prod ? (parseFloat(prod.cost) || 0) : 0);
+        return Object.assign({}, i, { cost: unitCost });
+      });
     const total = calculateClientReturnTotal();
 
     if (!clientName) { alert('يرجى إدخال اسم العميل'); return; }
@@ -3802,11 +3830,43 @@ window.deleteExpense = async (idx) => {
 };
 
 function updateDashboardStats() {
-  const grossSales = invoicesDB.reduce((acc, i) => acc + (i.grandTotal ? i.grandTotal : 0), 0);
-  const totalClientReturns = (clientReturnsDB || []).reduce((acc, r) => acc + (r.grandTotal ? r.grandTotal : 0), 0);
+  const grossSales = invoicesDB.reduce((acc, i) => acc + (parseFloat(i.grandTotal) || 0), 0);
+  const totalTax = invoicesDB.reduce((acc, i) => {
+    if (typeof i.taxAmount === 'number' && !isNaN(i.taxAmount)) {
+      return acc + i.taxAmount;
+    }
+    const sub = parseFloat(i.subtotal) || 0;
+    const disc = parseFloat(i.discount) || 0;
+    const taxPct = parseFloat(i.taxPercent) || 0;
+    return acc + (Math.max(0, sub - disc) * (taxPct / 100));
+  }, 0);
+  const totalClientReturns = (clientReturnsDB || []).reduce((acc, r) => acc + (parseFloat(r.grandTotal) || 0), 0);
   const totalSales = Math.max(0, grossSales - totalClientReturns);
-  const totalExpensesAmount = expensesDB.reduce((acc, e) => acc + (e.amount ? e.amount : 0), 0);
-  const netProfit = totalSales - totalExpensesAmount;
+
+  // دالة مساعدة لحساب تكلفة الأصناف في أي فاتورة أو مرتجع
+  const calcItemsCost = (itemsList = []) => {
+    return itemsList.reduce((sum, item) => {
+      const qty = parseFloat(item.qty) || 0;
+      let unitCost = parseFloat(item.cost);
+      if (isNaN(unitCost) || unitCost <= 0) {
+        const cleanName = (item.name || '').trim().toLowerCase();
+        const prod = productsDB.find(p => (p.name || '').trim().toLowerCase() === cleanName);
+        unitCost = prod ? (parseFloat(prod.cost) || 0) : 0;
+      }
+      return sum + (qty * unitCost);
+    }, 0);
+  };
+
+  // إجمالي تكلفة البضاعة المباعة مطروحاً منها تكلفة البضاعة المرتجعة للمخزن
+  const soldCOGS = invoicesDB.reduce((acc, inv) => acc + calcItemsCost(inv.items), 0);
+  const returnedCOGS = (clientReturnsDB || []).reduce((acc, ret) => acc + calcItemsCost(ret.items), 0);
+  const netCOGS = Math.max(0, soldCOGS - returnedCOGS);
+
+  const totalExpensesAmount = expensesDB.reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
+
+  // صافي الربح = (صافي المبيعات بدون ضريبة) - تكلفة البضاعة المباعة - المصروفات
+  const netRevenue = Math.max(0, totalSales - totalTax);
+  const netProfit = netRevenue - netCOGS - totalExpensesAmount;
 
   let totalDebts = 0;
   clientsDB.forEach(c => {
@@ -3820,7 +3880,10 @@ function updateDashboardStats() {
 
   if (salesEl) salesEl.textContent = `${totalSales.toFixed(2)} ${storeProfile.currency}`;
   if (debtsEl) debtsEl.textContent = `${totalDebts.toFixed(2)} ${storeProfile.currency}`;
-  if (profitEl) profitEl.textContent = `${netProfit.toFixed(2)} ${storeProfile.currency}`;
+  if (profitEl) {
+    profitEl.textContent = `${netProfit.toFixed(2)} ${storeProfile.currency}`;
+    profitEl.style.color = netProfit < 0 ? 'var(--danger)' : 'var(--success)';
+  }
   if (countEl) countEl.textContent = invoicesDB.length;
 }
 
