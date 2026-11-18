@@ -95,6 +95,9 @@ jobs:
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
+              <!-- جعل ميزة الواي فاي اختيارية لدعم جميع الأجهزة -->
+              <uses-feature android:name="android.hardware.wifi" android:required="false" />
+
               <queries>
                   <package android:name="com.whatsapp" />
                   <package android:name="com.whatsapp.w4b" />
@@ -148,7 +151,7 @@ jobs:
                       <meta-data
                           android:name="android.support.FILE_PROVIDER_PATHS"
                           android:resource="@xml/file_paths" />
-                      </provider>
+                  </provider>
 
               </application>
 
@@ -185,8 +188,8 @@ jobs:
                   applicationId "io.github.karamegy.Ton2"
                   minSdk 24
                   targetSdk 36
-                  versionCode 80018
-                  versionName "8.0.1.8"
+                  versionCode 80019
+                  versionName "8.0.1.9"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_21
