@@ -1082,6 +1082,7 @@ if (addItemBtn) {
 
 const payStatusSelect = document.getElementById('payment-status-select');
 const paidAmountWrapper = document.getElementById('paid-amount-wrapper');
+const paidAmountInput = document.getElementById('paid-amount-input');
 
 if (payStatusSelect) {
   payStatusSelect.addEventListener('change', () => {
@@ -1090,7 +1091,12 @@ if (payStatusSelect) {
     } else {
       if (paidAmountWrapper) paidAmountWrapper.classList.add('hidden');
     }
+    calculateTotals();
   });
+}
+
+if (paidAmountInput) {
+  paidAmountInput.addEventListener('input', calculateTotals);
 }
 
 function calculateTotals() {
@@ -1128,8 +1134,15 @@ function calculateTotals() {
   const taxAmount = afterDiscount * (taxPercent / 100);
   const grandTotal = afterDiscount + taxAmount;
 
+  let displayTotal = grandTotal;
+  if (payStatusSelect && payStatusSelect.value === 'مدفوعة جزئياً') {
+    const paidInput = document.getElementById('paid-amount-input');
+    const paidVal = paidInput ? (parseFloat(paidInput.value) || 0) : 0;
+    displayTotal = Math.max(0, grandTotal - paidVal);
+  }
+
   if (subtotalDisplay) subtotalDisplay.textContent = `${subtotal.toFixed(2)} ${storeProfile.currency}`;
-  if (grandTotalDisplay) grandTotalDisplay.textContent = `${grandTotal.toFixed(2)} ${storeProfile.currency}`;
+  if (grandTotalDisplay) grandTotalDisplay.textContent = `${displayTotal.toFixed(2)} ${storeProfile.currency}`;
   return { subtotal, discount, taxPercent, taxAmount, grandTotal };
 }
 
@@ -1320,7 +1333,7 @@ function populatePrintableInvoice(inv) {
   const prClientPhone = document.getElementById('pr-v-client-phone');
   if (prClientPhone) prClientPhone.textContent = inv.phone ? inv.phone : '-';
   const prPaymentStatus = document.getElementById('pr-v-payment-status');
-  if (prPaymentStatus) prPaymentStatus.textContent = formatPaymentStatusText(inv);
+  if (prPaymentStatus) prPaymentStatus.textContent = inv.status || '';
 
   const prSubtotal = document.getElementById('pr-v-subtotal');
   if (prSubtotal) prSubtotal.textContent = `${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}`;
@@ -1329,7 +1342,17 @@ function populatePrintableInvoice(inv) {
   const prTax = document.getElementById('pr-v-tax');
   if (prTax) prTax.textContent = `${inv.taxPercent ? inv.taxPercent : 0}%`;
   const prTotal = document.getElementById('pr-v-total');
-  if (prTotal) prTotal.textContent = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+  if (prTotal) {
+    if (inv.status === 'مدفوعة جزئياً') {
+      const paid = (parseFloat(inv.paidAmount) || 0).toFixed(2);
+      const due = (parseFloat(inv.dueAmount) || 0).toFixed(2);
+      prTotal.innerHTML = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}
+        <div style="font-size: 0.85em; color: #059669; margin-top: 4px;">المدفوع: ${paid} ${storeProfile.currency}</div>
+        <div style="font-size: 0.9em; color: #dc2626; margin-top: 2px;">المتبقي: ${due} ${storeProfile.currency}</div>`;
+    } else {
+      prTotal.textContent = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+    }
+  }
 
   const prItemsBody = document.getElementById('pr-v-items-body');
   if (prItemsBody) {
@@ -1374,7 +1397,7 @@ function openInvoicePreview(inv) {
   const vClientPhone = document.getElementById('v-client-phone');
   if (vClientPhone) vClientPhone.textContent = inv.phone ? inv.phone : '-';
   const vPaymentStatus = document.getElementById('v-payment-status');
-  if (vPaymentStatus) vPaymentStatus.textContent = formatPaymentStatusText(inv);
+  if (vPaymentStatus) vPaymentStatus.textContent = inv.status || '';
   const vSubtotal = document.getElementById('v-subtotal');
   if (vSubtotal) vSubtotal.textContent = `${(inv.subtotal ? inv.subtotal : 0).toFixed(2)} ${storeProfile.currency}`;
   const vDiscount = document.getElementById('v-discount');
@@ -1382,7 +1405,17 @@ function openInvoicePreview(inv) {
   const vTax = document.getElementById('v-tax');
   if (vTax) vTax.textContent = `${inv.taxPercent ? inv.taxPercent : 0}%`;
   const vTotal = document.getElementById('v-total');
-  if (vTotal) vTotal.textContent = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+  if (vTotal) {
+    if (inv.status === 'مدفوعة جزئياً') {
+      const paid = (parseFloat(inv.paidAmount) || 0).toFixed(2);
+      const due = (parseFloat(inv.dueAmount) || 0).toFixed(2);
+      vTotal.innerHTML = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}
+        <div style="font-size: 0.85em; color: #059669; margin-top: 4px;">المدفوع: ${paid} ${storeProfile.currency}</div>
+        <div style="font-size: 0.9em; color: #dc2626; margin-top: 2px;">المتبقي: ${due} ${storeProfile.currency}</div>`;
+    } else {
+      vTotal.textContent = `${(inv.grandTotal ? inv.grandTotal : 0).toFixed(2)} ${storeProfile.currency}`;
+    }
+  }
 
   const vItemsBody = document.getElementById('v-items-body');
   if (vItemsBody) {
@@ -1547,7 +1580,7 @@ function renderSavedInvoices(filter = '') {
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.editInvoiceById(${inv.id})">✏️ تعديل</button>
           <button class="btn-sm" style="background:var(--warning); color:#fff" onclick="window.archiveInvoice(${inv.id})" title="أرشفة الفاتورة">📦 أرشفة</button>
           <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendWhatsAppById(${inv.id})">💬 واتساب</button>
-          <button class="btn-sm" onclick="window.reprintInvoice(${inv.id})">🖨 طباعة / PDF</button>
+          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.reprintInvoice(${inv.id})">🖨 طباعة / PDF</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deleteInvoice(${inv.id})">🗑️</button>
         </div>
       </div>
@@ -3128,7 +3161,7 @@ function renderPurchases() {
         <div class="inv-actions" style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;" onclick="event.stopPropagation();">
           <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.viewPurchaseById(${pur.id})">👁️ معاينة</button>
           <button class="btn-sm" style="background:#25d366; color:#fff" onclick="window.sendSupplierWhatsAppById(${pur.id})">💬 واتساب</button>
-          <button class="btn-sm" onclick="window.reprintPurchase(${pur.id})">🖨 طباعة / PDF</button>
+          <button class="btn-sm" style="background:var(--accent); color:#fff" onclick="window.reprintPurchase(${pur.id})">🖨 طباعة / PDF</button>
           <button class="btn-sm" style="color:var(--danger)" onclick="window.deletePurchase(${pur.id})">🗑️</button>
         </div>
       </div>
