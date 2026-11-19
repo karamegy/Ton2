@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- منع أرشفة صفحة الخطأ مع السماح بتتبع روابط التطبيق -->
+    <meta name="robots" content="noindex, follow">
+    <title>404 - الصفحة غير موجودة | GITI ERP - الفواتير</title>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: #111827;
+            --card-border: rgba(16, 185, 129, 0.25);
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at top right, rgba(16, 185, 129, 0.12), transparent 45%);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            max-width: 520px;
+            width: 100%;
+            padding: 40px 28px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+        .badge {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .error-num {
+            font-size: 5rem;
+            font-weight: 900;
+            line-height: 1;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+        h1 {
+            font-size: 1.45rem;
+            margin-bottom: 12px;
+            color: #ffffff;
+        }
+        p {
+            color: var(--text-muted);
+            font-size: 0.96rem;
+            line-height: 1.65;
+            margin-bottom: 26px;
+        }
+        .btn {
+            display: inline-block;
+            background: var(--primary);
+            color: #064e3b;
+            text-decoration: none;
+            padding: 13px 28px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            background: var(--primary-hover);
+            color: #ffffff;
+            transform: translateY(-2px);
+        }
+        .links {
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .links a:hover {
+            color: #34d399;
+        }
+        .timer {
+            margin-top: 18px;
+            font-size: 0.82rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="badge">GITI ERP - منظومة الفواتير</div>
+        <div class="error-num">404</div>
+        <h1>الصفحة المطلوبة غير موجودة!</h1>
+        <p>
+            عذراً، الرابط الذي تحاول الوصول إليه داخل تطبيق <strong>GITI ERP</strong> غير متوفر أو تم نقله. سيتم توجيهك إلى واجهة التطبيق الرئيسية.
+        </p>
+
+        <a href="https://karamegy.github.io/Ton2/" class="btn">العودة إلى تطبيق GITI ERP</a>
+
+        <div class="links">
+            <a href="https://karamegy.github.io/Ton2/privacy.html">سياسة الخصوصية</a>
+            <span>•</span>
+            <a href="https://karamegy.github.io/Ton2/terms.html">شروط الخدمة</a>
+            <span>•</span>
+            <a href="https://karamegy.github.io/">منظومة GITI الرئيسية</a>
+        </div>
+
+        <div class="timer">
+            توجيه تلقائي خلال <strong id="sec" style="color:#34d399;">5</strong> ثوانٍ...
+        </div>
+    </div>
+
+    <script>
+        let count = 5;
+        const secEl = document.getElementById('sec');
+        const timer = setInterval(() => {
+            count--;
+            secEl.textContent = count;
+            if (count <= 0) {
+                clearInterval(timer);
+                window.location.replace("https://karamegy.github.io/Ton2/");
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
