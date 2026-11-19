@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
-  <!-- الصفحة الرئيسية -->
+  <!-- الصفحة الرئيسية لتطبيق GITI ERP -->
   <url>
     <loc>https://karamegy.github.io/Ton2/</loc>
-    <lastmod>2026-10-03</lastmod>
+    <lastmod>2026-11-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -12,7 +12,15 @@
   <!-- صفحة سياسة الخصوصية -->
   <url>
     <loc>https://karamegy.github.io/Ton2/privacy.html</loc>
-    <lastmod>2026-10-03</lastmod>
+    <lastmod>2026-11-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- صفحة شروط الخدمة -->
+  <url>
+    <loc>https://karamegy.github.io/Ton2/terms.html</loc>
+    <lastmod>2026-11-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
