@@ -1,5 +1,7 @@
 User-agent: *
-Disallow: /admin.html
-Allow: /
+Allow: /Ton2/
+Disallow: /Ton2/admin.html
+Disallow: /Ton2/404.html
+Disallow: /Ton2/android/
 
 Sitemap: https://karamegy.github.io/Ton2/sitemap.xml
