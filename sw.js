@@ -1,11 +1,10 @@
-const CACHE_NAME = 'giti-invoices-v64';
+const CACHE_NAME = 'giti-invoices-v65';
 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './admin.html',
   './privacy.html',
-  './terms.html',
   './style.css',
   './app.js',
   './giti-core-plus.js',
@@ -61,13 +60,7 @@ self.addEventListener('fetch', (event) => {
       }
 
       return fetch(event.request).then((networkResponse) => {
-        if (
-          !networkResponse ||
-          networkResponse.status !== 200 ||
-          (networkResponse.type !== 'basic' &&
-            !event.request.url.includes('cdnjs.cloudflare.com') &&
-            !event.request.url.includes('gstatic.com'))
-        ) {
+        if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && !event.request.url.includes('cdnjs.cloudflare.com') && !event.request.url.includes('fonts.gstatic.com'))) {
           return networkResponse;
         }
 
