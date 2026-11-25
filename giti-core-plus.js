@@ -1,8 +1,6 @@
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
 // ============================================================================
-// GITI Core Plus v1.4 - Modular Extension Engine (Zero-Intrusion & Play-Safe)
-// المهام (بدون أي تصاريح كاميرا أو أذونات حساسة):
+// giti Core Plus v1.5 - Modular Extension Engine (Zero-Intrusion & Play-Safe)
+// المهام (بدون أي تعارض مع Firebase SDK أو localStorage):
 // 1. ملخص الخزينة ودرج الكاش الفعلي + تحليل الأرباح والأكثر مبيعاً
 // 2. رادار نواقص المخزن الذكي + تقييم رأس المال وجرد المخزن
 // 3. كتالوج البيع السريع باللمس داخل الفاتورة (Quick POS Catalog Picker)
@@ -19,6 +17,7 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
   let lowStockFilterActive = false;
   let activeThermalInvoice = null;
   let thermalPaperWidth = localStorage.getItem('giti_thermal_width') || '80mm';
+  let refreshTimer = null;
 
   // ==========================================================================
   // أدوات مساعدة لقراءة البيانات ومشاركة الملفات (متوافقة مع Capacitor & Web)
@@ -80,13 +79,11 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
     return active.find(i => parseInt(i.id, 10) === numId) || archived.find(i => parseInt(i.id, 10) === numId) || null;
   }
 
-  // استخراج سعر التكلفة للصنف (من بطاقة الصنف أو من آخر فاتورة مشتريات مسجلة)
   function buildProductCostMap() {
     const products = readStore('products', []);
     const purchases = readStore('purchases', []);
     const costMap = {};
 
-    // أولاً: من المشتريات كقيمة احتياطية
     purchases.forEach(pur => {
       (pur.items || []).forEach(it => {
         const key = (it.name || '').trim().toLowerCase();
@@ -95,7 +92,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
       });
     });
 
-    // ثانياً: من المخزن مباشرة (له الأولوية)
     products.forEach(p => {
       const key = (p.name || '').trim().toLowerCase();
       const explicitCost = parseFloat(p.cost ?? p.costPrice ?? p.buyPrice ?? 0) || 0;
@@ -169,14 +165,27 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
     }
   }
 
-  // مراقبة أي تحديث في البيانات داخل localStorage لتحديث الإضافات تلقائياً
-  const originalSetItem = localStorage.setItem;
-  localStorage.setItem = function (key, value) {
-    originalSetItem.apply(this, arguments);
-    if (typeof key === 'string' && key.startsWith('giti_')) {
-      setTimeout(refreshAllAddons, 80);
-    }
-  };
+  // مراقبة تغيرات الواجهة فقط دون اعتراض localStorage أو Firebase
+  function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshAllAddons, 160);
+  }
+
+  function isGitiNode(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.id && node.id.startsWith('giti-')) return true;
+    if (node.classList && Array.from(node.classList).some(c => c.startsWith('giti-'))) return true;
+    return false;
+  }
+
+  const domObserver = new MutationObserver((mutations) => {
+    const hasAppChange = mutations.some(m => {
+      if (isGitiNode(m.target)) return false;
+      const changed = [...m.addedNodes, ...m.removedNodes].filter(n => n.nodeType === 1);
+      return changed.some(n => !isGitiNode(n));
+    });
+    if (hasAppChange) scheduleRefresh();
+  });
 
   // ==========================================================================
   // 1. حاسبة الخزينة الفعلي ودرج الكاش + تحليل الأرباح والأكثر مبيعاً
@@ -299,7 +308,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
     const costMap = buildProductCostMap();
     const currency = getCurrency();
 
-    // شارة النواقص على زر تبويب المخزن
     const prodTabBtn = document.querySelector('.nav-tab[data-tab="products"]');
     if (prodTabBtn) {
       let badge = document.getElementById('giti-low-stock-badge');
@@ -318,7 +326,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
 
     const prodListContainer = document.getElementById('products-list-container');
     if (prodListContainer && prodListContainer.parentElement) {
-      // 1. بطاقة تقييم جرد المخزن ورأس المال المجمد
       let valCard = document.getElementById('giti-inventory-valuation-card');
       if (!valCard) {
         valCard = document.createElement('div');
@@ -364,7 +371,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
       const expProdBtn = document.getElementById('giti-export-products-csv');
       if (expProdBtn) expProdBtn.onclick = exportProductsToExcelCSV;
 
-      // 2. شريط فلترة النواقص
       let filterBar = document.getElementById('giti-stock-filter-bar');
       if (!filterBar) {
         filterBar = document.createElement('div');
@@ -646,7 +652,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
     }
   }
 
-  // ربط مراقبة فورية على مدخلات الفاتورة الحية
   if (!window._gitiProfitInputBound) {
     window._gitiProfitInputBound = true;
     document.addEventListener('input', (e) => {
@@ -668,7 +673,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
     const currency = getCurrency();
     const profile = getStoreProfile();
 
-    // خريطة هواتف العملاء للبحث السريع
     const clientPhoneMap = {};
     clients.forEach(c => {
       if (c.name && c.phone) {
@@ -693,7 +697,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
     const totalReceivables = pendingInvoices.reduce((s, i) => s + i.calcDue, 0);
     const overdueCount = pendingInvoices.filter(i => i.daysOld >= 7).length;
 
-    // شارة على تبويب العملاء بعدد الفواتير المتأخرة
     const clientsTabBtn = document.querySelector('.nav-tab[data-tab="clients"]');
     if (clientsTabBtn) {
       let badge = document.getElementById('giti-overdue-badge');
@@ -800,7 +803,6 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
       headers.map(escapeCell).join(','),
       ...rows.map(r => r.map(escapeCell).join(','))
     ];
-    // إضافة UTF-8 BOM لضمان ظهور اللغة العربية بشكل سليم في Excel
     return new Blob(['\uFEFF' + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   }
 
@@ -1394,22 +1396,13 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
           );
 
           if (matchedItems.length > 0 && confirm(`📦 هل تريد إعادة كميات أصناف الفاتورة المحذوفة (#${id}) إلى المخزن؟`)) {
-            const modified = [];
             matchedItems.forEach(item => {
               const prod = products.find(p => (p.name || '').trim().toLowerCase() === (item.name || '').trim().toLowerCase());
               if (prod) {
                 prod.stock = (parseFloat(prod.stock) || 0) + (parseFloat(item.qty) || 0);
-                modified.push(prod);
               }
             });
-
             localStorage.setItem(`giti_${uid}_products`, JSON.stringify(products));
-            if (uid !== 'local') {
-              try {
-                const fsDb = getFirestore();
-                await Promise.all(modified.map(p => setDoc(doc(fsDb, "users", uid, "products", String(p.id)), p)));
-              } catch {}
-            }
             location.reload();
           }
         }
@@ -1433,22 +1426,13 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
           );
 
           if (matchedItems.length > 0 && confirm(`📦 هل تريد خصم كميات فاتورة المشتريات المحذوفة (#${id}) من رصيد المخزن؟`)) {
-            const modified = [];
             matchedItems.forEach(item => {
               const prod = products.find(p => (p.name || '').trim().toLowerCase() === (item.name || '').trim().toLowerCase());
               if (prod) {
                 prod.stock = Math.max(0, (parseFloat(prod.stock) || 0) - (parseFloat(item.qty) || 0));
-                modified.push(prod);
               }
             });
-
             localStorage.setItem(`giti_${uid}_products`, JSON.stringify(products));
-            if (uid !== 'local') {
-              try {
-                const fsDb = getFirestore();
-                await Promise.all(modified.map(p => setDoc(doc(fsDb, "users", uid, "products", String(p.id)), p)));
-              } catch {}
-            }
             location.reload();
           }
         }
@@ -1473,9 +1457,21 @@ import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10
     hookDeleteStockReconciliation();
   }
 
+  function startCorePlus() {
+    refreshAllAddons();
+    if (document.body) {
+      domObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.closest('.nav-tab')) {
+        scheduleRefresh();
+      }
+    });
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(refreshAllAddons, 400));
+    document.addEventListener('DOMContentLoaded', () => setTimeout(startCorePlus, 400));
   } else {
-    setTimeout(refreshAllAddons, 400);
+    setTimeout(startCorePlus, 400);
   }
 })();
