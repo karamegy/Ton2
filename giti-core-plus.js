@@ -1,42 +1,28 @@
 // ============================================================================
-// giti Core Plus v1.7 - App-Synced Modular Extension (Zero-Conflict Edition)
-// متوافق 100% مع app.js و Firebase SDK و Capacitor بدون أي تعارض في المزامنة
+// giti Core Plus v1.9 - Modular Extension Engine (Zero-Intrusion Architecture)
+// مبني على نفس نواة v1.1 المستقرة بالكامل مع جميع المميزات الإضافية
 // ============================================================================
 
 (function initGitiCorePlus() {
   const LOW_STOCK_THRESHOLD = 5;
-  const DEFAULT_STORE_NAMES = ['GITI Enterprise ERP', 'GITI ERP', 'اسم النشاط التجاري', ''];
-  const DEFAULT_PHONES = ['01000000000', '00000000000', ''];
-
   let lowStockFilterActive = false;
   let activeThermalInvoice = null;
   let thermalPaperWidth = localStorage.getItem('giti_thermal_width') || '80mm';
   let refreshTimer = null;
 
   // ==========================================================================
-  // أدوات قراءة وتوحيد بيانات المستخدم والمنشأة بالتوافق مع app.js
+  // أدوات مساعدة لقراءة البيانات ومشاركة الملفات (متوافقة مع Capacitor & Web)
   // ==========================================================================
   function getActiveUid() {
-    if (window.currentUser && window.currentUser.uid) return window.currentUser.uid;
-    if (typeof window.currentUid === 'string' && window.currentUid) return window.currentUid;
-
-    try {
-      if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
-        return firebase.auth().currentUser.uid;
-      }
-    } catch (_) {}
-
     const uidTag = document.getElementById('user-uid-tag');
     if (uidTag && uidTag.textContent.includes('UID:')) {
       const match = uidTag.textContent.match(/UID:\s*([^\s(]+)/);
-      if (match && match[1] && match[1] !== 'local') return match[1];
+      if (match && match[1]) return match[1];
     }
-
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('giti_') && key !== 'giti_local_invoices' && key !== 'giti_local_profile') {
-        const m = key.match(/^giti_([^_]+)_(invoices|profile|products|clients)$/);
-        if (m && m[1] && m[1] !== 'local') return m[1];
+      if (key && key.startsWith('giti_') && key.endsWith('_invoices') && key !== 'giti_local_invoices') {
+        return key.replace('giti_', '').replace('_invoices', '');
       }
     }
     return 'local';
@@ -45,139 +31,22 @@
   function readStore(key, fallback = []) {
     const uid = getActiveUid();
     try {
-      const raw =
-        (uid !== 'local' ? localStorage.getItem(`giti_${uid}_${key}`) : null) ||
-        localStorage.getItem(`giti_local_${key}`);
+      const raw = localStorage.getItem(`giti_${uid}_${key}`) || localStorage.getItem(`giti_local_${key}`);
       return raw ? JSON.parse(raw) : fallback;
     } catch {
       return fallback;
     }
   }
 
-  function isDefaultName(val) {
-    const clean = String(val || '').trim();
-    return !clean || DEFAULT_STORE_NAMES.includes(clean);
-  }
-
-  function isDefaultPhone(val) {
-    const clean = String(val || '').trim();
-    return !clean || DEFAULT_PHONES.includes(clean);
-  }
-
-  function normalizeProfileObject(raw) {
-    if (!raw || typeof raw !== 'object') return {};
-    return {
-      name: String(raw.name || raw.storeName || raw.businessName || raw.companyName || raw.shopName || '').trim(),
-      phone: String(raw.phone || raw.storePhone || raw.mobile || raw.tel || raw.whatsapp || '').trim(),
-      address: String(raw.address || raw.storeAddress || raw.location || raw.city || '').trim(),
-      currency: String(raw.currency || 'ج.م').trim() || 'ج.م',
-      vatNo: String(raw.vatNo || raw.taxNo || raw.taxNumber || '').trim(),
-      logo: String(raw.logo || raw.storeLogo || raw.photoURL || '').trim()
-    };
-  }
-
   function getStoreProfile() {
-    const uid = getActiveUid();
-    const sources = [];
-
-    // 1. المتغيرات العامة في app.js إن وُجدت
-    if (window.storeProfile && typeof window.storeProfile === 'object') {
-      sources.push(normalizeProfileObject(window.storeProfile));
-    }
-    if (window.profile && typeof window.profile === 'object') {
-      sources.push(normalizeProfileObject(window.profile));
-    }
-
-    // 2. التخزين المحلي الخاص بالمستخدم النشط أولاً
-    if (uid !== 'local') {
-      try {
-        const rawUserProf = localStorage.getItem(`giti_${uid}_profile`);
-        if (rawUserProf) sources.push(normalizeProfileObject(JSON.parse(rawUserProf)));
-      } catch (_) {}
-    }
-
-    // 3. التخزين المحلي العام
-    try {
-      const rawLocalProf = localStorage.getItem('giti_local_profile');
-      if (rawLocalProf) sources.push(normalizeProfileObject(JSON.parse(rawLocalProf)));
-    } catch (_) {}
-
-    // 4. قراءة أي قيم محفوظة داخل حقول الإعدادات في الصفحة
-    const setNameEl = document.querySelector('#set-name, #set-store-name, #store-name, #profile-name');
-    const setPhoneEl = document.querySelector('#set-phone, #set-store-phone, #store-phone, #profile-phone');
-    const setAddrEl = document.querySelector('#set-address, #set-store-address, #store-address, #profile-address');
-    const setCurrEl = document.querySelector('#set-currency, #store-currency');
-    const setVatEl = document.querySelector('#set-vat, #store-vat');
-
-    sources.push(normalizeProfileObject({
-      name: setNameEl ? setNameEl.value : '',
-      phone: setPhoneEl ? setPhoneEl.value : '',
-      address: setAddrEl ? setAddrEl.value : '',
-      currency: setCurrEl ? setCurrEl.value : '',
-      vatNo: setVatEl ? setVatEl.value : ''
-    }));
-
-    const merged = {
-      name: '',
+    return readStore('profile', {
+      name: 'GITI Enterprise ERP',
       phone: '',
       address: '',
       currency: 'ج.م',
       vatNo: '',
       logo: ''
-    };
-
-    for (const src of sources) {
-      if (isDefaultName(merged.name) && !isDefaultName(src.name)) merged.name = src.name;
-      if (isDefaultPhone(merged.phone) && !isDefaultPhone(src.phone)) merged.phone = src.phone;
-      if (!merged.address && src.address) merged.address = src.address;
-      if (!merged.vatNo && src.vatNo) merged.vatNo = src.vatNo;
-      if (!merged.logo && src.logo) merged.logo = src.logo;
-      if (src.currency && src.currency !== 'ج.م') merged.currency = src.currency;
-    }
-
-    if (isDefaultName(merged.name)) merged.name = 'GITI Enterprise ERP';
-    return merged;
-  }
-
-  function syncStoreProfileUI() {
-    const profile = getStoreProfile();
-
-    const nameEls = document.querySelectorAll('#header-store-name, #display-store-name, #store-name-display, .store-name');
-    nameEls.forEach(el => {
-      if (!isDefaultName(profile.name) && isDefaultName(el.textContent)) {
-        el.textContent = profile.name;
-      }
     });
-
-    const phoneEls = document.querySelectorAll('#header-store-phone, #display-store-phone, #store-phone-display, .store-phone');
-    phoneEls.forEach(el => {
-      if (!isDefaultPhone(profile.phone) && isDefaultPhone(el.textContent)) {
-        el.textContent = profile.phone;
-      }
-    });
-
-    const addrEls = document.querySelectorAll('#header-store-address, #display-store-address, #store-address-display, .store-address');
-    addrEls.forEach(el => {
-      if (profile.address && !el.textContent.trim()) {
-        el.textContent = profile.address;
-        el.style.display = '';
-      }
-    });
-
-    const headerRoot = document.querySelector('header, .app-header, .top-header, #app-header');
-    if (headerRoot) {
-      const walker = document.createTreeWalker(headerRoot, NodeFilter.SHOW_TEXT, null);
-      let node;
-      while ((node = walker.nextNode())) {
-        const txt = node.nodeValue.trim();
-        if (!isDefaultName(profile.name) && (txt === 'GITI Enterprise ERP' || txt === 'GITI ERP')) {
-          node.nodeValue = node.nodeValue.replace(txt, profile.name);
-        }
-        if (!isDefaultPhone(profile.phone) && txt === '01000000000') {
-          node.nodeValue = node.nodeValue.replace('01000000000', profile.phone);
-        }
-      }
-    }
   }
 
   function getCurrency() {
@@ -287,28 +156,25 @@
     }
   }
 
-  // مراقبة تحديثات واجهة app.js بصمت ودون اعتراض Firebase أو localStorage
   function scheduleRefresh() {
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(refreshAllAddons, 180);
+    refreshTimer = setTimeout(refreshAllAddons, 90);
   }
 
-  function isGitiNode(node) {
-    if (!node || node.nodeType !== 1) return false;
-    if (node.id && node.id.startsWith('giti-')) return true;
-    if (node.classList && Array.from(node.classList).some(c => c.startsWith('giti-'))) return true;
-    return false;
-  }
-
-  const domObserver = new MutationObserver((mutations) => {
-    const hasAppChange = mutations.some(m => {
-      if (isGitiNode(m.target)) return false;
-      if (m.type === 'characterData') return true;
-      const changed = [...m.addedNodes, ...m.removedNodes].filter(n => n.nodeType === 1);
-      return changed.some(n => !isGitiNode(n));
-    });
-    if (hasAppChange) scheduleRefresh();
-  });
+  // مراقبة أي تحديث في بيانات التطبيق داخل localStorage لتحديث الإضافات تلقائياً (نفس آلية v1.1)
+  const originalSetItem = localStorage.setItem;
+  localStorage.setItem = function (key, value) {
+    originalSetItem.apply(this, arguments);
+    if (
+      typeof key === 'string' &&
+      key.startsWith('giti_') &&
+      key !== 'giti_thermal_width' &&
+      key !== 'giti_thermal_footer' &&
+      key !== 'giti_last_backup_ts'
+    ) {
+      scheduleRefresh();
+    }
+  };
 
   // ==========================================================================
   // 1. حاسبة الخزينة الفعلي ودرج الكاش + تحليل الأرباح والأكثر مبيعاً
@@ -423,9 +289,9 @@
   }
 
   // ==========================================================================
-  // 2. رادار نواقص المخزن + تقييم رأس المال وجرد المخزن (Inventory Valuation)
+  // 2. رادار نواقص المخزن الذكي + تقييم رأس المال وجرد المخزن
   // ==========================================================================
-  function updateLowStockAndValuation() {
+  function updateLowStockRadar() {
     const products = readStore('products', []);
     const lowItems = products.filter(p => (parseFloat(p.stock) || 0) <= LOW_STOCK_THRESHOLD);
     const costMap = buildProductCostMap();
@@ -515,7 +381,7 @@
       if (toggleBtn) {
         toggleBtn.onclick = () => {
           lowStockFilterActive = !lowStockFilterActive;
-          updateLowStockAndValuation();
+          updateLowStockRadar();
         };
       }
 
@@ -531,21 +397,33 @@
   }
 
   // ==========================================================================
-  // 3. كتالوج البيع السريع باللمس داخل الفاتورة الحية (متوافق مع دوال app.js)
+  // 3. ماسح الباركود بالكاميرا + كتالوج الأصناف السريعة داخل الفاتورة الحية
   // ==========================================================================
-  function injectQuickCatalogPicker() {
+  function injectLiveInvoiceTools() {
     const paperHeader = document.querySelector('.paper-header');
-    if (!paperHeader || document.getElementById('giti-quick-catalog-btn')) return;
+    if (!paperHeader) return;
 
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'giti-quick-catalog-btn';
-    btn.className = 'btn-sm';
-    btn.style.cssText = 'background: var(--accent); color: #fff; font-weight: 800; gap: 5px;';
-    btn.innerHTML = '⚡ أصناف سريعة';
-    btn.onclick = openQuickCatalogModal;
+    if (!document.getElementById('giti-barcode-scan-btn')) {
+      const scanBtn = document.createElement('button');
+      scanBtn.type = 'button';
+      scanBtn.id = 'giti-barcode-scan-btn';
+      scanBtn.className = 'btn-sm';
+      scanBtn.style.cssText = 'background: #0f766e; color: #fff; font-weight: 800; gap: 5px;';
+      scanBtn.innerHTML = '📷 باركود';
+      scanBtn.onclick = openBarcodeScannerModal;
+      paperHeader.insertBefore(scanBtn, paperHeader.lastElementChild);
+    }
 
-    paperHeader.insertBefore(btn, paperHeader.lastElementChild);
+    if (!document.getElementById('giti-quick-catalog-btn')) {
+      const catBtn = document.createElement('button');
+      catBtn.type = 'button';
+      catBtn.id = 'giti-quick-catalog-btn';
+      catBtn.className = 'btn-sm';
+      catBtn.style.cssText = 'background: var(--accent); color: #fff; font-weight: 800; gap: 5px;';
+      catBtn.innerHTML = '⚡ أصناف سريعة';
+      catBtn.onclick = openQuickCatalogModal;
+      paperHeader.insertBefore(catBtn, paperHeader.lastElementChild);
+    }
   }
 
   function addProductToLiveInvoice(queryText) {
@@ -567,12 +445,7 @@
       if (inputs[0] && inputs[0].value.trim().toLowerCase() === targetName.toLowerCase()) {
         const nextQty = (parseFloat(inputs[1].value) || 0) + 1;
         inputs[1].value = nextQty;
-        if (typeof window.updateItem === 'function') {
-          window.updateItem(i, 'qty', nextQty);
-        } else {
-          inputs[1].dispatchEvent(new Event('input', { bubbles: true }));
-          inputs[1].dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        if (typeof window.updateItem === 'function') window.updateItem(i, 'qty', nextQty);
         setTimeout(updateLiveInvoiceProfitGuard, 40);
         return targetName;
       }
@@ -596,14 +469,76 @@
         nameInput.value = targetName;
         if (typeof window.handleItemInput === 'function') {
           window.handleItemInput(targetIndex, targetName);
-        } else {
-          nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-          nameInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
       }
     }
     setTimeout(updateLiveInvoiceProfitGuard, 40);
     return targetName;
+  }
+
+  async function openBarcodeScannerModal() {
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices) {
+      const manualCode = prompt('أدخل رقم الباركود أو اسم الصنف للإضافة الفورية:');
+      if (manualCode) addProductToLiveInvoice(manualCode);
+      return;
+    }
+
+    let modal = document.getElementById('giti-scanner-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'giti-scanner-modal';
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+          <div class="modal-header">
+            <h3>📷 ماسح الباركود السريع</h3>
+            <button type="button" id="giti-close-scanner" class="btn-close">✕</button>
+          </div>
+          <video id="giti-scanner-video" playsinline style="width: 100%; border-radius: 12px; background: #000; max-height: 260px; object-fit: cover;"></video>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">وجّه الكاميرا نحو باركود المنتج لإضافته تلقائياً</p>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    modal.classList.remove('hidden');
+    const video = document.getElementById('giti-scanner-video');
+    let stream = null;
+    let scanning = true;
+
+    const stopScanner = () => {
+      scanning = false;
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      modal.classList.add('hidden');
+    };
+
+    document.getElementById('giti-close-scanner').onclick = stopScanner;
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+      await video.play();
+
+      const detector = new window.BarcodeDetector();
+      const scanLoop = async () => {
+        if (!scanning) return;
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes && barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+            stopScanner();
+            addProductToLiveInvoice(code);
+            return;
+          }
+        } catch {}
+        requestAnimationFrame(scanLoop);
+      };
+      requestAnimationFrame(scanLoop);
+    } catch {
+      stopScanner();
+      const fallback = prompt('تعذر فتح الكاميرا. اكتب رقم الباركود أو اسم الصنف:');
+      if (fallback) addProductToLiveInvoice(fallback);
+    }
   }
 
   function openQuickCatalogModal() {
@@ -1191,7 +1126,7 @@
 
     const lines = [
       `*${profile.name || 'GITI ERP'}*`,
-      ...(!isDefaultPhone(profile.phone) ? [`📞 هاتف: ${profile.phone}`] : []),
+      ...(profile.phone ? [`📞 هاتف: ${profile.phone}`] : []),
       ...(profile.address ? [`📍 العنوان: ${profile.address}`] : []),
       `🧾 *فاتورة مبيعات رقم #${inv.id}*`,
       `📅 التاريخ: ${inv.date || ''}`,
@@ -1284,13 +1219,11 @@
       `
       : '';
 
-    const showPhone = !isDefaultPhone(profile.phone);
-
     paper.innerHTML = `
       <div style="text-align: center; border-bottom: 1.5px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
         ${profile.logo ? `<img src="${profile.logo}" alt="Logo" style="max-height: ${is58 ? '38px' : '48px'}; max-width: 80%; object-fit: contain; filter: grayscale(100%) contrast(140%); margin-bottom: 4px;">` : ''}
         <div style="font-size: ${titleFont}; font-weight: 900; color: #000;">${escapeHtml(profile.name || 'GITI ERP')}</div>
-        ${showPhone ? `<div style="font-size: 0.9em; color: #000;">هاتف: ${escapeHtml(profile.phone)}</div>` : ''}
+        ${profile.phone ? `<div style="font-size: 0.9em; color: #000;">هاتف: ${escapeHtml(profile.phone)}</div>` : ''}
         ${profile.vatNo ? `<div style="font-size: 0.85em; color: #000;">الرقم الضريبي: ${escapeHtml(profile.vatNo)}</div>` : ''}
         ${profile.address ? `<div style="font-size: 0.85em; color: #000;">${escapeHtml(profile.address)}</div>` : ''}
         <div style="margin-top: 6px; padding: 3px 6px; border: 1.5px solid #000; font-weight: 900; display: inline-block; font-size: 0.95em;">
@@ -1501,7 +1434,7 @@
   }
 
   // ==========================================================================
-  // 9. معالجة رصيد المخزن عند حذف الفواتير أو المشتريات + حماية فواصل الطباعة
+  // 9. حماية فواصل الطباعة
   // ==========================================================================
   function injectPrintRowProtection() {
     if (document.getElementById('giti-print-row-fix')) return;
@@ -1516,104 +1449,30 @@
     document.head.appendChild(style);
   }
 
-  function hookDeleteStockReconciliation() {
-    if (typeof window.deleteInvoice === 'function' && !window.deleteInvoice._gitiHooked) {
-      const origDeleteInvoice = window.deleteInvoice;
-      window.deleteInvoice = async function (id) {
-        const inv = findInvoiceById(id);
-        await origDeleteInvoice.apply(this, arguments);
-
-        if (!findInvoiceById(id) && inv && Array.isArray(inv.items)) {
-          const uid = getActiveUid();
-          const products = readStore('products', []);
-          const matchedItems = inv.items.filter(item =>
-            products.some(p => (p.name || '').trim().toLowerCase() === (item.name || '').trim().toLowerCase())
-          );
-
-          if (matchedItems.length > 0 && confirm(`📦 هل تريد إعادة كميات أصناف الفاتورة المحذوفة (#${id}) إلى المخزن؟`)) {
-            matchedItems.forEach(item => {
-              const prod = products.find(p => (p.name || '').trim().toLowerCase() === (item.name || '').trim().toLowerCase());
-              if (prod) {
-                prod.stock = (parseFloat(prod.stock) || 0) + (parseFloat(item.qty) || 0);
-              }
-            });
-            localStorage.setItem(`giti_${uid}_products`, JSON.stringify(products));
-            if (typeof window.saveDataToCloud === 'function') {
-              await window.saveDataToCloud('products', products).catch(() => {});
-            }
-            location.reload();
-          }
-        }
-      };
-      window.deleteInvoice._gitiHooked = true;
-    }
-
-    if (typeof window.deletePurchase === 'function' && !window.deletePurchase._gitiHooked) {
-      const origDeletePurchase = window.deletePurchase;
-      window.deletePurchase = async function (id) {
-        const purchases = readStore('purchases', []);
-        const pur = purchases.find(p => parseInt(p.id, 10) === parseInt(id, 10));
-        await origDeletePurchase.apply(this, arguments);
-
-        const stillExists = readStore('purchases', []).some(p => parseInt(p.id, 10) === parseInt(id, 10));
-        if (!stillExists && pur && Array.isArray(pur.items)) {
-          const uid = getActiveUid();
-          const products = readStore('products', []);
-          const matchedItems = pur.items.filter(item =>
-            products.some(p => (p.name || '').trim().toLowerCase() === (item.name || '').trim().toLowerCase())
-          );
-
-          if (matchedItems.length > 0 && confirm(`📦 هل تريد خصم كميات فاتورة المشتريات المحذوفة (#${id}) من رصيد المخزن؟`)) {
-            matchedItems.forEach(item => {
-              const prod = products.find(p => (p.name || '').trim().toLowerCase() === (item.name || '').trim().toLowerCase());
-              if (prod) {
-                prod.stock = Math.max(0, (parseFloat(prod.stock) || 0) - (parseFloat(item.qty) || 0));
-              }
-            });
-            localStorage.setItem(`giti_${uid}_products`, JSON.stringify(products));
-            if (typeof window.saveDataToCloud === 'function') {
-              await window.saveDataToCloud('products', products).catch(() => {});
-            }
-            location.reload();
-          }
-        }
-      };
-      window.deletePurchase._gitiHooked = true;
-    }
-  }
-
   // ==========================================================================
   // تشغيل وتحديث جميع وحدات النواة
   // ==========================================================================
   function refreshAllAddons() {
-    syncStoreProfileUI();
     renderCashDrawerSummary();
-    updateLowStockAndValuation();
-    injectQuickCatalogPicker();
+    updateLowStockRadar();
+    injectLiveInvoiceTools();
     updateLiveInvoiceProfitGuard();
     renderDebtCollectionRadar();
     injectInvoicesExcelButton();
     initBackupGuard();
     injectThermalTriggers();
     injectPrintRowProtection();
-    hookDeleteStockReconciliation();
   }
 
-  function startCorePlus() {
-    refreshAllAddons();
-    if (document.body) {
-      domObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.closest('.nav-tab')) {
+      scheduleRefresh();
     }
-    document.addEventListener('click', (e) => {
-      if (e.target && e.target.closest('.nav-tab')) {
-        scheduleRefresh();
-      }
-    });
-  }
+  });
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(startCorePlus, 450));
+    document.addEventListener('DOMContentLoaded', () => setTimeout(refreshAllAddons, 400));
   } else {
-    setTimeout(startCorePlus, 450);
+    setTimeout(refreshAllAddons, 400);
   }
 })();
