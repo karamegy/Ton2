@@ -1,13 +1,12 @@
 // ============================================================================
-// giti Core Plus v2.0 - Modular Extension Engine (Zero-Intrusion Architecture)
-// بدون زر الباركود + رادار تحصيلات الديون مرتبط مباشرة بكشف حساب العملاء
+// giti Core Plus v2.1 - Modular Extension Engine (Zero-Intrusion Architecture)
+// بدون زر الباركود + إطار متحرك لكشوفات العملاء + طباعة حرارية للموردين وكشوفات الحساب
 // ============================================================================
 
 (function initGitiCorePlus() {
   const LOW_STOCK_THRESHOLD = 5;
   let lowStockFilterActive = false;
-  let showAllDebtors = false;
-  let activeThermalInvoice = null;
+  let activeThermalDoc = null; // يدعم: sale | purchase | client_statement | supplier_statement
   let thermalPaperWidth = localStorage.getItem('giti_thermal_width') || '80mm';
   let refreshTimer = null;
 
@@ -71,6 +70,13 @@
     return active.find(i => parseInt(i.id, 10) === numId) || archived.find(i => parseInt(i.id, 10) === numId) || null;
   }
 
+  function findPurchaseById(id) {
+    const cleanId = String(id).replace(/[^0-9a-zA-Z_-]/g, '');
+    if (!cleanId) return null;
+    const purchases = readStore('purchases', []);
+    return purchases.find(p => String(p.id) === cleanId) || null;
+  }
+
   function buildProductCostMap() {
     const products = readStore('products', []);
     const purchases = readStore('purchases', []);
@@ -79,7 +85,7 @@
     purchases.forEach(pur => {
       (pur.items || []).forEach(it => {
         const key = (it.name || '').trim().toLowerCase();
-        const unitCost = parseFloat(it.price) || 0;
+        const unitCost = parseFloat(it.cost ?? it.price) || 0;
         if (key && unitCost > 0) costMap[key] = unitCost;
       });
     });
@@ -404,7 +410,6 @@
     const paperHeader = document.querySelector('.paper-header');
     if (!paperHeader) return;
 
-    // التأكد من إزالة زر الباركود إن وجد
     const oldScanBtn = document.getElementById('giti-barcode-scan-btn');
     if (oldScanBtn) oldScanBtn.remove();
 
@@ -653,7 +658,7 @@
   }
 
   // ==========================================================================
-  // 5. رادار تحصيلات الديون المرتبط مباشرة بكشف حساب العملاء (Client Ledger)
+  // 5. رادار تحصيلات الديون داخل إطار متحرك للسحب أعلى وأسفل
   // ==========================================================================
   function calculateClientStatement(clientObj, invoices, clientReturns) {
     const cId = clientObj.id;
@@ -701,7 +706,54 @@
       balance,
       invoicesCount: cInvoices.length,
       paymentsCount: (clientObj.payments || []).length,
-      lastDate: (lastPayment && lastPayment.date) || (lastInvoice && lastInvoice.date) || ''
+      lastDate: (lastPayment && lastPayment.date) || (lastInvoice && lastInvoice.date) || '',
+      cInvoices,
+      cReturns
+    };
+  }
+
+  function calculateSupplierStatement(supplierObj, purchases, supplierReturns) {
+    const sId = supplierObj.id;
+    const sNameLower = (supplierObj.name || '').trim().toLowerCase();
+
+    const sPurchases = purchases.filter(p =>
+      (sId && p.supplierId === sId) ||
+      ((p.supplier || p.supplierName || '').trim().toLowerCase() === sNameLower && sNameLower !== '')
+    );
+
+    const sReturns = supplierReturns.filter(r =>
+      (sId && r.supplierId === sId) ||
+      ((r.supplier || r.supplierName || '').trim().toLowerCase() === sNameLower && sNameLower !== '')
+    );
+
+    const totalReturns = sReturns.reduce((sum, r) => sum + (parseFloat(r.grandTotal) || 0), 0);
+    const cashRefunded = sReturns
+      .filter(r => r.settlement === 'نقدي')
+      .reduce((sum, r) => sum + (parseFloat(r.grandTotal) || 0), 0);
+
+    let totalPurchases = (parseFloat(supplierObj.openingBalance) || 0) - totalReturns;
+    let totalPaid = -cashRefunded;
+
+    sPurchases.forEach(pur => {
+      totalPurchases += (parseFloat(pur.grandTotal) || 0);
+      totalPaid += (parseFloat(pur.paidAmount) || 0);
+    });
+
+    (supplierObj.payments || []).forEach(p => {
+      totalPaid += (parseFloat(p.amount) || 0);
+    });
+
+    const balance = Math.max(0, totalPurchases - totalPaid);
+
+    return {
+      totalPurchases,
+      totalPaid,
+      totalReturns,
+      balance,
+      purchasesCount: sPurchases.length,
+      paymentsCount: (supplierObj.payments || []).length,
+      sPurchases,
+      sReturns
     };
   }
 
@@ -756,48 +808,43 @@
       clientsTab.insertBefore(widget, clientsTab.firstChild);
     }
 
-    const visibleClients = showAllDebtors ? indebtedClients : indebtedClients.slice(0, 6);
+    const prevScrollBox = document.getElementById('giti-debt-radar-scroll-box');
+    const savedScrollTop = prevScrollBox ? prevScrollBox.scrollTop : 0;
 
     const listHtml = indebtedClients.length === 0
-      ? `<p style="font-size: 0.82rem; color: var(--success); margin: 4px 0 0;">✅ ممتاز! جميع كشوف حسابات العملاء مسددة بالكامل.</p>`
-      : visibleClients.map(c => {
-          const isHighDebt = c.balance >= 5000;
-          return `
-            <div class="giti-debt-client-row" data-client-open="${escapeHtml(c.name)}" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 10px; background: var(--input-bg); border-radius: 9px; border-right: 3px solid ${isHighDebt ? 'var(--danger)' : 'var(--warning)'}; margin-top: 6px; flex-wrap: wrap;">
-              <div style="font-size: 0.82rem; flex: 1; min-width: 165px;">
-                <strong>👤 ${escapeHtml(c.name)}</strong>
-                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
-                  صافي الرصيد: <strong style="color: var(--danger);">${c.balance.toFixed(2)} ${currency}</strong>
-                  • التعاملات: ${c.totalPurchases.toFixed(2)} | المسدد: ${c.totalPaid.toFixed(2)}
+      ? `<p style="font-size: 0.82rem; color: var(--success); margin: 4px 0;">✅ ممتاز! جميع كشوف حسابات العملاء مسددة بالكامل.</p>`
+      : `<div id="giti-debt-radar-scroll-box" style="max-height: 290px; overflow-y: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border-color); border-radius: 12px; padding: 6px 8px; background: rgba(128, 128, 128, 0.04); margin-top: 6px;">
+          ${indebtedClients.map((c, idx) => {
+            const isHighDebt = c.balance >= 5000;
+            return `
+              <div class="giti-debt-client-row" data-client-open="${escapeHtml(c.name)}" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 10px; background: var(--input-bg); border-radius: 10px; border: 1px solid var(--border-color); border-right: 3px solid ${isHighDebt ? 'var(--danger)' : 'var(--warning)'}; ${idx > 0 ? 'margin-top: 7px;' : ''} flex-wrap: wrap;">
+                <div style="font-size: 0.82rem; flex: 1; min-width: 165px;">
+                  <strong>👤 ${escapeHtml(c.name)}</strong>
+                  <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+                    صافي الرصيد: <strong style="color: var(--danger);">${c.balance.toFixed(2)} ${currency}</strong>
+                    • التعاملات: ${c.totalPurchases.toFixed(2)} | المسدد: ${c.totalPaid.toFixed(2)}
+                  </div>
+                </div>
+                <div style="display: flex; gap: 5px; align-items: center;" onclick="event.stopPropagation();">
+                  <button type="button" class="btn-sm giti-open-client-ledger-btn"
+                    data-client="${escapeHtml(c.name)}"
+                    style="background: var(--accent); color: #fff; font-size: 0.75rem;">
+                    📄 كشف الحساب
+                  </button>
+                  <button type="button" class="btn-sm giti-debt-remind-btn"
+                    data-client="${escapeHtml(c.name)}"
+                    data-purchases="${c.totalPurchases.toFixed(2)}"
+                    data-paid="${c.totalPaid.toFixed(2)}"
+                    data-due="${c.balance.toFixed(2)}"
+                    data-phone="${escapeHtml(c.phone)}"
+                    style="background: #16a34a; color: #fff; font-size: 0.75rem;">
+                    💬 تذكير بالرصيد
+                  </button>
                 </div>
               </div>
-              <div style="display: flex; gap: 5px; align-items: center;" onclick="event.stopPropagation();">
-                <button type="button" class="btn-sm giti-open-client-ledger-btn"
-                  data-client="${escapeHtml(c.name)}"
-                  style="background: var(--accent); color: #fff; font-size: 0.75rem;">
-                  📄 كشف الحساب
-                </button>
-                <button type="button" class="btn-sm giti-debt-remind-btn"
-                  data-client="${escapeHtml(c.name)}"
-                  data-purchases="${c.totalPurchases.toFixed(2)}"
-                  data-paid="${c.totalPaid.toFixed(2)}"
-                  data-due="${c.balance.toFixed(2)}"
-                  data-phone="${escapeHtml(c.phone)}"
-                  style="background: #16a34a; color: #fff; font-size: 0.75rem;">
-                  💬 تذكير بالرصيد
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-    const toggleMoreHtml = indebtedClients.length > 6
-      ? `<div style="text-align: center; margin-top: 8px;">
-           <button type="button" id="giti-toggle-more-debtors" class="btn-sm" style="background: var(--input-bg); color: var(--accent); border: 1px solid var(--border-color); font-size: 0.76rem;">
-             ${showAllDebtors ? '🔼 عرض أقل' : `🔽 عرض كل العملاء المدينين (${indebtedClients.length})`}
-           </button>
-         </div>`
-      : '';
+            `;
+          }).join('')}
+        </div>`;
 
     widget.innerHTML = `
       <div class="card-header" style="margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
@@ -808,19 +855,15 @@
         </div>
       </div>
       ${listHtml}
-      ${toggleMoreHtml}
     `;
+
+    const newScrollBox = document.getElementById('giti-debt-radar-scroll-box');
+    if (newScrollBox && savedScrollTop > 0) {
+      newScrollBox.scrollTop = savedScrollTop;
+    }
 
     const expDebtBtn = document.getElementById('giti-export-debts-csv');
     if (expDebtBtn) expDebtBtn.onclick = () => exportDebtsToExcelCSV(indebtedClients);
-
-    const toggleMoreBtn = document.getElementById('giti-toggle-more-debtors');
-    if (toggleMoreBtn) {
-      toggleMoreBtn.onclick = () => {
-        showAllDebtors = !showAllDebtors;
-        renderDebtCollectionRadar();
-      };
-    }
 
     widget.querySelectorAll('.giti-debt-client-row').forEach(row => {
       row.onclick = () => {
@@ -1010,9 +1053,10 @@
   }
 
   // ==========================================================================
-  // 8. محرك طباعة الإيصالات الحرارية (80mm & 58mm) + إرسال واتساب نصي
+  // 8. محرك الطباعة الحرارية (80mm & 58mm) للمبيعات والمشتريات وكشوفات الحساب
   // ==========================================================================
   function injectThermalTriggers() {
+    // أ) زر الإيصال الحراري داخل نافذة المعاينة (#view-modal) للمبيعات والمشتريات
     const viewModalActions = document.querySelector('#view-modal .modal-actions-row');
     if (viewModalActions && !document.getElementById('giti-open-thermal-modal-btn')) {
       const thermalBtn = document.createElement('button');
@@ -1026,13 +1070,19 @@
         const inv = findInvoiceById(idText);
         if (inv) {
           openThermalReceiptModal(inv);
-        } else {
-          alert('⚠️ تعذر قراءة بيانات الفاتورة.');
+          return;
         }
+        const pur = findPurchaseById(idText);
+        if (pur) {
+          openThermalPurchaseModal(pur);
+          return;
+        }
+        alert('⚠️ تعذر قراءة بيانات الفاتورة.');
       };
       viewModalActions.appendChild(thermalBtn);
     }
 
+    // ب) زر حراري في بطاقات فواتير المبيعات (#invoices-container)
     const invoiceCards = document.querySelectorAll('#invoices-container li');
     invoiceCards.forEach(li => {
       const actionsRow = li.querySelector('.inv-actions');
@@ -1058,6 +1108,132 @@
       const deleteBtn = actionsRow.lastElementChild;
       actionsRow.insertBefore(btn, deleteBtn);
     });
+
+    // ج) زر حراري في بطاقات فواتير المشتريات من الموردين
+    injectSupplierPurchaseThermalButtons();
+
+    // د) زر حراري داخل نوافذ كشوفات حسابات العملاء والموردين
+    injectLedgerThermalButtons();
+  }
+
+  function injectSupplierPurchaseThermalButtons() {
+    const purchases = readStore('purchases', []);
+    if (purchases.length === 0) return;
+
+    const candidateCards = document.querySelectorAll(
+      '#purchases-container li, #purchases-list li, #tab-purchases li, #tab-suppliers li, .card ul li'
+    );
+
+    candidateCards.forEach(li => {
+      if (li.closest('#invoices-container') || li.closest('#products-list-container')) return;
+
+      const actionsRow = li.querySelector('.inv-actions') || Array.from(li.querySelectorAll('div')).find(d => d.querySelector('button'));
+      if (!actionsRow || actionsRow.querySelector('.giti-row-thermal-btn')) return;
+
+      const titleText = li.querySelector('strong, h4')?.textContent || li.textContent || '';
+      const idMatch = titleText.match(/#([0-9a-zA-Z_-]+)/);
+      if (!idMatch) return;
+
+      const purId = idMatch[1];
+      const matchedPur = purchases.find(p => String(p.id) === String(purId));
+      if (!matchedPur) return;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-sm giti-row-thermal-btn';
+      btn.style.cssText = 'background: #1f2937; color: #f8fafc; border: 1px solid #4b5563;';
+      btn.innerHTML = '🧾 حراري';
+      btn.title = 'طباعة إيصال توريد / مشتريات حراري 80mm / 58mm';
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const latestPur = findPurchaseById(purId) || matchedPur;
+        openThermalPurchaseModal(latestPur);
+      };
+
+      const deleteBtn = actionsRow.lastElementChild;
+      if (deleteBtn && deleteBtn.tagName === 'BUTTON') {
+        actionsRow.insertBefore(btn, deleteBtn);
+      } else {
+        actionsRow.appendChild(btn);
+      }
+    });
+  }
+
+  function resolveLedgerEntityFromModal(modal) {
+    const headerEl = modal.querySelector('.modal-header h3, .modal-header h2, h3, h2');
+    const headerText = (headerEl ? headerEl.textContent : '').trim();
+
+    let rawName = headerText.includes(':')
+      ? headerText.split(':').slice(1).join(':').trim()
+      : headerText.replace(/كشف حساب/g, '').trim();
+    rawName = rawName.replace(/^[👤🏭🏢📋\s]+/, '').trim();
+
+    const modalId = (modal.id || '').toLowerCase();
+    const modalText = modal.textContent || '';
+
+    const isExplicitSupplier =
+      modalId.includes('supplier') ||
+      headerText.includes('مورد') ||
+      modalText.includes('للمورد') ||
+      modalText.includes('دفعة سداد للمورد') ||
+      modalText.includes('فواتير التوريد');
+
+    const isExplicitClient =
+      modalId.includes('client') ||
+      headerText.includes('عميل') ||
+      modalText.includes('من العميل') ||
+      modalText.includes('دفعة سداد نقدي من العميل');
+
+    const clients = readStore('clients', []);
+    const suppliers = readStore('suppliers', []);
+    const norm = rawName.toLowerCase();
+
+    if (isExplicitSupplier) {
+      const sup = suppliers.find(s => (s.name || '').trim().toLowerCase() === norm) || { name: rawName || 'مورد', openingBalance: 0, payments: [] };
+      return { ledgerType: 'supplier', entity: sup };
+    }
+
+    if (isExplicitClient) {
+      const cli = clients.find(c => (c.name || '').trim().toLowerCase() === norm) || { name: rawName || 'عميل', openingBalance: 0, payments: [] };
+      return { ledgerType: 'client', entity: cli };
+    }
+
+    const foundClient = clients.find(c => (c.name || '').trim().toLowerCase() === norm);
+    if (foundClient) return { ledgerType: 'client', entity: foundClient };
+
+    const foundSupplier = suppliers.find(s => (s.name || '').trim().toLowerCase() === norm);
+    if (foundSupplier) return { ledgerType: 'supplier', entity: foundSupplier };
+
+    return { ledgerType: 'client', entity: { name: rawName || 'حساب', openingBalance: 0, payments: [] } };
+  }
+
+  function injectLedgerThermalButtons() {
+    const openModals = document.querySelectorAll('.modal:not(.hidden)');
+    openModals.forEach(modal => {
+      if (modal.id === 'giti-thermal-modal' || modal.id === 'giti-quick-catalog-modal') return;
+
+      const headerEl = modal.querySelector('.modal-header h3, .modal-header h2, h3, h2');
+      const headerText = headerEl ? headerEl.textContent : '';
+      if (!headerText.includes('كشف حساب')) return;
+
+      const actionsRow = modal.querySelector('.modal-actions-row');
+      if (!actionsRow) return;
+
+      let btn = actionsRow.querySelector('.giti-ledger-thermal-btn');
+      if (!btn) {
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-sm giti-ledger-thermal-btn';
+        btn.style.cssText = 'background: #1f2937; color: #ffffff; border: 1px solid #4b5563; min-height: 42px; font-size: 0.85rem;';
+        btn.innerHTML = '🧾 حراري';
+        btn.title = 'طباعة كشف الحساب حراري 80mm / 58mm';
+        btn.onclick = () => {
+          const { ledgerType, entity } = resolveLedgerEntityFromModal(modal);
+          openThermalStatementModal(ledgerType, entity);
+        };
+        actionsRow.appendChild(btn);
+      }
+    });
   }
 
   function ensureThermalModal() {
@@ -1067,6 +1243,7 @@
     modal = document.createElement('div');
     modal.id = 'giti-thermal-modal';
     modal.className = 'modal hidden';
+    modal.style.zIndex = '10050';
     modal.innerHTML = `
       <div class="modal-content" style="max-width: 440px;">
         <div class="modal-header">
@@ -1129,37 +1306,127 @@
     return modal;
   }
 
+  function openThermalReceiptModal(inv) {
+    activeThermalDoc = { docType: 'sale', data: inv };
+    const modal = ensureThermalModal();
+    modal.classList.remove('hidden');
+    renderThermalReceiptContent();
+  }
+
+  function openThermalPurchaseModal(pur) {
+    activeThermalDoc = { docType: 'purchase', data: pur };
+    const modal = ensureThermalModal();
+    modal.classList.remove('hidden');
+    renderThermalReceiptContent();
+  }
+
+  function openThermalStatementModal(ledgerType, entity) {
+    activeThermalDoc = {
+      docType: ledgerType === 'supplier' ? 'supplier_statement' : 'client_statement',
+      data: entity
+    };
+    const modal = ensureThermalModal();
+    modal.classList.remove('hidden');
+    renderThermalReceiptContent();
+  }
+
   function shareThermalWhatsAppText() {
-    if (!activeThermalInvoice) return;
-    const inv = activeThermalInvoice;
+    if (!activeThermalDoc) return;
     const profile = getStoreProfile();
     const currency = profile.currency || 'ج.م';
+    const { docType, data } = activeThermalDoc;
 
-    const lines = [
-      `*${profile.name || 'GITI ERP'}*`,
-      ...(profile.phone ? [`📞 هاتف: ${profile.phone}`] : []),
-      ...(profile.address ? [`📍 العنوان: ${profile.address}`] : []),
-      `🧾 *فاتورة مبيعات رقم #${inv.id}*`,
-      `📅 التاريخ: ${inv.date || ''}`,
-      `👤 العميل: ${inv.client || 'عميل نقدي'}`,
-      `──────────────`,
-      ...(inv.items || []).map(it => {
-        const q = parseFloat(it.qty) || 0;
-        const p = parseFloat(it.price) || 0;
-        return `• ${it.name} (${q} × ${p.toFixed(2)}) = *${(q * p).toFixed(2)} ${currency}*`;
-      }),
-      `──────────────`,
-      `💰 *الإجمالي: ${(parseFloat(inv.grandTotal) || 0).toFixed(2)} ${currency}*`,
-      `📌 الحالة: ${inv.status || ''}`
-    ];
+    let lines = [];
+    let phoneRaw = '';
 
-    if (inv.status === 'مدفوعة جزئياً') {
-      lines.push(`✅ المدفوع: ${(parseFloat(inv.paidAmount) || 0).toFixed(2)} ${currency}`);
-      lines.push(`⏳ المتبقي: ${(parseFloat(inv.dueAmount) || 0).toFixed(2)} ${currency}`);
+    if (docType === 'sale') {
+      const inv = data;
+      phoneRaw = inv.phone || '';
+      lines = [
+        `*${profile.name || 'GITI ERP'}*`,
+        ...(profile.phone ? [`📞 هاتف: ${profile.phone}`] : []),
+        ...(profile.address ? [`📍 العنوان: ${profile.address}`] : []),
+        `🧾 *فاتورة مبيعات رقم #${inv.id}*`,
+        `📅 التاريخ: ${inv.date || ''}`,
+        `👤 العميل: ${inv.client || 'عميل نقدي'}`,
+        `──────────────`,
+        ...(inv.items || []).map(it => {
+          const q = parseFloat(it.qty) || 0;
+          const p = parseFloat(it.price) || 0;
+          return `• ${it.name} (${q} × ${p.toFixed(2)}) = *${(q * p).toFixed(2)} ${currency}*`;
+        }),
+        `──────────────`,
+        `💰 *الإجمالي: ${(parseFloat(inv.grandTotal) || 0).toFixed(2)} ${currency}*`,
+        `📌 الحالة: ${inv.status || ''}`
+      ];
+      if (inv.status === 'مدفوعة جزئياً') {
+        lines.push(`✅ المدفوع: ${(parseFloat(inv.paidAmount) || 0).toFixed(2)} ${currency}`);
+        lines.push(`⏳ المتبقي: ${(parseFloat(inv.dueAmount) || 0).toFixed(2)} ${currency}`);
+      }
+    } else if (docType === 'purchase') {
+      const pur = data;
+      const supplierName = pur.supplier || pur.supplierName || 'مورد';
+      phoneRaw = pur.phone || pur.supplierPhone || '';
+      const grand = parseFloat(pur.grandTotal) || 0;
+      const paid = parseFloat(pur.paidAmount) || 0;
+      const due = pur.dueAmount !== undefined ? (parseFloat(pur.dueAmount) || 0) : Math.max(0, grand - paid);
+
+      lines = [
+        `*${profile.name || 'GITI ERP'}*`,
+        ...(profile.phone ? [`📞 هاتف: ${profile.phone}`] : []),
+        `📦 *فاتورة مشتريات / توريد رقم #${pur.id}*`,
+        `📅 التاريخ: ${pur.date || ''}`,
+        `🏭 المورد: ${supplierName}`,
+        `──────────────`,
+        ...(pur.items || []).map(it => {
+          const q = parseFloat(it.qty) || 0;
+          const p = parseFloat(it.cost ?? it.price) || 0;
+          return `• ${it.name} (${q} × ${p.toFixed(2)}) = *${(q * p).toFixed(2)} ${currency}*`;
+        }),
+        `──────────────`,
+        `💰 *الإجمالي: ${grand.toFixed(2)} ${currency}*`,
+        `📌 الحالة: ${pur.status || ''}`
+      ];
+      if (due > 0.01) {
+        lines.push(`✅ المدفوع: ${paid.toFixed(2)} ${currency}`);
+        lines.push(`⏳ المتبقي: ${due.toFixed(2)} ${currency}`);
+      }
+    } else if (docType === 'client_statement') {
+      const invoices = readStore('invoices', []);
+      const clientReturns = readStore('client_returns', []);
+      const st = calculateClientStatement(data, invoices, clientReturns);
+      phoneRaw = data.phone || '';
+      lines = [
+        `*${profile.name || 'GITI ERP'}*`,
+        `📋 *كشف حساب عميل: ${data.name || ''}*`,
+        `📅 التاريخ: ${new Date().toLocaleDateString('ar-EG')}`,
+        `──────────────`,
+        `🛍 *إجمالي التعاملات:* ${st.totalPurchases.toFixed(2)} ${currency}`,
+        `✅ *إجمالي المسدد:* ${st.totalPaid.toFixed(2)} ${currency}`,
+        `💰 *صافي الرصيد المتبقي:* ${st.balance.toFixed(2)} ${currency}`,
+        `──────────────`,
+        `شاكرين حسن تعاونكم وتعاملكم معنا.`
+      ];
+    } else if (docType === 'supplier_statement') {
+      const purchases = readStore('purchases', []);
+      const supplierReturns = readStore('supplier_returns', []);
+      const st = calculateSupplierStatement(data, purchases, supplierReturns);
+      phoneRaw = data.phone || '';
+      lines = [
+        `*${profile.name || 'GITI ERP'}*`,
+        `📋 *كشف حساب مورد: ${data.name || ''}*`,
+        `📅 التاريخ: ${new Date().toLocaleDateString('ar-EG')}`,
+        `──────────────`,
+        `📦 *إجمالي التوريدات:* ${st.totalPurchases.toFixed(2)} ${currency}`,
+        `✅ *إجمالي المدفوعات:* ${st.totalPaid.toFixed(2)} ${currency}`,
+        `💰 *صافي الرصيد المتبقي:* ${st.balance.toFixed(2)} ${currency}`,
+        `──────────────`,
+        `مع تحيات إدارة الحسابات.`
+      ];
     }
 
-    const rawPhone = String(inv.phone || '').replace(/[^0-9]/g, '');
-    const waPhone = rawPhone.length === 11 && rawPhone.startsWith('01') ? `2${rawPhone}` : rawPhone;
+    const cleanPhone = String(phoneRaw || '').replace(/[^0-9]/g, '');
+    const waPhone = cleanPhone.length === 11 && cleanPhone.startsWith('01') ? `2${cleanPhone}` : cleanPhone;
     const url = waPhone
       ? `https://wa.me/${waPhone}?text=${encodeURIComponent(lines.join('\n'))}`
       : `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`;
@@ -1167,16 +1434,25 @@
     window.open(url, '_blank');
   }
 
-  function openThermalReceiptModal(inv) {
-    activeThermalInvoice = inv;
-    const modal = ensureThermalModal();
-    modal.classList.remove('hidden');
-    renderThermalReceiptContent();
+  function renderThermalHeaderHtml(profile, badgeTitle, is58) {
+    const titleFont = is58 ? '14px' : '16px';
+    return `
+      <div style="text-align: center; border-bottom: 1.5px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
+        ${profile.logo ? `<img src="${profile.logo}" alt="Logo" style="max-height: ${is58 ? '38px' : '48px'}; max-width: 80%; object-fit: contain; filter: grayscale(100%) contrast(140%); margin-bottom: 4px;">` : ''}
+        <div style="font-size: ${titleFont}; font-weight: 900; color: #000;">${escapeHtml(profile.name || 'GITI ERP')}</div>
+        ${profile.phone ? `<div style="font-size: 0.9em; color: #000;">هاتف: ${escapeHtml(profile.phone)}</div>` : ''}
+        ${profile.vatNo ? `<div style="font-size: 0.85em; color: #000;">الرقم الضريبي: ${escapeHtml(profile.vatNo)}</div>` : ''}
+        ${profile.address ? `<div style="font-size: 0.85em; color: #000;">${escapeHtml(profile.address)}</div>` : ''}
+        <div style="margin-top: 6px; padding: 3px 6px; border: 1.5px solid #000; font-weight: 900; display: inline-block; font-size: 0.95em;">
+          ${escapeHtml(badgeTitle)}
+        </div>
+      </div>
+    `;
   }
 
   function renderThermalReceiptContent() {
-    if (!activeThermalInvoice) return;
-    const inv = activeThermalInvoice;
+    if (!activeThermalDoc) return;
+    const { docType, data } = activeThermalDoc;
     const profile = getStoreProfile();
     const currency = profile.currency || 'ج.م';
     const is58 = thermalPaperWidth === '58mm';
@@ -1195,120 +1471,270 @@
 
     const pixelWidth = is58 ? '219px' : '302px';
     const baseFont = is58 ? '11px' : '12.5px';
-    const titleFont = is58 ? '14px' : '16px';
     const totalFont = is58 ? '14px' : '16px';
+    const footerNote = localStorage.getItem('giti_thermal_footer') || 'شكراً لتعاملكم معنا — نتمنى لكم يوماً سعيداً';
 
     paper.style.width = pixelWidth;
     paper.style.fontSize = baseFont;
     paper.style.lineHeight = '1.45';
 
-    const footerNote = localStorage.getItem('giti_thermal_footer') || 'شكراً لتعاملكم معنا — نتمنى لكم يوماً سعيداً';
-    const itemsHtml = (inv.items || []).map(item => {
-      const qty = parseFloat(item.qty) || 0;
-      const price = parseFloat(item.price) || 0;
-      const rowTotal = (qty * price).toFixed(2);
-      return `
-        <tr style="border-bottom: 1px dashed #9ca3af;">
-          <td style="padding: 4px 2px; font-weight: 700; color: #000; word-break: break-word;">${escapeHtml(item.name)}</td>
-          <td style="padding: 4px 2px; text-align: center; color: #000; white-space: nowrap;">${qty}</td>
-          <td style="padding: 4px 2px; text-align: center; color: #000; white-space: nowrap;">${price.toFixed(2)}</td>
-          <td style="padding: 4px 2px; text-align: left; font-weight: 800; color: #000; white-space: nowrap;">${rowTotal}</td>
-        </tr>
-      `;
-    }).join('');
+    // ------------------------------------------------------------------------
+    // الحالة 1 والحالة 2: فاتورة مبيعات أو فاتورة مشتريات / توريد
+    // ------------------------------------------------------------------------
+    if (docType === 'sale' || docType === 'purchase') {
+      const isPurchase = docType === 'purchase';
+      const doc = data;
+      const partyLabel = isPurchase ? 'المورد' : 'العميل';
+      const partyName = isPurchase
+        ? (doc.supplier || doc.supplierName || 'مورد عام')
+        : (doc.client || 'عميل نقدي');
+      const partyPhone = isPurchase ? (doc.phone || doc.supplierPhone || '') : (doc.phone || '');
+      const badgeTitle = isPurchase ? `إيصال توريد / مشتريات #${doc.id}` : `إيصال مبيعات #${doc.id}`;
 
-    const paidVal = parseFloat(inv.paidAmount) || 0;
-    const dueVal = parseFloat(inv.dueAmount) || 0;
-    const partialHtml = inv.status === 'مدفوعة جزئياً'
-      ? `
-        <div style="display: flex; justify-content: space-between; font-weight: 700; margin-top: 3px;">
-          <span>المدفوع:</span><span>${paidVal.toFixed(2)} ${currency}</span>
+      const itemsHtml = (doc.items || []).map(item => {
+        const qty = parseFloat(item.qty) || 0;
+        const price = parseFloat(isPurchase ? (item.cost ?? item.price) : item.price) || 0;
+        const rowTotal = (qty * price).toFixed(2);
+        return `
+          <tr style="border-bottom: 1px dashed #9ca3af;">
+            <td style="padding: 4px 2px; font-weight: 700; color: #000; word-break: break-word;">${escapeHtml(item.name)}</td>
+            <td style="padding: 4px 2px; text-align: center; color: #000; white-space: nowrap;">${qty}</td>
+            <td style="padding: 4px 2px; text-align: center; color: #000; white-space: nowrap;">${price.toFixed(2)}</td>
+            <td style="padding: 4px 2px; text-align: left; font-weight: 800; color: #000; white-space: nowrap;">${rowTotal}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const grandVal = parseFloat(doc.grandTotal) || 0;
+      const paidVal = parseFloat(doc.paidAmount) || 0;
+      const dueVal = doc.dueAmount !== undefined ? (parseFloat(doc.dueAmount) || 0) : Math.max(0, grandVal - paidVal);
+      const showPartial = doc.status === 'مدفوعة جزئياً' || (isPurchase && dueVal > 0.01 && paidVal > 0);
+
+      const partialHtml = showPartial
+        ? `
+          <div style="display: flex; justify-content: space-between; font-weight: 700; margin-top: 3px;">
+            <span>المدفوع:</span><span>${paidVal.toFixed(2)} ${currency}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-weight: 800; margin-top: 2px;">
+            <span>المتبقي:</span><span>${dueVal.toFixed(2)} ${currency}</span>
+          </div>
+        `
+        : '';
+
+      const subtotalVal = parseFloat(doc.subtotal) || (doc.items || []).reduce((s, it) => {
+        const unitPrice = parseFloat(isPurchase ? (it.cost ?? it.price) : it.price) || 0;
+        return s + ((parseFloat(it.qty) || 0) * unitPrice);
+      }, 0);
+
+      paper.innerHTML = `
+        ${renderThermalHeaderHtml(profile, badgeTitle, is58)}
+
+        <div style="border-bottom: 1.5px dashed #000; padding-bottom: 6px; margin-bottom: 6px; font-size: 0.92em;">
+          <div style="display: flex; justify-content: space-between;">
+            <span><strong>التاريخ:</strong> ${escapeHtml(doc.date || '')}</span>
+            <span><strong>الحالة:</strong> ${escapeHtml(doc.status || '')}</span>
+          </div>
+          <div><strong>${partyLabel}:</strong> ${escapeHtml(partyName)}</div>
+          ${partyPhone ? `<div><strong>هاتف ${partyLabel}:</strong> ${escapeHtml(partyPhone)}</div>` : ''}
         </div>
-        <div style="display: flex; justify-content: space-between; font-weight: 800; margin-top: 2px;">
-          <span>المتبقي:</span><span>${dueVal.toFixed(2)} ${currency}</span>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 0.92em;">
+          <thead>
+            <tr style="border-bottom: 1.5px solid #000; background: #f3f4f6;">
+              <th style="padding: 4px 2px; text-align: right; color: #000;">الصنف</th>
+              <th style="padding: 4px 2px; text-align: center; color: #000;">ك</th>
+              <th style="padding: 4px 2px; text-align: center; color: #000;">سعر</th>
+              <th style="padding: 4px 2px; text-align: left; color: #000;">إجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div style="border-top: 1.5px dashed #000; padding-top: 6px; font-size: 0.95em;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>المجموع الفرعي:</span>
+            <strong>${subtotalVal.toFixed(2)} ${currency}</strong>
+          </div>
+          ${(parseFloat(doc.discount) || 0) > 0 ? `
+            <div style="display: flex; justify-content: space-between;">
+              <span>الخصم:</span>
+              <strong>-${(parseFloat(doc.discount) || 0).toFixed(2)} ${currency}</strong>
+            </div>
+          ` : ''}
+          ${(parseFloat(doc.taxPercent) || 0) > 0 ? `
+            <div style="display: flex; justify-content: space-between;">
+              <span>الضريبة (${doc.taxPercent}%):</span>
+              <strong>${(parseFloat(doc.taxAmount) || 0).toFixed(2)} ${currency}</strong>
+            </div>
+          ` : ''}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 6px 4px; border-top: 2px solid #000; border-bottom: 2px solid #000; font-size: ${totalFont}; font-weight: 900;">
+            <span>الإجمالي:</span>
+            <span>${grandVal.toFixed(2)} ${currency}</span>
+          </div>
+          ${partialHtml}
         </div>
-      `
-      : '';
+
+        <div style="text-align: center; margin-top: 10px; padding-top: 6px;">
+          <div id="giti-thermal-qr" style="display: inline-block; padding: 4px; background: #fff;"></div>
+          <div style="font-size: 0.85em; font-weight: 700; margin-top: 6px; color: #000;">${escapeHtml(footerNote)}</div>
+          <div style="font-size: 0.75em; margin-top: 4px; color: #374151;">Powered by GITI ERP</div>
+        </div>
+      `;
+
+      const qrBox = document.getElementById('giti-thermal-qr');
+      if (qrBox && typeof QRCode !== 'undefined' && doc.zatcaQr) {
+        qrBox.innerHTML = '';
+        const qrSize = is58 ? 72 : 88;
+        new QRCode(qrBox, {
+          text: doc.zatcaQr,
+          width: qrSize,
+          height: qrSize,
+          colorDark: '#000000',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+      return;
+    }
+
+    // ------------------------------------------------------------------------
+    // الحالة 3 والحالة 4: كشف حساب عميل أو كشف حساب مورد
+    // ------------------------------------------------------------------------
+    const isSupplier = docType === 'supplier_statement';
+    const entity = data;
+    const partyLabel = isSupplier ? 'المورد' : 'العميل';
+    const badgeTitle = isSupplier ? 'كشف حساب مورد' : 'كشف حساب عميل';
+
+    let st;
+    const rows = [];
+    const opening = parseFloat(entity.openingBalance) || 0;
+    if (opening > 0) {
+      rows.push({
+        label: 'رصيد افتتاحي',
+        date: '-',
+        amount: `+${opening.toFixed(2)}`
+      });
+    }
+
+    if (isSupplier) {
+      const purchases = readStore('purchases', []);
+      const supplierReturns = readStore('supplier_returns', []);
+      st = calculateSupplierStatement(entity, purchases, supplierReturns);
+
+      st.sPurchases.forEach(p => {
+        rows.push({
+          label: `فاتورة توريد #${p.id}`,
+          date: p.date || '',
+          amount: `+${(parseFloat(p.grandTotal) || 0).toFixed(2)}`
+        });
+      });
+      st.sReturns.forEach(r => {
+        rows.push({
+          label: `مرتجع توريد #${r.id || ''}`,
+          date: r.date || '',
+          amount: `-${(parseFloat(r.grandTotal) || 0).toFixed(2)}`
+        });
+      });
+    } else {
+      const invoices = readStore('invoices', []);
+      const clientReturns = readStore('client_returns', []);
+      st = calculateClientStatement(entity, invoices, clientReturns);
+
+      st.cInvoices.forEach(inv => {
+        rows.push({
+          label: `فاتورة #${inv.id}`,
+          date: inv.date || '',
+          amount: `+${(parseFloat(inv.grandTotal) || 0).toFixed(2)}`
+        });
+      });
+      st.cReturns.forEach(r => {
+        rows.push({
+          label: `مرتجع #${r.id || ''}`,
+          date: r.date || '',
+          amount: `-${(parseFloat(r.grandTotal) || 0).toFixed(2)}`
+        });
+      });
+    }
+
+    (entity.payments || []).forEach(pay => {
+      rows.push({
+        label: 'دفعة سداد نقدي',
+        date: pay.date || '',
+        amount: `-${(parseFloat(pay.amount) || 0).toFixed(2)}`
+      });
+    });
+
+    const rowsHtml = rows.length > 0
+      ? rows.map(r => `
+          <tr style="border-bottom: 1px dashed #9ca3af;">
+            <td style="padding: 4px 2px; font-weight: 700; color: #000; word-break: break-word;">
+              ${escapeHtml(r.label)}
+              ${r.date && r.date !== '-' ? `<div style="font-size: 0.82em; font-weight: 400; color: #374151;">${escapeHtml(r.date)}</div>` : ''}
+            </td>
+            <td style="padding: 4px 2px; text-align: left; font-weight: 800; color: #000; white-space: nowrap;">${escapeHtml(r.amount)}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="2" style="padding: 8px 2px; text-align: center; color: #374151;">لا توجد حركات مسجلة</td></tr>`;
 
     paper.innerHTML = `
-      <div style="text-align: center; border-bottom: 1.5px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
-        ${profile.logo ? `<img src="${profile.logo}" alt="Logo" style="max-height: ${is58 ? '38px' : '48px'}; max-width: 80%; object-fit: contain; filter: grayscale(100%) contrast(140%); margin-bottom: 4px;">` : ''}
-        <div style="font-size: ${titleFont}; font-weight: 900; color: #000;">${escapeHtml(profile.name || 'GITI ERP')}</div>
-        ${profile.phone ? `<div style="font-size: 0.9em; color: #000;">هاتف: ${escapeHtml(profile.phone)}</div>` : ''}
-        ${profile.vatNo ? `<div style="font-size: 0.85em; color: #000;">الرقم الضريبي: ${escapeHtml(profile.vatNo)}</div>` : ''}
-        ${profile.address ? `<div style="font-size: 0.85em; color: #000;">${escapeHtml(profile.address)}</div>` : ''}
-        <div style="margin-top: 6px; padding: 3px 6px; border: 1.5px solid #000; font-weight: 900; display: inline-block; font-size: 0.95em;">
-          إيصال مبيعات #${inv.id}
-        </div>
-      </div>
+      ${renderThermalHeaderHtml(profile, badgeTitle, is58)}
 
       <div style="border-bottom: 1.5px dashed #000; padding-bottom: 6px; margin-bottom: 6px; font-size: 0.92em;">
-        <div style="display: flex; justify-content: space-between;">
-          <span><strong>التاريخ:</strong> ${escapeHtml(inv.date || '')}</span>
-          <span><strong>الحالة:</strong> ${escapeHtml(inv.status || '')}</span>
-        </div>
-        <div><strong>العميل:</strong> ${escapeHtml(inv.client || 'عميل نقدي')}</div>
-        ${inv.phone ? `<div><strong>هاتف العميل:</strong> ${escapeHtml(inv.phone)}</div>` : ''}
+        <div><strong>${partyLabel}:</strong> ${escapeHtml(entity.name || '')}</div>
+        ${entity.phone ? `<div><strong>الهاتف:</strong> ${escapeHtml(entity.phone)}</div>` : ''}
+        <div><strong>تاريخ الكشف:</strong> ${new Date().toLocaleDateString('ar-EG')}</div>
       </div>
 
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 0.92em;">
         <thead>
           <tr style="border-bottom: 1.5px solid #000; background: #f3f4f6;">
-            <th style="padding: 4px 2px; text-align: right; color: #000;">الصنف</th>
-            <th style="padding: 4px 2px; text-align: center; color: #000;">ك</th>
-            <th style="padding: 4px 2px; text-align: center; color: #000;">سعر</th>
-            <th style="padding: 4px 2px; text-align: left; color: #000;">إجمالي</th>
+            <th style="padding: 4px 2px; text-align: right; color: #000;">البيان / الحركة</th>
+            <th style="padding: 4px 2px; text-align: left; color: #000;">القيمة</th>
           </tr>
         </thead>
         <tbody>
-          ${itemsHtml}
+          ${rowsHtml}
         </tbody>
       </table>
 
       <div style="border-top: 1.5px dashed #000; padding-top: 6px; font-size: 0.95em;">
-        <div style="display: flex; justify-content: space-between;">
-          <span>المجموع الفرعي:</span>
-          <strong>${(parseFloat(inv.subtotal) || 0).toFixed(2)} ${currency}</strong>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+          <span>${isSupplier ? 'إجمالي التوريدات:' : 'إجمالي التعاملات:'}</span>
+          <strong>${st.totalPurchases.toFixed(2)} ${currency}</strong>
         </div>
-        ${(parseFloat(inv.discount) || 0) > 0 ? `
-          <div style="display: flex; justify-content: space-between;">
-            <span>الخصم:</span>
-            <strong>-${(parseFloat(inv.discount) || 0).toFixed(2)} ${currency}</strong>
-          </div>
-        ` : ''}
-        ${(parseFloat(inv.taxPercent) || 0) > 0 ? `
-          <div style="display: flex; justify-content: space-between;">
-            <span>الضريبة (${inv.taxPercent}%):</span>
-            <strong>${(parseFloat(inv.taxAmount) || 0).toFixed(2)} ${currency}</strong>
-          </div>
-        ` : ''}
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+          <span>إجمالي المسدد:</span>
+          <strong>${st.totalPaid.toFixed(2)} ${currency}</strong>
+        </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 6px 4px; border-top: 2px solid #000; border-bottom: 2px solid #000; font-size: ${totalFont}; font-weight: 900;">
-          <span>الإجمالي:</span>
-          <span>${(parseFloat(inv.grandTotal) || 0).toFixed(2)} ${currency}</span>
+          <span>صافي الرصيد:</span>
+          <span>${st.balance.toFixed(2)} ${currency}</span>
         </div>
-        ${partialHtml}
       </div>
 
       <div style="text-align: center; margin-top: 10px; padding-top: 6px;">
-        <div id="giti-thermal-qr" style="display: inline-block; padding: 4px; background: #fff;"></div>
-        <div style="font-size: 0.85em; font-weight: 700; margin-top: 6px; color: #000;">${escapeHtml(footerNote)}</div>
+        <div style="font-size: 0.85em; font-weight: 700; color: #000;">${escapeHtml(footerNote)}</div>
         <div style="font-size: 0.75em; margin-top: 4px; color: #374151;">Powered by GITI ERP</div>
       </div>
     `;
+  }
 
-    const qrBox = document.getElementById('giti-thermal-qr');
-    if (qrBox && typeof QRCode !== 'undefined' && inv.zatcaQr) {
-      qrBox.innerHTML = '';
-      const qrSize = is58 ? 72 : 88;
-      new QRCode(qrBox, {
-        text: inv.zatcaQr,
-        width: qrSize,
-        height: qrSize,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
-      });
+  function getThermalDocFileMeta() {
+    if (!activeThermalDoc) return { fileTag: 'Receipt', shareTitle: 'إيصال حراري' };
+    const { docType, data } = activeThermalDoc;
+    if (docType === 'sale') {
+      return { fileTag: `Receipt_${data.id}`, shareTitle: `إيصال مبيعات #${data.id}` };
     }
+    if (docType === 'purchase') {
+      return { fileTag: `Purchase_${data.id}`, shareTitle: `إيصال توريد #${data.id}` };
+    }
+    const safeName = String(data.name || 'Account').replace(/[^\u0600-\u06FFa-zA-Z0-9_-]/g, '_');
+    return {
+      fileTag: `Statement_${safeName}`,
+      shareTitle: `كشف حساب ${data.name || ''}`
+    };
   }
 
   function printThermalReceiptIframe() {
@@ -1335,6 +1761,7 @@
     iframe.style.cssText = 'position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0;';
     document.body.appendChild(iframe);
 
+    const { shareTitle } = getThermalDocFileMeta();
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`
@@ -1342,7 +1769,7 @@
       <html lang="ar" dir="rtl">
       <head>
         <meta charset="UTF-8">
-        <title>Thermal Receipt #${activeThermalInvoice?.id || ''}</title>
+        <title>${escapeHtml(shareTitle)}</title>
         <style>
           @page {
             size: ${thermalPaperWidth} auto;
@@ -1381,7 +1808,7 @@
 
   async function exportThermalReceipt(format = 'pdf') {
     const paper = document.getElementById('giti-thermal-paper');
-    if (!paper || !activeThermalInvoice) return;
+    if (!paper || !activeThermalDoc) return;
 
     if (typeof html2canvas === 'undefined') {
       alert('⚠️ مكتبة التصوير قيد التحميل، حاول بعد لحظات.');
@@ -1401,16 +1828,16 @@
         logging: false
       });
 
-      const invId = activeThermalInvoice.id;
+      const { fileTag, shareTitle } = getThermalDocFileMeta();
       const widthTag = thermalPaperWidth;
 
       if (format === 'png') {
         const dataUrl = canvas.toDataURL('image/png');
         await shareOrDownloadFile(
           dataUrl,
-          `Receipt_${widthTag}_${invId}.png`,
+          `${fileTag}_${widthTag}.png`,
           'image/png',
-          `إيصال حراري #${invId}`
+          shareTitle
         );
       } else {
         const jsPDFClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
@@ -1433,9 +1860,9 @@
 
         await shareOrDownloadFile(
           pdfBlob,
-          `Receipt_${widthTag}_${invId}.pdf`,
+          `${fileTag}_${widthTag}.pdf`,
           'application/pdf',
-          `إيصال حراري ${widthTag} #${invId}`
+          `${shareTitle} (${widthTag})`
         );
       }
     } finally {
@@ -1445,7 +1872,7 @@
   }
 
   // ==========================================================================
-  // 9. حماية فواصل الطباعة
+  // 9. حماية فواصل الطباعة وتنسيق الإطار المتحرك لكشوفات الحساب
   // ==========================================================================
   function injectPrintRowProtection() {
     if (document.getElementById('giti-print-row-fix')) return;
@@ -1455,6 +1882,20 @@
       .a4-official-table tr, .preview-table tr {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
+      }
+      #giti-debt-radar-scroll-box {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+      }
+      #giti-debt-radar-scroll-box::-webkit-scrollbar {
+        width: 5px;
+      }
+      #giti-debt-radar-scroll-box::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #giti-debt-radar-scroll-box::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, 0.45);
+        border-radius: 99px;
       }
     `;
     document.head.appendChild(style);
@@ -1475,8 +1916,28 @@
     injectPrintRowProtection();
   }
 
+  // مراقبة فتح أي نافذة كشف حساب (عملاء أو موردين) لحقن زر الطباعة الحرارية فوراً
+  const modalObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      const target = m.target;
+      if (target && (target.id === 'giti-thermal-modal' || target.id === 'giti-quick-catalog-modal')) continue;
+      injectLedgerThermalButtons();
+      injectSupplierPurchaseThermalButtons();
+      break;
+    }
+  });
+
+  if (document.body) {
+    modalObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class', 'style'],
+      childList: true,
+      subtree: true
+    });
+  }
+
   document.addEventListener('click', (e) => {
-    if (e.target && e.target.closest('.nav-tab')) {
+    if (e.target && (e.target.closest('.nav-tab') || e.target.closest('button'))) {
       scheduleRefresh();
     }
   });
