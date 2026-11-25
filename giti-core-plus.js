@@ -1,11 +1,12 @@
 // ============================================================================
-// giti Core Plus v1.9 - Modular Extension Engine (Zero-Intrusion Architecture)
-// مبني على نفس نواة v1.1 المستقرة بالكامل مع جميع المميزات الإضافية
+// giti Core Plus v2.0 - Modular Extension Engine (Zero-Intrusion Architecture)
+// بدون زر الباركود + رادار تحصيلات الديون مرتبط مباشرة بكشف حساب العملاء
 // ============================================================================
 
 (function initGitiCorePlus() {
   const LOW_STOCK_THRESHOLD = 5;
   let lowStockFilterActive = false;
+  let showAllDebtors = false;
   let activeThermalInvoice = null;
   let thermalPaperWidth = localStorage.getItem('giti_thermal_width') || '80mm';
   let refreshTimer = null;
@@ -161,7 +162,7 @@
     refreshTimer = setTimeout(refreshAllAddons, 90);
   }
 
-  // مراقبة أي تحديث في بيانات التطبيق داخل localStorage لتحديث الإضافات تلقائياً (نفس آلية v1.1)
+  // مراقبة أي تحديث في بيانات التطبيق داخل localStorage لتحديث الإضافات تلقائياً
   const originalSetItem = localStorage.setItem;
   localStorage.setItem = function (key, value) {
     originalSetItem.apply(this, arguments);
@@ -397,22 +398,15 @@
   }
 
   // ==========================================================================
-  // 3. ماسح الباركود بالكاميرا + كتالوج الأصناف السريعة داخل الفاتورة الحية
+  // 3. كتالوج الأصناف السريعة داخل الفاتورة الحية (بدون باركود)
   // ==========================================================================
   function injectLiveInvoiceTools() {
     const paperHeader = document.querySelector('.paper-header');
     if (!paperHeader) return;
 
-    if (!document.getElementById('giti-barcode-scan-btn')) {
-      const scanBtn = document.createElement('button');
-      scanBtn.type = 'button';
-      scanBtn.id = 'giti-barcode-scan-btn';
-      scanBtn.className = 'btn-sm';
-      scanBtn.style.cssText = 'background: #0f766e; color: #fff; font-weight: 800; gap: 5px;';
-      scanBtn.innerHTML = '📷 باركود';
-      scanBtn.onclick = openBarcodeScannerModal;
-      paperHeader.insertBefore(scanBtn, paperHeader.lastElementChild);
-    }
+    // التأكد من إزالة زر الباركود إن وجد
+    const oldScanBtn = document.getElementById('giti-barcode-scan-btn');
+    if (oldScanBtn) oldScanBtn.remove();
 
     if (!document.getElementById('giti-quick-catalog-btn')) {
       const catBtn = document.createElement('button');
@@ -430,7 +424,6 @@
     const products = readStore('products', []);
     const clean = (queryText || '').trim().toLowerCase();
     const matched = products.find(p =>
-      (p.barcode && String(p.barcode).toLowerCase() === clean) ||
       (p.name && p.name.trim().toLowerCase() === clean) ||
       (p.name && p.name.trim().toLowerCase().includes(clean))
     );
@@ -476,71 +469,6 @@
     return targetName;
   }
 
-  async function openBarcodeScannerModal() {
-    if (!('BarcodeDetector' in window) || !navigator.mediaDevices) {
-      const manualCode = prompt('أدخل رقم الباركود أو اسم الصنف للإضافة الفورية:');
-      if (manualCode) addProductToLiveInvoice(manualCode);
-      return;
-    }
-
-    let modal = document.getElementById('giti-scanner-modal');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'giti-scanner-modal';
-      modal.className = 'modal';
-      modal.innerHTML = `
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-          <div class="modal-header">
-            <h3>📷 ماسح الباركود السريع</h3>
-            <button type="button" id="giti-close-scanner" class="btn-close">✕</button>
-          </div>
-          <video id="giti-scanner-video" playsinline style="width: 100%; border-radius: 12px; background: #000; max-height: 260px; object-fit: cover;"></video>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">وجّه الكاميرا نحو باركود المنتج لإضافته تلقائياً</p>
-        </div>
-      `;
-      document.body.appendChild(modal);
-    }
-
-    modal.classList.remove('hidden');
-    const video = document.getElementById('giti-scanner-video');
-    let stream = null;
-    let scanning = true;
-
-    const stopScanner = () => {
-      scanning = false;
-      if (stream) stream.getTracks().forEach(t => t.stop());
-      modal.classList.add('hidden');
-    };
-
-    document.getElementById('giti-close-scanner').onclick = stopScanner;
-
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = stream;
-      await video.play();
-
-      const detector = new window.BarcodeDetector();
-      const scanLoop = async () => {
-        if (!scanning) return;
-        try {
-          const barcodes = await detector.detect(video);
-          if (barcodes && barcodes.length > 0) {
-            const code = barcodes[0].rawValue;
-            stopScanner();
-            addProductToLiveInvoice(code);
-            return;
-          }
-        } catch {}
-        requestAnimationFrame(scanLoop);
-      };
-      requestAnimationFrame(scanLoop);
-    } catch {
-      stopScanner();
-      const fallback = prompt('تعذر فتح الكاميرا. اكتب رقم الباركود أو اسم الصنف:');
-      if (fallback) addProductToLiveInvoice(fallback);
-    }
-  }
-
   function openQuickCatalogModal() {
     let modal = document.getElementById('giti-quick-catalog-modal');
     if (!modal) {
@@ -553,7 +481,7 @@
             <h3 style="font-size: 1.05rem;">⚡ الإضافة السريعة من المخزن</h3>
             <button type="button" id="giti-close-catalog-btn" class="btn-close">✕</button>
           </div>
-          <input type="text" id="giti-catalog-search" placeholder="🔍 ابحث بالاسم أو الكود واضغط Enter للإضافة..." style="margin-bottom: 8px;">
+          <input type="text" id="giti-catalog-search" placeholder="🔍 ابحث باسم الصنف واضغط Enter للإضافة..." style="margin-bottom: 8px;">
           <div id="giti-catalog-feedback" style="font-size: 0.8rem; color: var(--success); font-weight: 700; min-height: 20px; margin-bottom: 6px;"></div>
           <div id="giti-catalog-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 8px; max-height: 52vh; overflow-y: auto; padding: 2px;"></div>
           <div class="modal-actions-row" style="margin-top: 10px;">
@@ -607,10 +535,7 @@
     const q = filterText.trim().toLowerCase();
 
     const filtered = q
-      ? products.filter(p =>
-          (p.name || '').toLowerCase().includes(q) ||
-          (p.barcode && String(p.barcode).toLowerCase().includes(q))
-        )
+      ? products.filter(p => (p.name || '').toLowerCase().includes(q))
       : products;
 
     if (filtered.length === 0) {
@@ -728,52 +653,95 @@
   }
 
   // ==========================================================================
-  // 5. رادار تحصيلات الديون ومطالبات واتساب الجاهزة (Debt Collection Radar)
+  // 5. رادار تحصيلات الديون المرتبط مباشرة بكشف حساب العملاء (Client Ledger)
   // ==========================================================================
+  function calculateClientStatement(clientObj, invoices, clientReturns) {
+    const cId = clientObj.id;
+    const cNameLower = (clientObj.name || '').trim().toLowerCase();
+
+    const cInvoices = invoices.filter(i =>
+      (cId && i.clientId === cId) ||
+      (i.client && cNameLower && i.client.trim().toLowerCase() === cNameLower)
+    );
+
+    const cReturns = clientReturns.filter(r =>
+      (cId && r.clientId === cId) ||
+      (r.client && cNameLower && r.client.trim().toLowerCase() === cNameLower)
+    );
+
+    const totalReturns = cReturns.reduce((sum, r) => sum + (parseFloat(r.grandTotal) || 0), 0);
+    const cashRefunded = cReturns
+      .filter(r => r.settlement === 'نقدي')
+      .reduce((sum, r) => sum + (parseFloat(r.grandTotal) || 0), 0);
+
+    let totalPurchases = (parseFloat(clientObj.openingBalance) || 0) - totalReturns;
+    let totalPaid = -cashRefunded;
+
+    cInvoices.forEach(inv => {
+      totalPurchases += (parseFloat(inv.grandTotal) || 0);
+      totalPaid += (parseFloat(inv.paidAmount) || 0);
+    });
+
+    (clientObj.payments || []).forEach(p => {
+      totalPaid += (parseFloat(p.amount) || 0);
+    });
+
+    const rawBalance = totalPurchases - totalPaid;
+    const balance = Math.max(0, rawBalance);
+
+    const lastInvoice = cInvoices[0] || null;
+    const lastPayment = (clientObj.payments && clientObj.payments.length > 0)
+      ? clientObj.payments[clientObj.payments.length - 1]
+      : null;
+
+    return {
+      totalPurchases,
+      totalPaid,
+      totalReturns,
+      balance,
+      invoicesCount: cInvoices.length,
+      paymentsCount: (clientObj.payments || []).length,
+      lastDate: (lastPayment && lastPayment.date) || (lastInvoice && lastInvoice.date) || ''
+    };
+  }
+
   function renderDebtCollectionRadar() {
     const clientsTab = document.getElementById('tab-clients');
     if (!clientsTab) return;
 
     const invoices = readStore('invoices', []);
     const clients = readStore('clients', []);
+    const clientReturns = readStore('client_returns', []);
     const currency = getCurrency();
     const profile = getStoreProfile();
 
-    const clientPhoneMap = {};
-    clients.forEach(c => {
-      if (c.name && c.phone) {
-        clientPhoneMap[c.name.trim().toLowerCase()] = c.phone;
-      }
-    });
-
-    const now = Date.now();
-    const pendingInvoices = invoices
-      .map(inv => {
-        const grand = parseFloat(inv.grandTotal) || 0;
-        const paid = parseFloat(inv.paidAmount) || 0;
-        const due = inv.dueAmount !== undefined ? (parseFloat(inv.dueAmount) || 0) : Math.max(0, grand - paid);
-        const invTime = inv.date ? new Date(inv.date).getTime() : now;
-        const daysOld = isNaN(invTime) ? 0 : Math.max(0, Math.floor((now - invTime) / 86400000));
-        const phone = inv.phone || clientPhoneMap[(inv.client || '').trim().toLowerCase()] || '';
-        return { ...inv, calcDue: due, daysOld, resolvedPhone: phone };
+    const indebtedClients = clients
+      .map(c => {
+        const ledger = calculateClientStatement(c, invoices, clientReturns);
+        return {
+          id: c.id,
+          name: c.name || 'عميل',
+          phone: c.phone || '',
+          openingBalance: parseFloat(c.openingBalance) || 0,
+          ...ledger
+        };
       })
-      .filter(inv => inv.status !== 'مدفوعة' && inv.calcDue > 0.01)
-      .sort((a, b) => b.daysOld - a.daysOld || b.calcDue - a.calcDue);
+      .filter(c => c.balance > 0.01)
+      .sort((a, b) => b.balance - a.balance);
 
-    const totalReceivables = pendingInvoices.reduce((s, i) => s + i.calcDue, 0);
-    const overdueCount = pendingInvoices.filter(i => i.daysOld >= 7).length;
+    const totalReceivables = indebtedClients.reduce((sum, c) => sum + c.balance, 0);
 
     const clientsTabBtn = document.querySelector('.nav-tab[data-tab="clients"]');
     if (clientsTabBtn) {
       let badge = document.getElementById('giti-overdue-badge');
-      if (overdueCount > 0) {
+      if (indebtedClients.length > 0) {
         if (!badge) {
           badge = document.createElement('span');
           badge.id = 'giti-overdue-badge';
           badge.style.cssText = 'background: var(--warning); color: #000; font-size: 0.68rem; padding: 1px 6px; border-radius: 99px; margin-right: 4px; font-weight: 800;';
           clientsTabBtn.appendChild(badge);
         }
-        badge.textContent = `${overdueCount} متأخرة`;
+        badge.textContent = `${indebtedClients.length} مديونية`;
       } else if (badge) {
         badge.remove();
       }
@@ -788,59 +756,104 @@
       clientsTab.insertBefore(widget, clientsTab.firstChild);
     }
 
-    const listHtml = pendingInvoices.length === 0
-      ? `<p style="font-size: 0.82rem; color: var(--success); margin: 4px 0 0;">✅ ممتاز! لا توجد فواتير آجلة أو مستحقات متأخرة حالياً.</p>`
-      : pendingInvoices.slice(0, 6).map(inv => {
-          const isOverdue = inv.daysOld >= 7;
+    const visibleClients = showAllDebtors ? indebtedClients : indebtedClients.slice(0, 6);
+
+    const listHtml = indebtedClients.length === 0
+      ? `<p style="font-size: 0.82rem; color: var(--success); margin: 4px 0 0;">✅ ممتاز! جميع كشوف حسابات العملاء مسددة بالكامل.</p>`
+      : visibleClients.map(c => {
+          const isHighDebt = c.balance >= 5000;
           return `
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px; background: var(--input-bg); border-radius: 9px; border-right: 3px solid ${isOverdue ? 'var(--danger)' : 'var(--warning)'}; margin-top: 6px; flex-wrap: wrap;">
-              <div style="font-size: 0.82rem;">
-                <strong>${escapeHtml(inv.client || 'عميل')}</strong>
-                <span style="color: var(--text-muted);">(#${inv.id})</span>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">
-                  المتبقي: <strong style="color: var(--danger);">${inv.calcDue.toFixed(2)} ${currency}</strong>
-                  • منذ ${inv.daysOld} يوم
+            <div class="giti-debt-client-row" data-client-open="${escapeHtml(c.name)}" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 10px; background: var(--input-bg); border-radius: 9px; border-right: 3px solid ${isHighDebt ? 'var(--danger)' : 'var(--warning)'}; margin-top: 6px; flex-wrap: wrap;">
+              <div style="font-size: 0.82rem; flex: 1; min-width: 165px;">
+                <strong>👤 ${escapeHtml(c.name)}</strong>
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+                  صافي الرصيد: <strong style="color: var(--danger);">${c.balance.toFixed(2)} ${currency}</strong>
+                  • التعاملات: ${c.totalPurchases.toFixed(2)} | المسدد: ${c.totalPaid.toFixed(2)}
                 </div>
               </div>
-              <button type="button" class="btn-sm giti-debt-remind-btn"
-                data-client="${escapeHtml(inv.client || 'عميلنا العزيز')}"
-                data-id="${inv.id}"
-                data-date="${escapeHtml(inv.date || '')}"
-                data-due="${inv.calcDue.toFixed(2)}"
-                data-phone="${escapeHtml(inv.resolvedPhone)}"
-                style="background: #16a34a; color: #fff; font-size: 0.76rem;">
-                💬 تذكير بالرصيد
-              </button>
+              <div style="display: flex; gap: 5px; align-items: center;" onclick="event.stopPropagation();">
+                <button type="button" class="btn-sm giti-open-client-ledger-btn"
+                  data-client="${escapeHtml(c.name)}"
+                  style="background: var(--accent); color: #fff; font-size: 0.75rem;">
+                  📄 كشف الحساب
+                </button>
+                <button type="button" class="btn-sm giti-debt-remind-btn"
+                  data-client="${escapeHtml(c.name)}"
+                  data-purchases="${c.totalPurchases.toFixed(2)}"
+                  data-paid="${c.totalPaid.toFixed(2)}"
+                  data-due="${c.balance.toFixed(2)}"
+                  data-phone="${escapeHtml(c.phone)}"
+                  style="background: #16a34a; color: #fff; font-size: 0.75rem;">
+                  💬 تذكير بالرصيد
+                </button>
+              </div>
             </div>
           `;
         }).join('');
 
+    const toggleMoreHtml = indebtedClients.length > 6
+      ? `<div style="text-align: center; margin-top: 8px;">
+           <button type="button" id="giti-toggle-more-debtors" class="btn-sm" style="background: var(--input-bg); color: var(--accent); border: 1px solid var(--border-color); font-size: 0.76rem;">
+             ${showAllDebtors ? '🔼 عرض أقل' : `🔽 عرض كل العملاء المدينين (${indebtedClients.length})`}
+           </button>
+         </div>`
+      : '';
+
     widget.innerHTML = `
       <div class="card-header" style="margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-        <h3 style="font-size: 0.98rem;">🔔 رادار تحصيلات الديون (${pendingInvoices.length})</h3>
+        <h3 style="font-size: 0.98rem;">🔔 رادار تحصيلات العملاء (${indebtedClients.length})</h3>
         <div style="display: flex; align-items: center; gap: 6px;">
           <span class="badge badge-unpaid">${totalReceivables.toFixed(2)} ${currency}</span>
           <button type="button" id="giti-export-debts-csv" class="btn-sm" style="background: #0f766e; color: #fff; font-size: 0.74rem;">📊 كشف Excel</button>
         </div>
       </div>
       ${listHtml}
+      ${toggleMoreHtml}
     `;
 
     const expDebtBtn = document.getElementById('giti-export-debts-csv');
-    if (expDebtBtn) expDebtBtn.onclick = () => exportDebtsToExcelCSV(pendingInvoices);
+    if (expDebtBtn) expDebtBtn.onclick = () => exportDebtsToExcelCSV(indebtedClients);
+
+    const toggleMoreBtn = document.getElementById('giti-toggle-more-debtors');
+    if (toggleMoreBtn) {
+      toggleMoreBtn.onclick = () => {
+        showAllDebtors = !showAllDebtors;
+        renderDebtCollectionRadar();
+      };
+    }
+
+    widget.querySelectorAll('.giti-debt-client-row').forEach(row => {
+      row.onclick = () => {
+        const cName = row.getAttribute('data-client-open');
+        if (cName && typeof window.openClientLedger === 'function') {
+          window.openClientLedger(cName);
+        }
+      };
+    });
+
+    widget.querySelectorAll('.giti-open-client-ledger-btn').forEach(btn => {
+      btn.onclick = () => {
+        const cName = btn.getAttribute('data-client');
+        if (cName && typeof window.openClientLedger === 'function') {
+          window.openClientLedger(cName);
+        }
+      };
+    });
 
     widget.querySelectorAll('.giti-debt-remind-btn').forEach(btn => {
       btn.onclick = () => {
         const cName = btn.getAttribute('data-client');
-        const invId = btn.getAttribute('data-id');
-        const invDate = btn.getAttribute('data-date');
+        const purchasesVal = btn.getAttribute('data-purchases');
+        const paidVal = btn.getAttribute('data-paid');
         const dueVal = btn.getAttribute('data-due');
         const phone = btn.getAttribute('data-phone');
 
         const msg = [
           `السلام عليكم أ/ *${cName}*،`,
-          `تذكير ودي من *${profile.name || 'إدارة المبيعات'}* بخصوص الرصيد المتبقي على الفاتورة رقم *#${invId}* بتاريخ (${invDate}).`,
-          `💰 *المبلغ المتبقي:* ${dueVal} ${currency}`,
+          `تذكير ودي من *${profile.name || 'إدارة الحسابات'}* بملخص كشف حسابكم لدينا حتى تاريخ (${new Date().toLocaleDateString('ar-EG')}):`,
+          `🛍 *إجمالي التعاملات:* ${purchasesVal} ${currency}`,
+          `✅ *إجمالي المدفوعات:* ${paidVal} ${currency}`,
+          `💰 *صافي الرصيد المتبقي:* ${dueVal} ${currency}`,
           `شاكرين حسن تعاونكم وتعاملكم معنا.`
         ].join('\n');
 
@@ -909,13 +922,13 @@
       return;
     }
     const costMap = buildProductCostMap();
-    const headers = ['كود / باركود', 'اسم الصنف', 'الكمية المتاحة', 'سعر التكلفة', 'سعر البيع', 'إجمالي التكلفة', 'إجمالي القيمة البيعية'];
+    const headers = ['كود الصنف', 'اسم الصنف', 'الكمية المتاحة', 'سعر التكلفة', 'سعر البيع', 'إجمالي التكلفة', 'إجمالي القيمة البيعية'];
     const rows = products.map(p => {
       const stock = parseFloat(p.stock) || 0;
       const price = parseFloat(p.price) || 0;
       const cost = costMap[(p.name || '').trim().toLowerCase()] || 0;
       return [
-        p.barcode || p.id || '',
+        p.id || '',
         p.name || '',
         stock,
         cost.toFixed(2),
@@ -929,25 +942,23 @@
     await shareOrDownloadFile(blob, `GITI_Inventory_${today}.csv`, 'text/csv', 'جرد المخزن Excel');
   }
 
-  async function exportDebtsToExcelCSV(pendingInvoices) {
-    if (!pendingInvoices || pendingInvoices.length === 0) {
-      alert('لا توجد ديون مسجلة للتصدير.');
+  async function exportDebtsToExcelCSV(indebtedClients) {
+    if (!indebtedClients || indebtedClients.length === 0) {
+      alert('لا توجد مديونيات مسجلة على العملاء للتصدير.');
       return;
     }
-    const headers = ['رقم الفاتورة', 'التاريخ', 'العميل', 'الهاتف', 'إجمالي الفاتورة', 'المدفوع', 'المبلغ المتبقي', 'أيام التأخير'];
-    const rows = pendingInvoices.map(inv => [
-      inv.id,
-      inv.date || '',
-      inv.client || '',
-      inv.resolvedPhone || '',
-      (parseFloat(inv.grandTotal) || 0).toFixed(2),
-      (parseFloat(inv.paidAmount) || 0).toFixed(2),
-      inv.calcDue.toFixed(2),
-      inv.daysOld
+    const headers = ['اسم العميل', 'رقم الهاتف', 'الرصيد الافتتاحي', 'إجمالي التعاملات', 'إجمالي المدفوعات', 'صافي المديونية المتبقية'];
+    const rows = indebtedClients.map(c => [
+      c.name || '',
+      c.phone || '',
+      (c.openingBalance || 0).toFixed(2),
+      (c.totalPurchases || 0).toFixed(2),
+      (c.totalPaid || 0).toFixed(2),
+      (c.balance || 0).toFixed(2)
     ]);
     const blob = toArabicCsvBlob(headers, rows);
     const today = new Date().toISOString().slice(0, 10);
-    await shareOrDownloadFile(blob, `GITI_Receivables_${today}.csv`, 'text/csv', 'كشف الديون والتحصيلات Excel');
+    await shareOrDownloadFile(blob, `GITI_Clients_Receivables_${today}.csv`, 'text/csv', 'كشف مديونيات العملاء Excel');
   }
 
   function injectInvoicesExcelButton() {
